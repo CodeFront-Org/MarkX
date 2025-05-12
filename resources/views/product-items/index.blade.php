@@ -4,10 +4,15 @@
 <div class="container-fluid py-4">
     <div class="row">
         <div class="col-12">
-            <div class="card mb-4">
-                <div class="card-header pb-0">
+            <div class="card mb-4">                <div class="card-header pb-0">
                     <div class="d-flex justify-content-between align-items-center">
                         <h6>Product Items</h6>
+                        <div class="d-flex gap-2">
+                            @if(auth()->user()->isManager())
+                                @include('partials.export-button')
+                            @endif
+                            <a href="{{ route('product-items.create') }}" class="btn bg-gradient-primary">Add Product Item</a>
+                        </div>
                     </div>
                 </div>
                 
@@ -23,31 +28,14 @@
                             <input type="text" name="marketer" class="form-control search-input" value="{{ request('marketer') }}" placeholder="Search by marketer...">
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label">Min Quantity</label>
-                            <input type="number" name="min_quantity" class="form-control search-input" value="{{ request('min_quantity') }}" placeholder="Min quantity">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Max Quantity</label>
-                            <input type="number" name="max_quantity" class="form-control search-input" value="{{ request('max_quantity') }}" placeholder="Max quantity">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Min Price</label>
-                            <input type="number" step="0.01" name="min_price" class="form-control search-input" value="{{ request('min_price') }}" placeholder="Min price">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Max Price</label>
-                            <input type="number" step="0.01" name="max_price" class="form-control search-input" value="{{ request('max_price') }}" placeholder="Max price">
-                        </div>
-                        <div class="col-md-2">
                             <label class="form-label">Status</label>
                             <select name="approved" class="form-select search-input">
                                 <option value="">All Status</option>
                                 <option value="true" {{ request('approved') === 'true' ? 'selected' : '' }}>Approved</option>
                                 <option value="false" {{ request('approved') === 'false' ? 'selected' : '' }}>Pending</option>
                             </select>
-                        </div>
-                        <div class="col-12">
-                            <a href="{{ route('product-items.index') }}" class="btn bg-gradient-secondary" id="reset-search">Reset</a>
+                        </div>                        <div class="col-12">
+                            <button type="button" class="btn bg-gradient-secondary" id="reset-search">Reset</button>
                         </div>
                     </form>
                 </div>
@@ -108,11 +96,33 @@
         document.getElementById('search-form').addEventListener('submit', function(e) {
             e.preventDefault();
             performSearch();
-        });
-
-        document.getElementById('reset-search').addEventListener('click', function(e) {
+        });        document.getElementById('reset-search').addEventListener('click', function(e) {
             e.preventDefault();
-            document.getElementById('search-form').reset();
+            
+            // Get form and all inputs
+            const form = document.getElementById('search-form');
+            const inputs = form.querySelectorAll('.search-input');
+            
+            // Clear each input and trigger change event
+            inputs.forEach(input => {
+                if (input.tagName === 'SELECT') {
+                    input.selectedIndex = 0;
+                } else {
+                    input.value = '';
+                }
+                
+                // Dispatch input event to trigger search update
+                input.dispatchEvent(new Event('input', {
+                    bubbles: true,
+                    cancelable: true
+                }));
+            });
+
+            // Reset URL to base
+            const baseUrl = form.getAttribute('action');
+            window.history.pushState({}, '', baseUrl);
+            
+            // Perform immediate search with cleared filters
             performSearch();
         });
     });

@@ -21,12 +21,7 @@
                     <td>
                         <div class="d-flex px-2 py-1">
                             <div class="d-flex flex-column justify-content-center">
-                                <h6 class="mb-0 text-sm">{{ $quote->title }}</h6>
-                                @if($quote->invoice)
-                                <p class="text-xs text-secondary mb-0">
-                                    Invoice: #{{ $quote->invoice->invoice_number }}
-                                </p>
-                                @endif
+                                <h6 class="mb-0 text-sm">{{ $quote->title }}</h6>                                {{-- Removed invoice number display --}}
                             </div>
                         </div>
                     </td>
@@ -67,15 +62,7 @@
                                         <i class="fas fa-pencil-alt text-dark me-2" aria-hidden="true"></i>Edit
                                     </a>
                                 @endif
-                            @endif
-                            @if($quote->status === 'approved' && !$quote->invoice && auth()->user()->role !== 'manager' && auth()->id() === $quote->user_id)
-                                <form action="{{ route('quotes.convert', $quote) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn btn-link text-primary px-3 mb-0">
-                                        <i class="fas fa-file-invoice text-primary me-2" aria-hidden="true"></i>Convert
-                                    </button>
-                                </form>
-                            @endif
+                            @endif                            {{-- Removed invoice conversion button --}}
                             <a href="{{ route('quotes.download', $quote) }}" class="btn btn-link text-dark px-3 mb-0" target="_blank">
                                 <i class="fas fa-file-pdf text-dark me-2" aria-hidden="true"></i>PDF
                             </a>

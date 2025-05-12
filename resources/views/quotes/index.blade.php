@@ -4,12 +4,16 @@
 <div class="container-fluid py-4">
     <div class="row">
         <div class="col-12">
-            <div class="card mb-4">
-                <div class="card-header pb-0 d-flex justify-content-between align-items-center">
+            <div class="card mb-4">                <div class="card-header pb-0 d-flex justify-content-between align-items-center">
                     <h6>Quotes</h6>
-                    @if(auth()->user()->role !== 'manager')
-                    <a href="{{ route('quotes.create') }}" class="btn bg-gradient-primary">Create New Quote</a>
-                    @endif
+                    <div class="d-flex gap-2">
+                        @if(auth()->user()->isManager())
+                            @include('partials.export-button')
+                        @endif
+                        @if(auth()->user()->role !== 'manager')
+                            <a href="{{ route('quotes.create') }}" class="btn bg-gradient-primary">Create New Quote</a>
+                        @endif
+                    </div>
                 </div>
                 
                 <!-- Search Filters -->
@@ -36,26 +40,14 @@
                         <div class="col-md-3">
                             <label class="form-label">Marketer</label>
                             <input type="text" name="marketer" class="form-control search-input" value="{{ request('marketer') }}" placeholder="Search by marketer...">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Min Amount</label>
-                            <input type="number" name="min_amount" class="form-control search-input" value="{{ request('min_amount') }}" placeholder="Min amount">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Max Amount</label>
-                            <input type="number" name="max_amount" class="form-control search-input" value="{{ request('max_amount') }}" placeholder="Max amount">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Min Quantity</label>
-                            <input type="number" name="min_quantity" class="form-control search-input" value="{{ request('min_quantity') }}" placeholder="Minimum quantity...">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Max Quantity</label>
-                            <input type="number" name="max_quantity" class="form-control search-input" value="{{ request('max_quantity') }}" placeholder="Maximum quantity...">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Valid Until</label>
-                            <input type="date" name="valid_until" class="form-control search-input" value="{{ request('valid_until') }}">
+                        </div>                        <div class="col-md-4">
+                            <label class="form-label">Quotes Created </label>
+                            <div class="d-flex gap-2">
+                                <label>From</label>
+                                <input type="date" name="date_from" class="form-control search-input" value="{{ request('date_from') }}" placeholder="From">
+                                <label>To</label>
+                                <input type="date" name="date_to" class="form-control search-input" value="{{ request('date_to') }}" placeholder="To">
+                            </div>
                         </div>
                         <div class="col-12 mt-3">
                             <a href="{{ route('quotes.index') }}" class="btn bg-gradient-secondary" id="reset-search">Reset</a>
@@ -125,12 +117,18 @@
         document.getElementById('search-form').addEventListener('submit', function(e) {
             e.preventDefault();
             performSearch();
-        });
-
-        // Handle reset button
+        });        // Handle reset button
         document.getElementById('reset-search').addEventListener('click', function(e) {
             e.preventDefault();
-            document.getElementById('search-form').reset();
+            const form = document.getElementById('search-form');
+            form.reset();
+            
+            // Clear all date inputs explicitly
+            form.querySelectorAll('input[type="date"]').forEach(input => {
+                input.value = '';
+            });
+            
+            // Trigger the search
             performSearch();
         });
     });

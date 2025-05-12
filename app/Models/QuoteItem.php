@@ -11,7 +11,10 @@ class QuoteItem extends Model
         'item',
         'quantity',
         'price',
-        'approved'
+        'approved',
+        'comment',
+        'reason',
+        'reason_details'
     ];
 
     protected $casts = [

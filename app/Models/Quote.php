@@ -16,7 +16,9 @@ class Quote extends Model
         'amount',
         'status',
         'user_id',
-        'valid_until'
+        'valid_until',
+        'rejection_reason',
+        'rejection_details'
     ];
 
     protected $casts = [
@@ -30,14 +32,19 @@ class Quote extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function invoice()
-    {
-        return $this->hasOne(Invoice::class);
-    }
-
     public function items()
     {
         return $this->hasMany(QuoteItem::class);
+    }
+
+    public function productItems()
+    {
+        return $this->belongsToMany(ProductItem::class, 'quote_items');
+    }
+
+    public function unquotedItems()
+    {
+        return $this->hasMany(UnquotedItem::class);
     }
 
     // Scopes
@@ -52,9 +59,9 @@ class Quote extends Model
     }
 
     // Methods
-    public function isConvertible()
+    public function isApproved()
     {
-        return $this->status === 'approved' && !$this->invoice()->exists();
+        return $this->status === 'approved';
     }
 
     public function markAsConverted()

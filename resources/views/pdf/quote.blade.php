@@ -123,10 +123,7 @@
         <div style="float: left; width: 50%;">
             <strong>Date Created:</strong> {{ $quote->created_at->format('F d, Y') }}<br>
             <strong>Valid Until:</strong> {{ $quote->valid_until->format('F d, Y') }}<br>
-            <strong>Status:</strong> 
-            <span class="status-badge status-{{ strtolower($quote->status) }}">
-                {{ ucfirst($quote->status) }}
-            </span>
+            <strong>Status:</strong> <span class="status-badge status-{{ strtolower($quote->status) }}">{{ ucfirst($quote->status) }}</span>
         </div>
         <div class="clear"></div>
     </div>
@@ -138,32 +135,26 @@
         <table>
             <thead>
                 <tr>
-                    <th width="40%">Item Description</th>
+                    <th width="45%">Item Description</th>
                     <th width="15%">Quantity</th>
-                    <th width="15%">Unit Price</th>
-                    <th width="15%">Subtotal</th>
-                    <th width="15%">Status</th>
+                    <th width="20%">Unit Price</th>
+                    <th width="20%">Subtotal</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach($quote->items as $item)
+                @foreach($items as $item)
                 <tr>
                     <td>{{ $item->item }}</td>
                     <td>{{ $item->quantity }}</td>
                     <td>KES {{ number_format($item->price, 2) }}</td>
-                    <td>KES {{ number_format($item->total, 2) }}</td>
-                    <td>
-                        <span class="item-status item-{{ $item->approved ? 'approved' : 'pending' }}">
-                            {{ $item->approved ? 'Approved' : 'Pending' }}
-                        </span>
-                    </td>
+                    <td>KES {{ number_format($item->quantity * $item->price, 2) }}</td>
                 </tr>
                 @endforeach
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="3" style="text-align: right;"><strong>Total Amount:</strong></td>
-                    <td colspan="2"><strong>KES {{ number_format($quote->amount, 2) }}</strong></td>
+                    <td colspan="3" style="text-align: right;"><strong>Total Amount (Approved Items):</strong></td>
+                    <td><strong>KES {{ number_format($approvedTotal, 2) }}</strong></td>
                 </tr>
             </tfoot>
         </table>

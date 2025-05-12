@@ -56,10 +56,11 @@
                                     <table class="table" id="items-table">
                                         <thead>
                                             <tr>
-                                                <th width="40%">Item Description</th>
-                                                <th width="20%">Quantity</th>
-                                                <th width="20%">Unit Price</th>
+                                                <th width="35%">Item Description</th>
+                                                <th width="15%">Quantity</th>
+                                                <th width="15%">Unit Price</th>
                                                 <th width="15%">Total</th>
+                                                <th width="15%">Comment</th>
                                                 <th width="5%">Actions</th>
                                             </tr>
                                         </thead>
@@ -81,6 +82,12 @@
                                                 </td>
                                                 <td>
                                                     <span class="line-total">0.00</span>
+                                                </td>
+                                                <td>
+                                                    <textarea name="items[0][comment]" 
+                                                        class="form-control item-comment" 
+                                                        rows="1" 
+                                                        placeholder="Add notes...">{{ old('items.0.comment') }}</textarea>
                                                 </td>
                                                 <td>
                                                     <button type="button" class="btn btn-danger btn-sm delete-row" style="display: none;">
@@ -109,8 +116,7 @@
                                 @error('items')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
-                            </div>
-                        </div>
+                            </div>                        </div>
 
                         <div class="row mt-4">
                             <div class="col-md-12">
@@ -189,9 +195,7 @@
         .product-suggestions .dropdown-item {
             padding: 1rem;
         }
-    }
-
-    .select2-container--bootstrap-5 {
+    }    .select2-container--bootstrap-5 {
         width: 100% !important;
     }
     
@@ -236,8 +240,9 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const itemsTable = document.getElementById('items-table');
+        const unquotedItemsTable = document.getElementById('unquoted-items-table');
         const addItemBtn = document.getElementById('add-item');
-        let itemCount = 1;
+        const addUnquotedItemBtn = document.getElementById('add-unquoted-item');        let itemCount = 1;
 
         function updateLineTotal(row) {
             const quantity = parseFloat(row.querySelector('.item-quantity').value) || 0;
@@ -340,6 +345,12 @@
                         <span class="line-total">0.00</span>
                     </td>
                     <td>
+                        <textarea name="items[${itemCount}][comment]" 
+                            class="form-control item-comment" 
+                            rows="1" 
+                            placeholder="Add notes...">{{ old('items.${itemCount}.comment') }}</textarea>
+                    </td>
+                    <td>
                         <button type="button" class="btn btn-danger btn-sm delete-row">
                             Remove
                         </button>
@@ -393,9 +404,7 @@
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             validUntilInput.min = tomorrow.toISOString().split('T')[0];
-        }
-
-        // Initialize state
+        }        // Initialize state
         updateDeleteButtons();
     });
 </script>

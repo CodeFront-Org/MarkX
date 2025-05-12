@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Invoice;
 use App\Models\Quote;
 use App\Models\QuoteItem;
 use App\Models\User;
@@ -28,27 +27,27 @@ class ReportsController extends Controller
         $quoteTrends = $this->getQuoteTrends();
         $quoteStats = $this->getQuoteStats();
         
-        // Get payment analytics
-        $paymentStats = $this->getPaymentStats();
-        $agingReceivables = $this->getAgingReceivables();
+        // Get approval stats
+        $approvalStats = $this->getApprovalStats();
         
-        // Get client analytics
+        // Get quote aging
+        $quoteAging = $this->getQuoteAging();
+        
+        // Get top clients
         $topClients = $this->getTopClients();
         
-        // Get financial projections
-        $revenueForecast = $this->getRevenueForecast();
-        $financialHealth = $this->getFinancialHealth();
-
+        // Get financial health metrics
+        $financialHealth = $this->getFinancialHealthMetrics();
+        
         return view('reports.index', compact(
             'marketerStats',
             'topProducts',
             'lowProducts',
             'quoteTrends',
             'quoteStats',
-            'paymentStats',
-            'agingReceivables',
+            'approvalStats',
+            'quoteAging',
             'topClients',
-            'revenueForecast',
             'financialHealth'
         ));
     }
@@ -60,22 +59,22 @@ class ReportsController extends Controller
             ->withCount(['quotes as successful_quotes' => function($query) {
                 $query->where('status', 'approved');
             }])
-            ->withSum(['quotes as total_revenue' => function($query) {
-                $query->whereHas('invoice', function($q) {
-                    $q->where('status', 'paid');
-                });
+            ->withSum(['quotes as quote_value' => function($query) {
+                $query->where('status', 'approved');
             }], 'amount')
             ->get()
-            ->map(function($marketer) {
-                return (object)[
+            ->map(function($marketer) {                return (object)[
                     'name' => $marketer->name,
-                    'total_revenue' => $marketer->total_revenue ?? 0,
+                    'total_revenue' => $marketer->quote_value ?? 0,
                     'success_rate' => $marketer->total_quotes > 0 
                         ? ($marketer->successful_quotes / $marketer->total_quotes) * 100 
                         : 0,
                     'total_quotes' => $marketer->total_quotes,
+                    'approval_rate' => $marketer->total_quotes > 0 
+                        ? ($marketer->quotes()->where('status', 'approved')->count() / $marketer->total_quotes) * 100 
+                        : 0,
                     'conversion_rate' => $marketer->total_quotes > 0 
-                        ? ($marketer->quotes()->whereHas('invoice')->count() / $marketer->total_quotes) * 100 
+                        ? ($marketer->successful_quotes / $marketer->total_quotes) * 100 
                         : 0
                 ];
             })
@@ -88,14 +87,10 @@ class ReportsController extends Controller
         $products = QuoteItem::select(
                 'item',
                 DB::raw('COUNT(*) as total_count'),
-                DB::raw('SUM(CASE WHEN approved = 1 THEN 1 ELSE 0 END) as approved_count'),
+                DB::raw('SUM(CASE WHEN quotes.status = "approved" THEN 1 ELSE 0 END) as approved_count'),
                 DB::raw('SUM(quantity * price) as total_revenue')
             )
-            ->whereHas('quote', function($query) {
-                $query->whereHas('invoice', function($q) {
-                    $q->where('status', 'paid');
-                });
-            })
+            ->join('quotes', 'quote_items.quote_id', '=', 'quotes.id')
             ->groupBy('item')
             ->having('total_count', '>=', 5) // Minimum threshold for analysis
             ->get()
@@ -113,14 +108,16 @@ class ReportsController extends Controller
         $lowProducts = $sorted->reverse()->take(5);
 
         return [$topProducts, $lowProducts];
-    }
-
-    private function getQuoteTrends()
+    }    private function getQuoteTrends()
     {
         $trends = Quote::select(
             DB::raw("strftime('%Y-%m', created_at) as month"),
             DB::raw('COUNT(*) as total'),
-            DB::raw('SUM(CASE WHEN status = "approved" THEN 1 ELSE 0 END) as approved')
+            DB::raw('SUM(CASE WHEN status = "approved" THEN 1 ELSE 0 END) as approved'),
+            DB::raw('SUM(amount) as total_amount'),
+            DB::raw('SUM(CASE WHEN status = "approved" THEN amount ELSE 0 END) as approved_amount'),
+            DB::raw('AVG(CASE WHEN status = "approved" THEN amount ELSE NULL END) as avg_amount'),
+            DB::raw('COUNT(DISTINCT user_id) as unique_users')
         )
         ->where('created_at', '>=', now()->subMonths(12))
         ->groupBy(DB::raw("strftime('%Y-%m', created_at)"))
@@ -131,54 +128,87 @@ class ReportsController extends Controller
             'labels' => $trends->pluck('month'),
             'success_rates' => $trends->map(function($trend) {
                 return $trend->total > 0 ? ($trend->approved / $trend->total) * 100 : 0;
-            })
+            }),
+            'monthly_totals' => $trends->pluck('total'),
+            'monthly_approved' => $trends->pluck('approved'),
+            'monthly_amounts' => $trends->pluck('total_amount'),
+            'monthly_approved_amounts' => $trends->pluck('approved_amount'),
+            'monthly_avg_amounts' => $trends->pluck('avg_amount'),
+            'monthly_users' => $trends->pluck('unique_users'),
+            'highest_month' => $trends->max('total'),
+            'lowest_month' => $trends->min('total'),
+            'best_month' => $trends->sortByDesc('approved_amount')->first(),
+            'worst_month' => $trends->sortBy('approved_amount')->first(),
+            'average_monthly_quotes' => round($trends->avg('total'), 1),
+            'average_monthly_approved' => round($trends->avg('approved'), 1),
+            'total_amount_ytd' => $trends->where('month', '>=', now()->startOfYear()->format('Y-m'))->sum('approved_amount'),
+            'total_quotes_ytd' => $trends->where('month', '>=', now()->startOfYear()->format('Y-m'))->sum('total')
         ];
-    }
-
-    private function getQuoteStats()
+    }    private function getQuoteStats()
     {
         $totalQuotes = Quote::where('created_at', '>=', now()->subYear())->count();
         $successfulQuotes = Quote::where('status', 'approved')
             ->where('created_at', '>=', now()->subYear())
             ->count();
 
-        $avgConversionTime = Quote::where('status', 'converted')
-            ->whereHas('invoice')
-            ->selectRaw('AVG(round(julianday(updated_at) - julianday(created_at))) as avg_days')
-            ->value('avg_days');
+        // Calculate average time from creation to approval
+        $avgTimeToApprove = Quote::where('status', 'approved')
+            ->whereNotNull('updated_at')
+            ->where('created_at', '>=', now()->subYear())
+            ->selectRaw('round(avg(julianday(updated_at) - julianday(created_at))) as days')
+            ->value('days') ?? 0;
+
+        // Get monthly trend
+        $monthlyTrend = Quote::whereYear('created_at', now()->year)
+            ->whereMonth('created_at', now()->month)
+            ->count();
+
+        $lastMonthTrend = Quote::whereYear('created_at', now()->subMonth()->year)
+            ->whereMonth('created_at', now()->subMonth()->month)
+            ->count();
+
+        $trendPercentage = $lastMonthTrend > 0 
+            ? (($monthlyTrend - $lastMonthTrend) / $lastMonthTrend) * 100 
+            : 0;
 
         return (object)[
             'success_rate' => $totalQuotes > 0 ? ($successfulQuotes / $totalQuotes) * 100 : 0,
             'avg_value' => Quote::where('status', 'approved')->avg('amount') ?? 0,
-            'conversion_time' => round($avgConversionTime ?? 0)
+            'total_value' => Quote::where('status', 'approved')->sum('amount') ?? 0,
+            'conversion_time' => round($avgTimeToApprove),
+            'trend_percentage' => round($trendPercentage, 1),
+            'month_to_date' => $monthlyTrend,
+            'last_month' => $lastMonthTrend,
+            'total_quotes' => $totalQuotes,
+            'successful_quotes' => $successfulQuotes,
+            'pending_quotes' => Quote::where('status', 'pending')->count(),
+            'rejected_quotes' => Quote::where('status', 'rejected')->count(),
+            'average_quotes_per_day' => round($totalQuotes / 365, 1),
+            'highest_value' => Quote::where('status', 'approved')->max('amount') ?? 0,
+            'lowest_value' => Quote::where('status', 'approved')->min('amount') ?? 0
         ];
     }
 
-    private function getPaymentStats()
+    private function getApprovalStats()
     {
-        $paidInvoices = Invoice::where('status', 'paid')
-            ->whereNotNull('paid_at')
-            ->where('paid_at', '>=', now()->subYear());
-
-        $avgDaysToPayment = $paidInvoices
-            ->selectRaw('AVG(round(julianday(paid_at) - julianday(created_at))) as avg_days')
-            ->value('avg_days');
-
-        $totalInvoices = Invoice::where('status', '!=', 'draft')
+        $totalQuotes = Quote::where('created_at', '>=', now()->subYear())->count();
+        $approvedQuotes = Quote::where('status', 'approved')
             ->where('created_at', '>=', now()->subYear())
             ->count();
         
-        $overdueInvoices = Invoice::where('status', 'overdue')
+        $pendingQuotes = Quote::where('status', 'pending')
             ->where('created_at', '>=', now()->subYear())
             ->count();
 
         return (object)[
-            'avg_days_to_payment' => round($avgDaysToPayment ?? 0),
-            'overdue_rate' => $totalInvoices > 0 ? ($overdueInvoices / $totalInvoices) * 100 : 0
+            'total_quotes' => $totalQuotes,
+            'approved_quotes' => $approvedQuotes,
+            'pending_quotes' => $pendingQuotes,
+            'approval_rate' => $totalQuotes > 0 ? ($approvedQuotes / $totalQuotes) * 100 : 0
         ];
     }
 
-    private function getAgingReceivables()
+    private function getQuoteAging()
     {
         $ranges = [
             '0-30 days' => [0, 30],
@@ -189,13 +219,12 @@ class ReportsController extends Controller
 
         $results = [];
         foreach ($ranges as $label => [$min, $max]) {
-            $query = Invoice::where('status', 'final')
-                ->whereNull('paid_at');
+            $query = Quote::where('status', 'pending');
 
             if ($max) {
-                $query->whereRaw("julianday('now') - julianday(created_at) BETWEEN ? AND ?", [$min, $max]);
+                $query->whereRaw("(julianday('now') - julianday(created_at)) BETWEEN ? AND ?", [$min, $max]);
             } else {
-                $query->whereRaw("julianday('now') - julianday(created_at) >= ?", [$min]);
+                $query->whereRaw("(julianday('now') - julianday(created_at)) >= ?", [$min]);
             }
 
             $results[] = (object)[
@@ -210,147 +239,131 @@ class ReportsController extends Controller
 
     private function getTopClients()
     {
-        return User::where('role', 'marketer')
-            ->withCount(['invoices as paid_invoices_count' => function($query) {
-                $query->where('status', 'paid');
+        return User::where('role', 'client')
+            ->withCount(['quotes as total_quotes'])
+            ->withCount(['quotes as approved_quotes' => function($query) {
+                $query->where('status', 'approved');
             }])
-            ->withSum(['invoices as total_revenue' => function($query) {
-                $query->where('status', 'paid');
+            ->withSum(['quotes as total_value' => function($query) {
+                $query->where('status', 'approved');
             }], 'amount')
-            ->withAvg(['invoices as avg_payment_days' => function($query) {
-                $query->whereNotNull('paid_at')
-                    ->where('status', 'paid');
-            }], DB::raw('round(julianday(paid_at) - julianday(created_at))'))
-            ->orderByDesc('total_revenue')
+            ->withAvg(['quotes as avg_response_days' => function($query) {
+                $query->whereNotNull('updated_at')
+                    ->whereIn('status', ['approved', 'rejected']);
+            }], DB::raw('round(julianday(updated_at) - julianday(created_at))'))
+            ->orderByDesc('total_value')
             ->limit(10)
             ->get()
             ->map(function($client) {
-                // Calculate reliability score based on payment history
-                $reliabilityScore = $this->calculateReliabilityScore($client);
+                // Calculate reliability score based on quote history
+                $reliabilityScore = $this->calculateClientReliabilityScore($client);
                 
                 return (object)[
                     'name' => $client->name,
-                    'total_revenue' => $client->total_revenue ?? 0,
-                    'paid_invoices_count' => $client->paid_invoices_count,
-                    'avg_payment_days' => round($client->avg_payment_days ?? 0),
+                    'total_value' => $client->total_value ?? 0,
+                    'total_quotes' => $client->total_quotes,
+                    'approved_quotes' => $client->approved_quotes,
+                    'approval_rate' => $client->total_quotes > 0 
+                        ? ($client->approved_quotes / $client->total_quotes) * 100 
+                        : 0,
+                    'avg_response_time' => round($client->avg_response_days ?? 0),
                     'reliability_score' => $reliabilityScore
                 ];
             });
     }
 
-    private function calculateReliabilityScore($client)
+    private function calculateClientReliabilityScore($client)
     {
-        $factors = [
-            // Payment timeliness (40% weight)
-            'timeliness' => $client->avg_payment_days <= 30 ? 4 : 
-                          ($client->avg_payment_days <= 45 ? 3 : 
-                          ($client->avg_payment_days <= 60 ? 2 : 1)),
-            
-            // Payment consistency (30% weight)
-            'consistency' => $client->paid_invoices_count >= 10 ? 3 : 
-                          ($client->paid_invoices_count >= 5 ? 2 : 1),
-            
-            // Revenue contribution (30% weight)
-            'revenue' => $client->total_revenue >= 1000000 ? 3 : 
-                       ($client->total_revenue >= 500000 ? 2 : 1)
-        ];
-
-        return (
-            ($factors['timeliness'] * 4) + 
-            ($factors['consistency'] * 3) + 
-            ($factors['revenue'] * 3)
-        ) / 1.0;
-    }
-
-    private function getRevenueForecast()
-    {
-        $historicalData = Invoice::where('status', 'paid')
-            ->where('paid_at', '>=', now()->subMonths(12))
-            ->selectRaw("strftime('%Y-%m', paid_at) as month, SUM(amount) as total")
-            ->groupBy(DB::raw("strftime('%Y-%m', paid_at)"))
-            ->orderBy('month')
-            ->get();
-
-        // Calculate trend for projection
-        $trend = $this->calculateRevenueTrend($historicalData);
+        $approvalRate = $client->total_quotes > 0 
+            ? ($client->approved_quotes / $client->total_quotes) * 100 
+            : 0;
         
-        // Project next 6 months
-        $projectedData = collect();
-        $lastMonth = Carbon::now();
+        $responseTimeScore = $client->avg_response_days 
+            ? max(0, 100 - ($client->avg_response_days * 2)) // Deduct points for slower responses
+            : 50; // Default score if no data
         
-        for ($i = 1; $i <= 6; $i++) {
-            $lastMonth = $lastMonth->copy()->addMonth();
-            $projectedAmount = $trend['base'] + ($trend['growth'] * $i);
-            $projectedData->push([
-                'month' => $lastMonth->format('Y-m'),
-                'amount' => max(0, $projectedAmount) // Ensure no negative projections
-            ]);
-        }
-
-        return (object)[
-            'labels' => $historicalData->pluck('month')->merge($projectedData->pluck('month')),
-            'actual_values' => $historicalData->pluck('total'),
-            'projected_values' => $historicalData->pluck('total')->merge($projectedData->pluck('amount'))
-        ];
-    }
-
-    private function calculateRevenueTrend($historicalData)
+        // Weight the factors (adjust weights as needed)
+        $approvalWeight = 0.7;
+        $responseTimeWeight = 0.3;
+        
+        return ($approvalRate * $approvalWeight) + ($responseTimeScore * $responseTimeWeight);
+    }    private function getFinancialHealthMetrics()
     {
-        if ($historicalData->count() < 2) {
-            return ['base' => 0, 'growth' => 0];
-        }
-
-        $x = range(0, $historicalData->count() - 1);
-        $y = $historicalData->pluck('total')->toArray();
-
-        $n = count($x);
-        $sumX = array_sum($x);
-        $sumY = array_sum($y);
-        $sumXY = array_sum(array_map(function($x, $y) { return $x * $y; }, $x, $y));
-        $sumX2 = array_sum(array_map(function($x) { return $x * $x; }, $x));
-
-        $slope = ($n * $sumXY - $sumX * $sumY) / ($n * $sumX2 - $sumX * $sumX);
-        $intercept = ($sumY - $slope * $sumX) / $n;
-
-        return [
-            'base' => end($y),
-            'growth' => $slope
-        ];
-    }
-
-    private function getFinancialHealth()
-    {
-        // Calculate projected monthly revenue
-        $lastMonthRevenue = Invoice::where('status', 'paid')
-            ->whereMonth('paid_at', now()->subMonth())
+        // Calculate current month's projected revenue
+        $currentMonthRevenue = Quote::where('status', 'approved')
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
             ->sum('amount');
-        
-        $thisMonthRevenue = Invoice::where('status', 'paid')
-            ->whereMonth('paid_at', now())
+
+        // Calculate last month's revenue
+        $lastMonthRevenue = Quote::where('status', 'approved')
+            ->whereMonth('created_at', now()->subMonth()->month)
+            ->whereYear('created_at', now()->subMonth()->year)
             ->sum('amount');
 
         // Calculate growth rate
         $growthRate = $lastMonthRevenue > 0 
-            ? (($thisMonthRevenue - $lastMonthRevenue) / $lastMonthRevenue) * 100
+            ? (($currentMonthRevenue - $lastMonthRevenue) / $lastMonthRevenue) * 100 
             : 0;
 
-        // Get outstanding amount - include all unpaid invoices that are:
-        // 1. Final or overdue status AND not paid
-        // 2. Past their due date
-        $outstandingAmount = Invoice::where(function($query) {
-                $query->whereIn('status', ['final', 'overdue'])
-                    ->whereNull('paid_at');
-            })
-            ->where(function($query) {
-                $query->whereDate('due_date', '<', now())
-                    ->orWhere('status', 'overdue');
-            })
+        // Project monthly revenue based on current month's daily average
+        $daysInMonth = now()->daysInMonth;
+        $daysPassed = now()->day;
+        $projected_monthly_revenue = $daysPassed > 0
+            ? ($currentMonthRevenue / $daysPassed) * $daysInMonth
+            : $currentMonthRevenue;        // Calculate outstanding amount from pending quotes
+        $outstanding_amount = Quote::where('status', 'pending')
             ->sum('amount');
 
+        // Calculate conversion rate (approval rate) for current month
+        $thisMonthQuotes = Quote::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+        
+        $thisMonthApproved = Quote::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->where('status', 'approved')
+            ->count();
+
+        $conversion_rate = $thisMonthQuotes > 0 
+            ? ($thisMonthApproved / $thisMonthQuotes) * 100 
+            : 0;        // Get YTD and previous year metrics
+        $ytdRevenue = Quote::where('status', 'approved')
+            ->whereYear('created_at', now()->year)
+            ->sum('amount');
+        
+        $lastYearRevenue = Quote::where('status', 'approved')
+            ->whereYear('created_at', now()->subYear()->year)
+            ->sum('amount');
+
+        $yearOverYearGrowth = $lastYearRevenue > 0 
+            ? (($ytdRevenue - $lastYearRevenue) / $lastYearRevenue) * 100 
+            : 0;
+
+        // Average daily revenue
+        $avgDailyRevenue = $daysPassed > 0
+            ? $currentMonthRevenue / $daysPassed
+            : 0;
+
         return (object)[
-            'projected_monthly_revenue' => $thisMonthRevenue * (1 + ($growthRate / 100)),
+            'current_monthly_revenue' => $currentMonthRevenue,
+            'projected_monthly_revenue' => round($projected_monthly_revenue),
             'growth_rate' => $growthRate,
-            'outstanding_amount' => $outstandingAmount
+            'last_month_revenue' => $lastMonthRevenue,
+            'outstanding_amount' => $outstanding_amount,
+            'conversion_rate' => round($conversion_rate, 1),
+            'ytd_revenue' => $ytdRevenue,
+            'last_year_revenue' => $lastYearRevenue,
+            'year_over_year_growth' => round($yearOverYearGrowth, 1),
+            'avg_daily_revenue' => round($avgDailyRevenue),
+            'days_in_month' => $daysInMonth,
+            'days_passed' => $daysPassed,
+            'target_achievement' => $projected_monthly_revenue > 0 
+                ? ($currentMonthRevenue / $projected_monthly_revenue) * 100 
+                : 0,
+            'average_quote_size' => Quote::where('status', 'approved')
+                ->whereYear('created_at', now()->year)
+                ->avg('amount') ?? 0
         ];
     }
 }

@@ -19,43 +19,20 @@ class ProductItemController extends Controller
     {
         $query = QuoteItem::query()
             ->select([
-                'quote_items.*',
-                'quotes.user_id',
-                'quotes.title as quote_title',
-                DB::raw('(
-                    SELECT COUNT(DISTINCT i.id) 
-                    FROM invoices i 
-                    WHERE i.quote_id = quotes.id
-                ) as invoice_count')
+                'quote_items.item',
+                DB::raw('COUNT(DISTINCT quote_items.quote_id) as quote_count'),
+                DB::raw('GROUP_CONCAT(DISTINCT quotes.title) as quote_titles'),
+                DB::raw('SUM(quote_items.quantity) as total_quantity'),
+                DB::raw('AVG(quote_items.price) as avg_price'),
+                DB::raw('SUM(quote_items.quantity * quote_items.price) as total_value'),
+                DB::raw('SUM(CASE WHEN quote_items.approved = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as success_rate'),
+                DB::raw('GROUP_CONCAT(DISTINCT users.name) as marketers'),
+                DB::raw('MIN(CASE WHEN quote_items.approved = 0 THEN 1 ELSE 0 END) as has_pending'),
+                DB::raw('MIN(quote_items.comment) as latest_comment')
             ])
-            ->join('quotes', 'quotes.id', '=', 'quote_items.quote_id')
-            ->withCount([
-                'quote as quotes_count' => function($query) {
-                    $query->select(DB::raw('COUNT(DISTINCT quotes.id)'));
-                }
-            ]);
-
-        // Calculate success rate (items that made it to invoices)
-        $query->addSelect(DB::raw('
-            CASE 
-                WHEN COUNT(DISTINCT quotes.id) > 0 
-                THEN (COUNT(DISTINCT invoices.id) * 100.0 / COUNT(DISTINCT quotes.id)) 
-                ELSE 0 
-            END as success_rate'
-        ))
-        ->leftJoin('invoices', 'quotes.id', '=', 'invoices.quote_id')
-        ->groupBy([
-            'quote_items.id',
-            'quote_items.quote_id',
-            'quote_items.item',
-            'quote_items.quantity',
-            'quote_items.price',
-            'quote_items.approved',
-            'quote_items.created_at',
-            'quote_items.updated_at',
-            'quotes.user_id',
-            'quotes.title'
-        ]);
+            ->leftJoin('quotes', 'quotes.id', '=', 'quote_items.quote_id')
+            ->leftJoin('users', 'users.id', '=', 'quotes.user_id')
+            ->groupBy('quote_items.item');
 
         if (Auth::user()->role !== 'manager') {
             $query->where('quotes.user_id', Auth::id());
@@ -63,38 +40,38 @@ class ProductItemController extends Controller
 
         // Apply search filters
         if ($request->filled('item')) {
-            $query->where('item', 'like', '%' . $request->item . '%');
+            $query->having('item', 'like', '%' . $request->item . '%');
         }
 
         if ($request->filled('min_quantity')) {
-            $query->where('quantity', '>=', $request->min_quantity);
+            $query->having('total_quantity', '>=', $request->min_quantity);
         }
 
         if ($request->filled('max_quantity')) {
-            $query->where('quantity', '<=', $request->max_quantity);
+            $query->having('total_quantity', '<=', $request->max_quantity);
         }
 
         if ($request->filled('min_price')) {
-            $query->where('price', '>=', $request->min_price);
+            $query->having('avg_price', '>=', $request->min_price);
         }
 
         if ($request->filled('max_price')) {
-            $query->where('price', '<=', $request->max_price);
+            $query->having('avg_price', '<=', $request->max_price);
         }
 
         if ($request->filled('marketer')) {
-            $query->whereHas('quote.user', function($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->marketer . '%')
-                    ->orWhere('email', 'like', '%' . $request->marketer . '%');
-            });
+            $query->having('marketers', 'like', '%' . $request->marketer . '%');
         }
 
         if ($request->filled('approved')) {
-            $query->where('approved', $request->approved === 'true');
+            if ($request->approved === 'true') {
+                $query->having('has_pending', '=', 0);
+            } else {
+                $query->having('has_pending', '=', 1);
+            }
         }
 
-        $items = $query->with(['quote.user'])
-            ->latest()
+        $items = $query->latest('total_value')
             ->paginate(10)
             ->withQueryString();
 
@@ -113,7 +90,6 @@ class ProductItemController extends Controller
         $quotes = Quote::when(Auth::user()->role !== 'manager', function($query) {
             return $query->where('user_id', Auth::id());
         })
-        ->with('invoice')
         ->latest()
         ->get();
 
@@ -126,7 +102,8 @@ class ProductItemController extends Controller
             'item' => 'required|string|max:255',
             'quantity' => 'required|integer|min:1',
             'price' => 'required|numeric|min:0',
-            'quote_id' => 'required|exists:quotes,id'
+            'quote_id' => 'required|exists:quotes,id',
+            'comment' => 'nullable|string'
         ]);
 
         $item = QuoteItem::create($validated);
@@ -145,7 +122,8 @@ class ProductItemController extends Controller
         $validated = $request->validate([
             'item' => 'required|string|max:255',
             'quantity' => 'required|integer|min:1',
-            'price' => 'required|numeric|min:0'
+            'price' => 'required|numeric|min:0',
+            'comment' => 'nullable|string'
         ]);
 
         $item->update($validated);

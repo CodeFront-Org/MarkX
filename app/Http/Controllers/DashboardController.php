@@ -2,36 +2,30 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Invoice;
 use App\Models\Quote;
 use App\Models\User;
+use App\Models\QuoteItem;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
     public function index()
-    {
+    {        
         // Base query for scoping data
         $quotesQuery = Auth::user()->role === 'manager' 
             ? Quote::query() 
             : Quote::where('user_id', Auth::id());
-            
-        $invoicesQuery = Auth::user()->role === 'manager'
-            ? Invoice::query()
-            : Invoice::whereHas('quote', function($query) {
-                $query->where('user_id', Auth::id());
-            });
-
-        // Today's Money - Sum of paid invoices today
-        $todaysMoney = clone $invoicesQuery;
-        $todaysMoney = $todaysMoney->where('status', 'paid')
-            ->whereDate('paid_at', today())
+        
+        // Today's Money - Sum of approved quotes today
+        $todaysMoney = (clone $quotesQuery)
+            ->where('status', 'approved')
+            ->whereDate('created_at', today())
             ->sum('amount');
         
-        $yesterdayMoney = clone $invoicesQuery;
-        $yesterdayMoney = $yesterdayMoney->where('status', 'paid')
-            ->whereDate('paid_at', today()->subDay())
+        $yesterdayMoney = (clone $quotesQuery)
+            ->where('status', 'approved')
+            ->whereDate('created_at', today()->subDay())
             ->sum('amount');
         $moneyGrowth = $yesterdayMoney > 0 ? 
             (($todaysMoney - $yesterdayMoney) / $yesterdayMoney) * 100 : 0;
@@ -40,13 +34,9 @@ class DashboardController extends Controller
         if (Auth::user()->role === 'manager') {
             $todaysUsers = User::whereHas('quotes', function($q) {
                 $q->whereDate('created_at', today());
-            })->orWhereHas('invoices', function($q) {
-                $q->whereDate('created_at', today());
             })->count();
 
             $yesterdayUsers = User::whereHas('quotes', function($q) {
-                $q->whereDate('created_at', today()->subDay());
-            })->orWhereHas('invoices', function($q) {
                 $q->whereDate('created_at', today()->subDay());
             })->count();
         } else {
@@ -71,14 +61,14 @@ class DashboardController extends Controller
         $quotesGrowth = $yesterdayQuotes > 0 ? 
             (($newQuotes - $yesterdayQuotes) / $yesterdayQuotes) * 100 : 0;
 
-        // Monthly Sales - Sum of all paid invoices this month
-        $monthlySales = (clone $invoicesQuery)
-            ->where('status', 'paid')
-            ->whereMonth('paid_at', now()->month)
+        // Monthly Sales - Sum of all approved quotes this month
+        $monthlySales = (clone $quotesQuery)
+            ->where('status', 'approved')
+            ->whereMonth('created_at', now()->month)
             ->sum('amount');
-        $lastMonthSales = (clone $invoicesQuery)
-            ->where('status', 'paid')
-            ->whereMonth('paid_at', now()->subMonth()->month)
+        $lastMonthSales = (clone $quotesQuery)
+            ->where('status', 'approved')
+            ->whereMonth('created_at', now()->subMonth()->month)
             ->sum('amount');
         $salesGrowth = $lastMonthSales > 0 ? 
             (($monthlySales - $lastMonthSales) / $lastMonthSales) * 100 : 0;
@@ -94,10 +84,10 @@ class DashboardController extends Controller
                     ->whereYear('created_at', $date->year)
                     ->whereMonth('created_at', $date->month)
                     ->count(),
-                'invoices' => (clone $invoicesQuery)
+                'approved_quotes' => (clone $quotesQuery)
                     ->whereYear('created_at', $date->year)
                     ->whereMonth('created_at', $date->month)
-                    ->where('status', 'paid')
+                    ->where('status', 'approved')
                     ->count()
             ];
         }
@@ -105,15 +95,15 @@ class DashboardController extends Controller
 
         // Recent projects
         $recentProjects = (clone $quotesQuery)
-            ->with(['user', 'invoice'])
+            ->with(['user'])
             ->latest()
             ->take(6)
             ->get()
             ->map(function($quote) {
                 $completion = match($quote->status) {
-                    'approved' => 60,
-                    'converted' => 100,
+                    'approved' => 100,
                     'rejected' => 100,
+                    'pending' => 50,
                     default => 10
                 };
                 return [
@@ -121,18 +111,26 @@ class DashboardController extends Controller
                     'amount' => $quote->amount,
                     'status' => $quote->status,
                     'completion' => $completion,
-                    'user' => $quote->user,
-                    'invoice' => $quote->invoice
+                    'user' => $quote->user
                 ];
             });
 
         // Recent activity
-        $recentActivity = (clone $invoicesQuery)
-            ->with('quote')
+        $recentActivity = (clone $quotesQuery)
+            ->with(['user'])  // Include user relationship
             ->where('status', '!=', 'draft')
             ->latest()
             ->take(6)
-            ->get();
+            ->get()
+            ->map(function($quote) {
+                return [
+                    'title' => $quote->title,
+                    'amount' => $quote->amount,
+                    'status' => $quote->status,
+                    'created_at' => $quote->created_at,
+                    'user' => $quote->user
+                ];
+            });
 
         // Get marketers data for the line chart
         if (Auth::user()->role === 'manager') {
@@ -147,14 +145,11 @@ class DashboardController extends Controller
             $date = now()->startOfYear(); // Start from January of current year
             
             while ($date <= now()) {
-                // Include both approved quotes and converted quotes (which become invoices)
-                $amount = Invoice::whereHas('quote', function($query) use ($marketer) {
-                    $query->where('user_id', $marketer->id);
-                })
-                ->whereYear('created_at', $date->year)
-                ->whereMonth('created_at', $date->month)
-                ->where('status', 'paid')
-                ->sum('amount');
+                $amount = Quote::where('user_id', $marketer->id)
+                    ->where('status', 'approved')
+                    ->whereYear('created_at', $date->year)
+                    ->whereMonth('created_at', $date->month)
+                    ->sum('amount');
 
                 $monthlyPerformance[] = [
                     'month' => $date->format('M Y'),
@@ -166,15 +161,43 @@ class DashboardController extends Controller
             $marketerData[$marketer->name] = $monthlyPerformance;
         }
 
+        // Quote items per person per day
+        $quoteItemsByPerson = $this->getQuoteItemsByPersonPerDay();
+
         return view('dashboard', compact(
-            'todaysMoney', 'moneyGrowth',
-            'todaysUsers', 'usersGrowth',
-            'newQuotes', 'quotesGrowth',
-            'monthlySales', 'salesGrowth',
+            'todaysMoney',
+            'moneyGrowth',
+            'todaysUsers',
+            'usersGrowth',
+            'newQuotes',
+            'quotesGrowth',
+            'monthlySales',
+            'salesGrowth',
             'monthlyData',
             'recentProjects',
             'recentActivity',
-            'marketerData'
+            'marketerData',
+            'quoteItemsByPerson'
         ));
+    }    private function getQuoteItemsByPersonPerDay()
+    {
+        $query = QuoteItem::select([
+            'users.name as user_name',
+            DB::raw('DATE(quote_items.created_at) as quote_date'),
+            DB::raw('COUNT(*) as item_count')
+        ])
+        ->join('quotes', 'quotes.id', '=', 'quote_items.quote_id')
+        ->join('users', 'users.id', '=', 'quotes.user_id')
+        ->where('quotes.created_at', '>=', now()->subDays(30));
+
+        // If user is not a manager, only show their own data
+        if (Auth::user()->role !== 'manager') {
+            $query->where('quotes.user_id', Auth::id());
+        }
+
+        return $query->groupBy('users.name', DB::raw('DATE(quote_items.created_at)'))
+            ->orderBy('quote_date', 'desc')
+            ->orderBy('users.name', 'asc')
+            ->get();
     }
 }

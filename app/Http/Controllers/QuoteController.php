@@ -42,8 +42,12 @@ class QuoteController extends Controller
             $query->where('amount', '<=', $request->max_amount);
         }
 
-        if ($request->filled('valid_until')) {
-            $query->whereDate('valid_until', '<=', $request->valid_until);
+        // Date range filter
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
         }
 
         // Search by product item name
@@ -75,7 +79,7 @@ class QuoteController extends Controller
             });
         }
 
-        $quotes = $query->with(['user', 'items', 'invoice'])
+        $quotes = $query->with(['user', 'items'])
             ->latest()
             ->paginate(10)
             ->withQueryString();
@@ -161,7 +165,30 @@ class QuoteController extends Controller
             'items.*.item' => 'required|string',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.price' => 'required|numeric|min:0',
-            'items.*.approved' => 'boolean'
+            'items.*.approved' => 'boolean',
+            'items.*.reason' => [
+                'required_if:items.*.approved,false',
+                'string',
+                'in:out_of_stock,discontinued,price_unavailable,lead_time_too_long,other'
+            ],
+            'items.*.reason_details' => [
+                'required_if:items.*.reason,other',
+                'nullable',
+                'string'
+            ],
+            'unquoted_items' => 'nullable|array',
+            'unquoted_items.*.item' => 'required|string',
+            'unquoted_items.*.quantity' => 'required|integer|min:1',
+            'unquoted_items.*.reason' => [
+                'required',
+                'string',
+                'in:out_of_stock,discontinued,price_unavailable,lead_time_too_long,other'
+            ],
+            'unquoted_items.*.reason_details' => [
+                'required_if:unquoted_items.*.reason,other',
+                'nullable',
+                'string'
+            ]
         ]);
 
         DB::transaction(function() use ($validated, $request, $quote) {
@@ -176,6 +203,24 @@ class QuoteController extends Controller
 
             // Delete existing items and create new ones
             $quote->items()->delete();
+            $quote->unquotedItems()->delete();
+
+            // Collect items that weren't approved
+            $nonApprovedItems = collect($request->items)
+                ->reject(function($item) {
+                    return $item['approved'] ?? false;
+                })
+                ->map(function($item) {
+                    // Create an unquoted item for each non-approved item
+                    return [
+                        'item' => $item['item'],
+                        'quantity' => $item['quantity'],
+                        'reason' => $item['reason'] ?? 'price_unavailable',  // Default reason
+                        'reason_details' => $item['reason_details'] ?? null
+                    ];
+                });
+
+            // Create the quote items
             foreach ($request->items as $item) {
                 $quote->items()->create([
                     'item' => $item['item'],
@@ -183,6 +228,11 @@ class QuoteController extends Controller
                     'price' => $item['price'],
                     'approved' => $item['approved'] ?? false
                 ]);
+            }
+
+            // Create unquoted items for non-approved items
+            foreach ($nonApprovedItems as $item) {
+                $quote->unquotedItems()->create($item);
             }
         });
 
@@ -212,16 +262,36 @@ class QuoteController extends Controller
             ->with('success', 'Quote approved successfully.');
     }
 
-    public function reject(Quote $quote)
+    public function reject(Request $request, Quote $quote)
     {
         $this->authorize('reject', $quote);
 
-        DB::transaction(function() use ($quote) {
-            $quote->update(['status' => 'rejected']);
+        $validated = $request->validate([
+            'rejection_reason' => 'required|string|in:suspended,credit_limit,pending_payment,policy_violation,other',
+            'rejection_details' => 'required_if:rejection_reason,other|nullable|string|max:1000'
+        ]);
+
+        DB::transaction(function() use ($quote, $validated) {
+            $quote->update([
+                'status' => 'rejected',
+                'rejection_reason' => $validated['rejection_reason'],
+                'rejection_details' => $validated['rejection_details'] ?? null
+            ]);
+
+            // If rejection is administrative, reject all items
+            if (in_array($validated['rejection_reason'], ['suspended', 'credit_limit', 'pending_payment', 'policy_violation'])) {
+                foreach ($quote->items as $item) {
+                    $item->update([
+                        'approved' => false,
+                        'reason' => $validated['rejection_reason'],
+                        'reason_details' => $validated['rejection_details'] ?? null
+                    ]);
+                }
+            }
         });
 
         return redirect()->route('quotes.show', $quote)
-            ->with('success', 'Quote rejected.');
+            ->with('success', 'Quote rejected successfully.');
     }
 
     public function convertToInvoice(Quote $quote)
@@ -244,15 +314,8 @@ class QuoteController extends Controller
                 throw new \Exception('No approved items found in the quote.');
             }
 
-            $invoice = $quote->invoice()->create([
-                'invoice_number' => 'INV-' . date('Y') . '-' . str_pad(time(), 6, '0', STR_PAD_LEFT),
-                'user_id' => $quote->user_id,
-                'amount' => $approvedAmount,
-                'status' => 'draft',
-                'due_date' => now()->addDays(30)
-            ]);
-
-            $quote->markAsConverted();
+            // Approve the entire quote when all items are approved
+            $quote->update(['status' => 'approved']);
         });
 
         return redirect()->route('invoices.index')

@@ -96,6 +96,29 @@
         </div>
     </div>
 
+    <!-- Export Options -->
+    @if(auth()->user()->isManager())
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">Export Options</h6>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exportModal" data-export-type="performance">
+                                <i class="fas fa-download me-2"></i>Export Performance Data
+                            </button>
+                            <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#exportModal" data-export-type="analytics">
+                                <i class="fas fa-chart-line me-2"></i>Export Analytics
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- Marketer Performance Card -->
     <div class="row">
         <div class="col-12">

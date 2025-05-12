@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ChangePasswordController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExportController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InfoUserController;
 use App\Http\Controllers\MarketerController;
@@ -9,11 +10,11 @@ use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\ResetController;
 use App\Http\Controllers\SessionsController;
 use App\Http\Controllers\QuoteController;
-use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\UserRegistrationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\ProductItemController;
+use App\Http\Controllers\CompanyFileController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -30,8 +31,6 @@ use Illuminate\Support\Facades\Route;
 Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
     Route::get('/', [HomeController::class, 'home']);
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
-    Route::get('billing', [InvoiceController::class, 'billing'])->name('billing');
 
     Route::get('profile', function () {
         return view('profile');
@@ -74,21 +73,22 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
     Route::resource('quotes', QuoteController::class);
     Route::post('quotes/{quote}/approve', [QuoteController::class, 'approve'])->name('quotes.approve');
     Route::post('quotes/{quote}/reject', [QuoteController::class, 'reject'])->name('quotes.reject');
-    Route::post('quotes/{quote}/convert', [QuoteController::class, 'convertToInvoice'])->name('quotes.convert');
+    // Removed invoice conversion route
     Route::get('quotes/{quote}/download', [QuoteController::class, 'downloadPdf'])->name('quotes.download');
-
-    // Invoice routes with explicit route names
-    Route::resource('invoices', InvoiceController::class);
-    Route::post('invoices/{invoice}/send', [InvoiceController::class, 'send'])->name('invoices.send');
-    Route::post('invoices/{invoice}/mark-paid', [InvoiceController::class, 'markAsPaid'])->name('invoices.mark-paid');
-    Route::get('invoices/{invoice}/download', [InvoiceController::class, 'downloadPdf'])->name('invoices.download');
     
     // Reports route
     Route::get('reports', [ReportsController::class, 'index'])->middleware('role:manager')->name('reports');
 
+    // Company Files routes
+    Route::get('company-files', [CompanyFileController::class, 'index'])->name('company-files.index');
+    Route::post('company-files', [CompanyFileController::class, 'store'])->middleware(['auth', 'role:manager'])->name('company-files.store');
+    Route::get('company-files/{fileName}/download', [CompanyFileController::class, 'download'])->name('company-files.download');
+    Route::delete('company-files/{fileName}', [CompanyFileController::class, 'destroy'])->middleware(['auth', 'role:manager'])->name('company-files.destroy');
+
     // Manager Only Routes
     Route::middleware('role:manager')->group(function () {
-        Route::post('invoices/check-overdue', [InvoiceController::class, 'checkOverdue'])->name('invoices.check-overdue');
+        // Export routes
+        Route::get('exports/data', [ExportController::class, 'exportData'])->name('exports.data');
         
         // Marketer management routes
         Route::get('marketers/create', [MarketerController::class, 'create'])->name('marketers.create');

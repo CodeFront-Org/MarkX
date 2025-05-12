@@ -52,13 +52,7 @@ class User extends Authenticatable
         return $this->hasMany(Quote::class);
     }
 
-    /**
-     * Get all invoices created by the user
-     */
-    public function invoices()
-    {
-        return $this->hasMany(Invoice::class);
-    }
+    // No invoice relationship
 
     /**
      * Check if user has a specific role
@@ -73,7 +67,7 @@ class User extends Authenticatable
      */
     public function isManager(): bool
     {
-        return $this->hasRole('manager');
+        return $this->role === 'manager';
     }
 
     /**
@@ -82,5 +76,15 @@ class User extends Authenticatable
     public function isMarketer(): bool
     {
         return $this->hasRole('marketer');
+    }
+
+    /**
+     * Get the user's role
+     *
+     * @return string
+     */
+    public function getRole()
+    {
+        return $this->role;
     }
 }

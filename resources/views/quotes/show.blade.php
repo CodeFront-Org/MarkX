@@ -2,6 +2,29 @@
 
 @section('content')
 <div class="container-fluid py-4">
+    @if($quote->status === 'rejected')
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-danger" role="alert">
+                <div class="d-flex">
+                    <div class="text-white">
+                        <i class="fas fa-times-circle me-2"></i>
+                    </div>
+                    <div class="ps-2">
+                        <h6 class="text-sm text-white mb-1">Quote Rejected</h6>
+                        <p class="text-sm mb-0 text-white">
+                            Reason: {{ ucfirst(str_replace('_', ' ', $quote->rejection_reason)) }}
+                            @if($quote->rejection_details)
+                                <br>
+                                Additional Details: {{ $quote->rejection_details }}
+                            @endif
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
     <div class="row">
         <div class="col-12">
             <div class="card mb-4">
@@ -14,20 +37,13 @@
                                     @csrf
                                     <button type="submit" class="btn bg-gradient-success mx-1">Approve</button>
                                 </form>
-                                <form action="{{ route('quotes.reject', $quote) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn bg-gradient-danger mx-1">Reject</button>
-                                </form>
+                                <button type="button" class="btn bg-gradient-danger mx-1" data-bs-toggle="modal" data-bs-target="#rejectQuoteModal">
+                                    Reject
+                                </button>
                         
                                 <a href="{{ route('quotes.edit', $quote) }}" class="btn bg-gradient-info mx-1">Edit</a>
                             @endif
-                        @endif
-                        @if($quote->status === 'approved' && !$quote->invoice && auth()->user()->role !== 'manager && auth()->id() === $quote->user_id)')
-                            <form action="{{ route('quotes.convert', $quote) }}" method="POST" class="d-inline">
-                                @csrf
-                                <button type="submit" class="btn bg-gradient-primary mx-1">Convert to Invoice</button>
-                            </form>
-                        @endif
+                        @endif                        
                         <a href="{{ route('quotes.download', $quote) }}" class="btn bg-gradient-dark mx-1" target="_blank">
                             <i class="fas fa-file-pdf me-2"></i> Download PDF
                         </a>
@@ -113,20 +129,42 @@
                                     </tfoot>
                                 </table>
                             </div>
-                        </div>
-                    </div>
-                    @if($quote->invoice)
+                        </div>                    </div>
+                    
+                    @if($quote->unquotedItems && $quote->unquotedItems->count() > 0)
                     <div class="row mt-4">
-                        <div class="col-md-12">
-                            <p class="text-sm mb-0 text-uppercase font-weight-bold">Converted to Invoice</p>
-                            <p class="text-sm">
-                                <a href="{{ route('invoices.show', $quote->invoice) }}" class="text-primary">
-                                    Invoice #{{ $quote->invoice->invoice_number }}
-                                </a>
-                            </p>
+                        <div class="col-12">
+                            <p class="text-sm mb-0 text-uppercase font-weight-bold">Unquoted Items</p>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Item Description</th>
+                                            <th>Requested Quantity</th>
+                                            <th>Reason</th>
+                                            <th>Additional Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($quote->unquotedItems as $item)
+                                        <tr>
+                                            <td>{{ $item->item }}</td>
+                                            <td>{{ $item->quantity }}</td>
+                                            <td>
+                                                <span class="badge badge-sm bg-gradient-info">
+                                                    {{ ucwords(str_replace('_', ' ', $item->reason)) }}
+                                                </span>
+                                            </td>
+                                            <td>{{ $item->reason_details ?: '-' }}</td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                     @endif
+
                     <div class="row mt-4">
                         <div class="col-md-12">
                             <a href="{{ route('quotes.index') }}" class="btn bg-gradient-secondary">Back to Quotes</a>
@@ -167,5 +205,67 @@
 </script>
 @endpush
 @endif
+
+<!-- Quote Rejection Modal -->
+<div class="modal fade" id="rejectQuoteModal" tabindex="-1" role="dialog" aria-labelledby="rejectQuoteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <form action="{{ route('quotes.reject', $quote) }}" method="POST">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title" id="rejectQuoteModalLabel">Reject Quote</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="rejection_reason" class="form-control-label">Rejection Reason</label>
+                        <select name="rejection_reason" id="rejection_reason" class="form-control @error('rejection_reason') is-invalid @enderror" required>
+                            <option value="">Select a reason...</option>
+                            <optgroup label="Administrative">
+                                <option value="suspended">Account Suspended</option>
+                                <option value="credit_limit">Credit Limit Exceeded</option>
+                                <option value="pending_payment">Pending Previous Payment</option>
+                                <option value="policy_violation">Policy Violation</option>
+                                <option value="other">Other Reason</option>
+                            </optgroup>
+                        </select>
+                        @error('rejection_reason')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                    <div class="form-group mt-3" id="rejection_details_group" style="display: none;">
+                        <label for="rejection_details" class="form-control-label">Additional Details</label>
+                        <textarea name="rejection_details" id="rejection_details" rows="3" 
+                            class="form-control @error('rejection_details') is-invalid @enderror" 
+                            placeholder="Please provide additional details..."></textarea>
+                        @error('rejection_details')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn bg-gradient-danger">Reject Quote</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const rejectionSelect = document.getElementById('rejection_reason');
+        const rejectionDetails = document.getElementById('rejection_details_group');
+        const detailsInput = document.getElementById('rejection_details');
+
+        rejectionSelect.addEventListener('change', function() {
+            const showDetails = this.value === 'other';
+            rejectionDetails.style.display = showDetails ? 'block' : 'none';
+            detailsInput.required = showDetails;
+        });
+    });
+</script>
+@endpush
 
 @endsection

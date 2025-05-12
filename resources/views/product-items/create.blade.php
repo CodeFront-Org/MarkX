@@ -16,10 +16,10 @@
                                 <div class="form-group">
                                     <label class="form-control-label">Quote</label>
                                     <select name="quote_id" class="form-control" required>
-                                        <option value="">Select Quote</option>
+                                        <option value="">Select Quote</option>                                        
                                         @foreach($quotes as $quote)
                                             <option value="{{ $quote->id }}" {{ old('quote_id') == $quote->id ? 'selected' : '' }}>
-                                                {{ $quote->title }} ({{ $quote->invoice ? 'Invoiced' : 'Not Invoiced' }})
+                                                {{ $quote->title }} ({{ ucfirst($quote->status) }})
                                             </option>
                                         @endforeach
                                     </select>
@@ -47,12 +47,22 @@
                                         <p class="text-danger text-xs mt-1">{{ $message }}</p>
                                     @enderror
                                 </div>
-                            </div>
-                            <div class="col-md-3">
+                            </div>                            <div class="col-md-3">
                                 <div class="form-group">
                                     <label class="form-control-label">Unit Price</label>
                                     <input type="number" step="0.01" name="price" class="form-control" value="{{ old('price') }}" required min="0">
                                     @error('price')
+                                        <p class="text-danger text-xs mt-1">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label class="form-control-label">Comment</label>
+                                    <textarea name="comment" class="form-control" rows="3" placeholder="Add any notes about the item status...">{{ old('comment') }}</textarea>
+                                    @error('comment')
                                         <p class="text-danger text-xs mt-1">{{ $message }}</p>
                                     @enderror
                                 </div>

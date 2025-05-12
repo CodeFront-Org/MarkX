@@ -22,7 +22,32 @@ class PdfService
      */
     public function generateQuotePdf(Quote $quote)
     {
-        return Pdf::loadView('pdf.quote', compact('quote'));
+        $quoteData = $this->prepareQuoteData($quote);
+        return Pdf::loadView('pdf.quote', $quoteData);
+    }
+
+    /**
+     * Prepare quote data with approved items only for PDF generation
+     *
+     * @param Quote $quote
+     * @return array
+     */
+    protected function prepareQuoteData(Quote $quote)
+    {
+        $approvedItems = $quote->items->filter(function ($item) {
+            return $item->approved;
+        });
+
+        $approvedTotal = $approvedItems->sum(function ($item) {
+            return $item->quantity * $item->price;
+        });
+
+        return [
+            'quote' => $quote,
+            'items' => $approvedItems,
+            'approvedTotal' => $approvedTotal,
+            'hasUnapprovedItems' => $quote->items->count() !== $approvedItems->count()
+        ];
     }
 
     /**
@@ -32,25 +57,6 @@ class PdfService
      * @return \Barryvdh\DomPDF\PDF
      * @throws Exception
      */
-    public function generateInvoicePdf(Invoice $invoice)
-    {
-        try {
-            $pdf = PDF::loadView('pdf.invoice', compact('invoice'));
-
-            // Validate PDF was generated correctly
-            if (empty($pdf->output())) {
-                throw new Exception('Generated PDF file is invalid or empty');
-            }
-
-            return $pdf;
-        } catch (Exception $e) {
-            Log::error('PDF generation failed', [
-                'invoice_id' => $invoice->id,
-                'error' => $e->getMessage()
-            ]);
-            throw $e;
-        }
-    }
 
     /**
      * Save a quote PDF to storage
@@ -78,19 +84,6 @@ class PdfService
      * @param Invoice $invoice
      * @return string The path where the PDF was saved
      */
-    public function saveInvoicePdf(Invoice $invoice)
-    {
-        $pdf = $this->generateInvoicePdf($invoice);
-        $path = storage_path('app/public/invoices/' . $invoice->invoice_number . '.pdf');
-        
-        // Ensure the directory exists
-        if (!file_exists(dirname($path))) {
-            mkdir(dirname($path), 0777, true);
-        }
-        
-        $pdf->save($path);
-        return $path;
-    }
 
     /**
      * Stream a quote PDF to the browser
@@ -101,21 +94,6 @@ class PdfService
     public function streamQuotePdf(Quote $quote)
     {
         return $this->generateQuotePdf($quote)->stream("quote-{$quote->id}.pdf");
-    }
-
-    /**
-     * Stream an invoice PDF to the browser
-     *
-     * @param Invoice $invoice
-     * @return \Symfony\Component\HttpFoundation\Response
-     * @throws Exception
-     */
-    public function streamInvoicePdf(Invoice $invoice)
-    {
-        return $this->withRetry(function () use ($invoice) {
-            $pdf = $this->generateInvoicePdf($invoice);
-            return $pdf->stream("invoice_{$invoice->invoice_number}.pdf");
-        });
     }
 
     /**
