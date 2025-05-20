@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class QuoteItem extends Model
 {
@@ -33,5 +34,34 @@ class QuoteItem extends Model
     public function quote()
     {
         return $this->belongsTo(Quote::class);
+    }
+
+    public function getQuoteHistoryAttribute()
+    {
+        return self::query()
+            ->select([
+                'quote_items.quantity',
+                'quote_items.price',
+                'quotes.created_at',
+                'quotes.id',
+                'quotes.reference',
+                'quotes.status',
+                DB::raw('CAST(quote_items.quantity * quote_items.price AS DECIMAL(10,2)) as amount'),
+                DB::raw('CASE 
+                    WHEN quote_items.approved = 1 THEN "success"
+                    WHEN quote_items.approved = 0 AND quotes.status = "pending" THEN "warning"
+                    ELSE "danger"
+                END as status_color'),
+                DB::raw('CASE 
+                    WHEN quote_items.approved = 1 THEN "Approved"
+                    WHEN quote_items.approved = 0 AND quotes.status = "pending" THEN "Pending"
+                    ELSE "Rejected"
+                END as status')
+            ])
+            ->join('quotes', 'quotes.id', '=', 'quote_items.quote_id')
+            ->where('quote_items.item', $this->item)
+            ->whereNotNull('quotes.created_at')
+            ->orderBy('quotes.created_at', 'desc')
+            ->get();
     }
 }

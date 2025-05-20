@@ -18,7 +18,8 @@ class Quote extends Model
         'user_id',
         'valid_until',
         'rejection_reason',
-        'rejection_details'
+        'rejection_details',
+        'reference'
     ];
 
     protected $casts = [

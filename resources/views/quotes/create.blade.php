@@ -6,7 +6,10 @@
         <div class="col-12">
             <div class="card mb-4">
                 <div class="card-header pb-0">
-                    <h6>Create New Quote</h6>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">Create New Quote</h6>
+                        <span class="badge bg-gradient-success">Reference: {{ $reference }}</span>
+                    </div>
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('quotes.store') }}" id="quote-form">
@@ -288,24 +291,46 @@
                     processResults: function(data) {
                         return {
                             results: data.results.map(function(item) {
+                                // Store the original text without description
+                                const originalText = item.text;
                                 return {
                                     ...item,
+                                    originalText: originalText,
                                     text: item.text + ' - ' + item.description
                                 };
                             }),
                             pagination: data.pagination
                         };
                     }
-                },
-                templateResult: function(item) {
+                },                templateResult: function(item) {
                     if (!item.id) return item.text;
                     
+                    // For new items, just show the text
+                    if (item.newOption) {
+                        return $(`
+                            <div>
+                                <strong>${item.text}</strong>
+                                <small class="text-muted d-block">New item</small>
+                            </div>
+                        `);
+                    }
+                    
+                    // For existing items, split the text to separate name and description
+                    const name = item.text.split(' - ')[0];
                     return $(`
                         <div>
-                            <strong>${item.text}</strong>
-                            <small class="text-muted d-block">${item.newOption ? 'New item' : item.description}</small>
+                            <strong>${name}</strong>
+                            <small class="text-muted d-block">${item.description}</small>
                         </div>
                     `);
+                },
+                templateSelection: function(item) {
+                    // For new items or when originalText is not available, just use text
+                    if (item.newOption || !item.originalText) {
+                        return item.text;
+                    }
+                    // For existing items, use the originalText (without the description)
+                    return item.originalText;
                 }
             }).on('select2:select', function(e) {
                 const data = e.params.data;

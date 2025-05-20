@@ -96,13 +96,17 @@ class QuoteController extends Controller
 
     public function create()
     {
-        return view('quotes.create');
+        $latestQuoteId = Quote::max('id') ?? 0;
+        $nextQuoteId = $latestQuoteId + 1;
+        $reference = 'Q' . str_pad($nextQuoteId, 6, '0', STR_PAD_LEFT);
+        
+        return view('quotes.create', compact('reference'));
     }
 
     public function store(Request $request)
     {
         $this->authorize('create', Quote::class);
-        
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
@@ -118,11 +122,16 @@ class QuoteController extends Controller
                 return $item['quantity'] * $item['price'];
             });
             
+            // Get the latest quote ID
+            $latestQuoteId = Quote::max('id') ?? 0;
+            $nextQuoteId = $latestQuoteId + 1;
+            
             $quote = Quote::create([
                 ...$validated,
                 'amount' => $totalAmount,
                 'status' => 'pending',
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
+                'reference' => 'Q' . str_pad($nextQuoteId, 6, '0', STR_PAD_LEFT)
             ]);
 
             foreach ($request->items as $item) {
@@ -130,7 +139,8 @@ class QuoteController extends Controller
                     'item' => $item['item'],
                     'quantity' => $item['quantity'],
                     'price' => $item['price'],
-                    'approved' => false
+                    'approved' => false,
+                    'comment' => $item['comment'] ?? null
                 ]);
             }
 
@@ -226,7 +236,8 @@ class QuoteController extends Controller
                     'item' => $item['item'],
                     'quantity' => $item['quantity'],
                     'price' => $item['price'],
-                    'approved' => $item['approved'] ?? false
+                    'approved' => $item['approved'] ?? false,
+                    'comment' => $item['comment'] ?? null
                 ]);
             }
 
@@ -364,16 +375,13 @@ class QuoteController extends Controller
             ->get()
             ->map(function($item) {
                 $usedTimes = $item->usage_count;
-                $timePhrase = $usedTimes === 1 ? 'Used once' : "Used {$usedTimes} times";
-                $priceRange = $item->min_price === $item->max_price 
-                    ? "KES " . number_format($item->avg_price, 2)
-                    : "KES " . number_format($item->min_price, 2) . " - " . number_format($item->max_price, 2);
+                $timePhrase = $usedTimes === 1 ? 'Quoted once' : "Quoted {$usedTimes} times";
                 
                 return [
                     'id' => $item->item,
                     'text' => $item->item,
                     'price' => round($item->avg_price, 2),
-                    'description' => "{$timePhrase} - Price range: {$priceRange}",
+                    'description' => $timePhrase,
                     'lastUsed' => $item->last_used
                 ];
             });
