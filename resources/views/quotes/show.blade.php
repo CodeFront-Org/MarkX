@@ -15,8 +15,8 @@
                         <p class="text-sm mb-0 text-white">
                             Reason: {{ ucfirst(str_replace('_', ' ', $quote->rejection_reason)) }}
                             @if($quote->rejection_details)
-                                <br>
-                                Additional Details: {{ $quote->rejection_details }}
+                            <br>
+                            Additional Details: {{ $quote->rejection_details }}
                             @endif
                         </p>
                     </div>
@@ -32,18 +32,18 @@
                     <h6>Quote Details</h6>
                     <div>
                         @if($quote->status === 'pending')
-                            @if(auth()->id() === $quote->user_id)
-                                <form action="{{ route('quotes.approve', $quote) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn bg-gradient-success mx-1">Approve</button>
-                                </form>
-                                <button type="button" class="btn bg-gradient-danger mx-1" data-bs-toggle="modal" data-bs-target="#rejectQuoteModal">
-                                    Reject
-                                </button>
-                        
-                                <a href="{{ route('quotes.edit', $quote) }}" class="btn bg-gradient-info mx-1">Edit</a>
-                            @endif
-                        @endif                        
+                        @if(auth()->id() === $quote->user_id)
+                        <form action="{{ route('quotes.approve', $quote) }}" method="POST" class="d-inline">
+                            @csrf
+                            <button type="submit" class="btn bg-gradient-success mx-1">Approve</button>
+                        </form>
+                        <button type="button" class="btn bg-gradient-danger mx-1" data-bs-toggle="modal" data-bs-target="#rejectQuoteModal">
+                            Reject
+                        </button>
+
+                        <a href="{{ route('quotes.edit', $quote) }}" class="btn bg-gradient-info mx-1">Edit</a>
+                        @endif
+                        @endif
                         <a href="{{ route('quotes.download', $quote) }}" class="btn bg-gradient-dark mx-1" target="_blank">
                             <i class="fas fa-file-pdf me-2"></i> Download PDF
                         </a>
@@ -106,8 +106,8 @@
                                             @if($quote->status === 'pending' && auth()->user()->role === 'manager')
                                             <td>
                                                 <div class="form-check">
-                                                    <input type="checkbox" class="form-check-input item-approval" 
-                                                        data-item-id="{{ $item->id }}" 
+                                                    <input type="checkbox" class="form-check-input item-approval"
+                                                        data-item-id="{{ $item->id }}"
                                                         {{ $item->approved ? 'checked' : '' }}>
                                                 </div>
                                             </td>
@@ -129,8 +129,9 @@
                                     </tfoot>
                                 </table>
                             </div>
-                        </div>                    </div>
-                    
+                        </div>
+                    </div>
+
                     @if($quote->unquotedItems && $quote->unquotedItems->count() > 0)
                     <div class="row mt-4">
                         <div class="col-12">
@@ -162,8 +163,51 @@
                                 </table>
                             </div>
                         </div>
-                    </div>
+                    </div> 
                     @endif
+
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <p class="text-sm mb-0 text-uppercase font-weight-bold">RFQ Documents</p>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>File Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                            <th>Upload Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($quote->files as $file)
+                                        <tr>
+                                            <td>{{ $file->original_name }}</td>
+                                            <td>
+                                                <span class="badge bg-primary">
+                                                    {{ str_replace('_', ' ', ucfirst($file->file_type)) }}
+                                                </span>
+                                            </td>
+                                            <td>{{ $file->description ?: '-' }}</td>
+                                            <td>{{ $file->created_at->format('M d, Y') }}</td>
+                                            <td>
+                                                <a href="{{ route('quotes.download-file', [$quote, $file]) }}"
+                                                    class="btn btn-sm bg-gradient-info">
+                                                    <i class="fas fa-download me-2"></i>Download
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        @empty
+                                        <tr>
+                                            <td colspan="5" class="text-center">No RFQ files attached.</td>
+                                        </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="row mt-4">
                         <div class="col-md-12">
@@ -230,16 +274,16 @@
                             </optgroup>
                         </select>
                         @error('rejection_reason')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                        <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
                     <div class="form-group mt-3" id="rejection_details_group" style="display: none;">
                         <label for="rejection_details" class="form-control-label">Additional Details</label>
-                        <textarea name="rejection_details" id="rejection_details" rows="3" 
-                            class="form-control @error('rejection_details') is-invalid @enderror" 
+                        <textarea name="rejection_details" id="rejection_details" rows="3"
+                            class="form-control @error('rejection_details') is-invalid @enderror"
                             placeholder="Please provide additional details..."></textarea>
                         @error('rejection_details')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                        <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
                 </div>

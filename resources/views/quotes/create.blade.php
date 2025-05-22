@@ -11,8 +11,7 @@
                         <span class="badge bg-gradient-success">Reference: {{ $reference }}</span>
                     </div>
                 </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ route('quotes.store') }}" id="quote-form">
+                <div class="card-body">                    <form method="POST" action="{{ route('quotes.store') }}" id="quote-form" enctype="multipart/form-data">
                         @csrf
                         <div class="row">
                             <div class="col-md-6">
@@ -28,7 +27,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="valid_until" class="form-control-label">Valid Until</label>
+                                    <label for="valid_until" class="form-control-label">Validity</label>
                                     <input class="form-control @error('valid_until') is-invalid @enderror" type="date" 
                                         id="valid_until" name="valid_until" value="{{ old('valid_until') }}" required
                                         min="{{ date('Y-m-d', strtotime('+1 day')) }}">
@@ -120,6 +119,35 @@
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
                             </div>                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h6 class="mb-3">Attach RFQ</h6>
+                                <div class="p-3 bg-light rounded">
+                                    <div class="row" id="file-upload-container">
+                                        <div class="col-md-4">
+                                            <div class="form-group">                                                <label for="file">Select RFQ File *</label>
+                                                <input type="file" class="form-control @error('files.*') is-invalid @enderror" name="files[]" multiple required>
+                                                <small class="text-secondary">RFQ file is required for all quotes</small>
+                                                @error('files.*')
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <div class="form-group">
+                                                <label for="descriptions[]">Description</label>
+                                                <input type="text" class="form-control @error('descriptions.*') is-invalid @enderror" 
+                                                    name="descriptions[]" placeholder="Optional description">
+                                                @error('descriptions.*')
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <div class="row mt-4">
                             <div class="col-md-12">
@@ -431,6 +459,53 @@
             validUntilInput.min = tomorrow.toISOString().split('T')[0];
         }        // Initialize state
         updateDeleteButtons();
+
+        // Handle dynamic file upload fields
+        const fileUploadContainer = document.getElementById('file-upload-container');
+        const addFileButton = document.getElementById('add-file');
+
+        addFileButton.addEventListener('click', function() {
+            const newRow = document.createElement('div');
+            newRow.className = 'row mt-3';
+            newRow.innerHTML = `
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <input type="file" class="form-control" name="files[]">
+                    </div>
+                </div>
+                <div class="col-md-7">
+                    <div class="form-group">
+                        <input type="text" class="form-control" name="descriptions[]" placeholder="Optional description">
+                    </div>
+                </div>
+                <div class="col-md-1">
+                    <button type="button" class="btn btn-danger btn-sm remove-file">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            fileUploadContainer.appendChild(newRow);
+
+            // Add remove handler
+            newRow.querySelector('.remove-file').addEventListener('click', function() {
+                newRow.remove();
+            });            // Update file input required state
+            if (document.querySelectorAll('input[type="file"]').length === 1) {
+                document.querySelector('input[type="file"]').setAttribute('required', '');
+            }
+        });
+
+        // Handle form submission
+        document.getElementById('quote-form').addEventListener('submit', function(e) {
+            // Check if there are any files selected
+            const hasFiles = Array.from(document.querySelectorAll('input[type="file"]'))
+                .some(input => input.files.length > 0);
+
+            if (!hasFiles) {
+                e.preventDefault();
+                alert('At least one RFQ file is required');
+            }
+        });
     });
 </script>
 @endpush

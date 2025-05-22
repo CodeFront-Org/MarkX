@@ -9,30 +9,30 @@
                     <h6>Edit Quote</h6>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ route('quotes.update', $quote) }}" id="quote-form">
+                    <form method="POST" action="{{ route('quotes.update', $quote) }}" id="quote-form" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="title" class="form-control-label">Title</label>
-                                    <input class="form-control @error('title') is-invalid @enderror" type="text" 
+                                    <input class="form-control @error('title') is-invalid @enderror" type="text"
                                         id="title" name="title" value="{{ old('title', $quote->title) }}" required
                                         placeholder="Enter quote title">
                                     @error('title')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="valid_until" class="form-control-label">Valid Until</label>
-                                    <input class="form-control @error('valid_until') is-invalid @enderror" type="date" 
-                                        id="valid_until" name="valid_until" 
+                                    <label for="valid_until" class="form-control-label">Validity</label>
+                                    <input class="form-control @error('valid_until') is-invalid @enderror" type="date"
+                                        id="valid_until" name="valid_until"
                                         value="{{ old('valid_until', $quote->valid_until->format('Y-m-d')) }}" required
                                         min="{{ date('Y-m-d', strtotime('+1 day')) }}">
                                     @error('valid_until')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
                             </div>
@@ -41,11 +41,11 @@
                             <div class="col-md-12">
                                 <div class="form-group">
                                     <label for="description" class="form-control-label">Description</label>
-                                    <textarea class="form-control @error('description') is-invalid @enderror" 
+                                    <textarea class="form-control @error('description') is-invalid @enderror"
                                         id="description" name="description" rows="3" required
                                         placeholder="Detailed description of the quote">{{ old('description', $quote->description) }}</textarea>
                                     @error('description')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
                             </div>
@@ -56,7 +56,8 @@
                                 <h6 class="mb-3">Quote Items</h6>
                                 <div class="table-responsive">
                                     <table class="table" id="items-table">
-                                        <thead>                                            <tr>
+                                        <thead>
+                                            <tr>
                                                 <th width="30%">Item Description</th>
                                                 <th width="10%">Quantity</th>
                                                 <th width="10%">Unit Price</th>
@@ -70,8 +71,8 @@
                                             @foreach($quote->items as $index => $item)
                                             <tr class="item-row">
                                                 <td>
-                                                    <select name="items[{{ $index }}][item]" 
-                                                        class="form-control item-description product-search" 
+                                                    <select name="items[{{ $index }}][item]"
+                                                        class="form-control item-description product-search"
                                                         required>
                                                         <option value="{{ $item->item }}" selected>
                                                             {{ $item->item }}
@@ -79,32 +80,33 @@
                                                     </select>
                                                 </td>
                                                 <td>
-                                                    <input type="number" name="items[{{ $index }}][quantity]" 
-                                                        class="form-control item-quantity" min="1" 
+                                                    <input type="number" name="items[{{ $index }}][quantity]"
+                                                        class="form-control item-quantity" min="1"
                                                         value="{{ old("items.$index.quantity", $item->quantity) }}" required>
                                                 </td>
                                                 <td>
-                                                    <input type="number" name="items[{{ $index }}][price]" 
-                                                        class="form-control item-price" step="0.01" min="0" 
+                                                    <input type="number" name="items[{{ $index }}][price]"
+                                                        class="form-control item-price" step="0.01" min="0"
                                                         value="{{ old("items.$index.price", $item->price) }}" required>
                                                 </td>
                                                 <td>
                                                     <span class="line-total">{{ number_format($item->total, 2) }}</span>
                                                 </td>
                                                 <td>
-                                                    <textarea name="items[{{ $index }}][comment]" 
-                                                        class="form-control item-comment" 
-                                                        rows="1" 
+                                                    <textarea name="items[{{ $index }}][comment]"
+                                                        class="form-control item-comment"
+                                                        rows="1"
                                                         placeholder="Add notes...">{{ old("items.$index.comment", $item->comment) }}</textarea>
-                                                </td>                                                <td>
+                                                </td>
+                                                <td>
                                                     <div class="form-check">
-                                                        <input type="checkbox" name="items[{{ $index }}][approved]" 
-                                                            class="form-check-input approval-checkbox" value="1" 
+                                                        <input type="checkbox" name="items[{{ $index }}][approved]"
+                                                            class="form-check-input approval-checkbox" value="1"
                                                             {{ old("items.$index.approved", $item->approved) ? 'checked' : '' }}>
                                                     </div>
                                                 </td>
                                                 <td class="rejection-reason" style="display: {{ old("items.$index.approved", $item->approved) ? 'none' : 'table-cell' }}">
-                                                    <select name="items[{{ $index }}][reason]" class="form-control reason-select @error("items.$index.reason") is-invalid @enderror" required>
+                                                    <select name="items[{{ $index }}][reason]" class="form-control reason-select @error(" items.$index.reason") is-invalid @enderror" required>
                                                         <optgroup label="Product Related">
                                                             <option value="out_of_stock">Out of Stock</option>
                                                             <option value="discontinued">Discontinued</option>
@@ -120,15 +122,15 @@
                                                         </optgroup>
                                                     </select>
                                                     @error("items.$index.reason")
-                                                        <div class="invalid-feedback">{{ $message }}</div>
+                                                    <div class="invalid-feedback">{{ $message }}</div>
                                                     @enderror
-                                                    <textarea name="items[{{ $index }}][reason_details]" 
-                                                        class="form-control mt-2 reason-details @error("items.$index.reason_details") is-invalid @enderror" 
-                                                        rows="1" 
+                                                    <textarea name="items[{{ $index }}][reason_details]"
+                                                        class="form-control mt-2 reason-details @error(" items.$index.reason_details") is-invalid @enderror"
+                                                        rows="1"
                                                         placeholder="Additional details..."
                                                         style="display: none">{{ old("items.$index.reason_details") }}</textarea>
                                                     @error("items.$index.reason_details")
-                                                        <div class="invalid-feedback">{{ $message }}</div>
+                                                    <div class="invalid-feedback">{{ $message }}</div>
                                                     @enderror
                                                 </td>
                                             </tr>
@@ -147,7 +149,7 @@
                                     </table>
                                 </div>
                                 @error('items')
-                                    <div class="text-danger">{{ $message }}</div>
+                                <div class="text-danger">{{ $message }}</div>
                                 @enderror
                             </div>
                         </div>
@@ -169,13 +171,13 @@
                                             @foreach($quote->unquotedItems ?? [] as $index => $item)
                                             <tr class="unquoted-item-row">
                                                 <td>
-                                                    <input type="text" name="unquoted_items[{{ $index }}][item]" 
-                                                        class="form-control" 
+                                                    <input type="text" name="unquoted_items[{{ $index }}][item]"
+                                                        class="form-control"
                                                         value="{{ old("unquoted_items.$index.item", $item->item) }}" required>
                                                 </td>
                                                 <td>
-                                                    <input type="number" name="unquoted_items[{{ $index }}][quantity]" 
-                                                        class="form-control" min="1" 
+                                                    <input type="number" name="unquoted_items[{{ $index }}][quantity]"
+                                                        class="form-control" min="1"
                                                         value="{{ old("unquoted_items.$index.quantity", $item->quantity) }}" required>
                                                 </td>
                                                 <td>
@@ -187,9 +189,9 @@
                                                         <option value="lead_time_too_long" {{ old("unquoted_items.$index.reason", $item->reason) == 'lead_time_too_long' ? 'selected' : '' }}>Lead Time Too Long</option>
                                                         <option value="other" {{ old("unquoted_items.$index.reason", $item->reason) == 'other' ? 'selected' : '' }}>Other</option>
                                                     </select>
-                                                    <textarea name="unquoted_items[{{ $index }}][reason_details]" 
-                                                        class="form-control mt-2 reason-details" 
-                                                        rows="1" 
+                                                    <textarea name="unquoted_items[{{ $index }}][reason_details]"
+                                                        class="form-control mt-2 reason-details"
+                                                        rows="1"
                                                         placeholder="Additional details..."
                                                         style="display: {{ old("unquoted_items.$index.reason", $item->reason) == 'other' ? 'block' : 'none' }}">{{ old("unquoted_items.$index.reason_details", $item->reason_details) }}</textarea>
                                                 </td>
@@ -200,6 +202,80 @@
                                                 </td>
                                             </tr>
                                             @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h6 class="mb-3">Update RFQ</h6>
+
+                                <!-- File Upload Form -->
+                                <div class="p-3 bg-light rounded">
+                                    <div id="file-upload-container">
+                                        <div class="row">                                            <div class="col-md-4">
+                                                <div class="form-group">                                                    <label for="file">Update RFQ File</label>
+                                                    <input type="file" class="form-control @error('files.*') is-invalid @enderror" name="files[]" multiple {{ $quote->files->isEmpty() ? 'required' : '' }}>
+                                                    <small class="text-secondary">{{ $quote->files->isEmpty() ? 'At least one RFQ file is required' : 'Optional: Add new RFQ files or keep existing ones' }}</small>
+                                                    @error('files.*')
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                            </div>
+                                            <div class="col-md-7">
+                                                <div class="form-group">
+                                                    <label for="descriptions[]">Description</label>
+                                                    <input type="text" class="form-control" name="descriptions[]" placeholder="Optional description">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-1">
+                                                <button type="button" class="btn btn-success mt-4" id="add-file">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Attached Files Table -->
+                                <div class="table-responsive">
+                                    <table class="table align-items-center mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>File Name</th>
+                                                <th>Type</th>
+                                                <th>Description</th>
+                                                <th>Upload Date</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @forelse($quote->files as $file)
+                                            <tr>
+                                                <td>{{ $file->original_name }}</td>
+                                                <td>
+                                                    <span class="badge bg-primary">
+                                                        {{ str_replace('_', ' ', ucfirst($file->file_type)) }}
+                                                    </span>
+                                                </td>
+                                                <td>{{ $file->description }}</td>
+                                                <td>{{ $file->created_at->format('M d, Y') }}</td>
+                                                <td>
+                                                    <div class="d-flex">
+                                                        <a href="{{ route('quotes.download-file', [$quote, $file]) }}"
+                                                            class="btn btn-sm btn-info me-2">
+                                                            <i class="fas fa-download"></i> Download
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            @empty
+                                            <tr>
+                                                <td colspan="5" class="text-center text-danger">At least one RFQ file is required</td>
+                                            </tr>
+                                            @endforelse
                                         </tbody>
                                     </table>
                                 </div>
@@ -229,7 +305,7 @@
         background: white;
         border: none;
         border-radius: 0.5rem;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
 
     .product-suggestions .dropdown-item {
@@ -283,10 +359,12 @@
         .product-suggestions .dropdown-item {
             padding: 1rem;
         }
-    }    .select2-container--bootstrap-5 {
+    }
+
+    .select2-container--bootstrap-5 {
         width: 100% !important;
     }
-    
+
     .select2-container--bootstrap-5 .select2-selection {
         min-height: 38px;
         border: 1px solid #d2d6da;
@@ -388,7 +466,7 @@
                 },
                 templateResult: function(item) {
                     if (!item.id) return item.text;
-                    
+
                     // For new items, just show the text
                     if (item.newOption) {
                         return $(`
@@ -398,7 +476,7 @@
                             </div>
                         `);
                     }
-                    
+
                     // For existing items, split the text to separate name and description
                     const name = item.text.split(' - ')[0];
                     return $(`
@@ -471,7 +549,7 @@
                 itemsTable.querySelector('tbody').appendChild(newRow);
                 setupSelect2(newRow.querySelector('.product-search'));
                 itemCount++;
-                
+
                 // Add event listeners to new inputs
                 const newInputs = newRow.querySelectorAll('input');
                 newInputs.forEach(input => {
@@ -578,10 +656,10 @@
                 const reasonCell = row.querySelector('.rejection-reason');
                 const reasonSelect = reasonCell.querySelector('.reason-select');
                 const reasonDetails = reasonCell.querySelector('.reason-details');
-                
+
                 // Show/hide reason cell based on approval status
                 reasonCell.style.display = this.checked ? 'none' : 'table-cell';
-                
+
                 // If showing reason cell, make fields required, otherwise remove required
                 if (!this.checked) {
                     reasonSelect.setAttribute('required', '');
@@ -617,7 +695,7 @@
             const reasonCell = row.querySelector('.rejection-reason');
             const reasonSelect = reasonCell.querySelector('.reason-select');
             const reasonDetails = reasonCell.querySelector('.reason-details');
-            
+
             if (checkbox.checked) {
                 reasonCell.style.display = 'none';
                 reasonSelect.removeAttribute('required');
@@ -626,6 +704,56 @@
                 reasonSelect.setAttribute('required', '');
                 if (shouldShowReasonDetails(reasonSelect.value)) {
                     reasonDetails.setAttribute('required', '');
+                }
+            }
+        });
+
+        // Handle dynamic file upload fields
+        const fileUploadContainer = document.getElementById('file-upload-container');
+        const addFileButton = document.getElementById('add-file');
+
+        addFileButton.addEventListener('click', function() {
+            const newRow = document.createElement('div');
+            newRow.className = 'row mt-3';
+            newRow.innerHTML = `
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <input type="file" class="form-control" name="files[]">
+                    </div>
+                </div>
+                <div class="col-md-7">
+                    <div class="form-group">
+                        <input type="text" class="form-control" name="descriptions[]" placeholder="Optional description">
+                    </div>
+                </div>
+                <div class="col-md-1">
+                    <button type="button" class="btn btn-danger btn-sm remove-file">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            fileUploadContainer.appendChild(newRow);
+
+            // Add remove handler
+            newRow.querySelector('.remove-file').addEventListener('click', function() {
+                newRow.remove();
+            });            // Update file input required state
+            if (document.querySelectorAll('input[type="file"]').length === 1) {
+                document.querySelector('input[type="file"]').setAttribute('required', '');
+            }
+        });
+
+        // Handle form submission
+        document.getElementById('quote-form').addEventListener('submit', function(e) {            // Only check for required files if there are no existing files
+            const hasExistingFiles = {{ $quote->files->isNotEmpty() ? 'true' : 'false' }};
+            
+            if (!hasExistingFiles) {
+                const newFiles = Array.from(document.querySelectorAll('input[type="file"]'))
+                    .some(input => input.files.length > 0);
+
+                if (!newFiles) {
+                    e.preventDefault();
+                    alert('At least one RFQ file is required');
                 }
             }
         });

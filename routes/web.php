@@ -76,6 +76,11 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
     // Removed invoice conversion route
     Route::get('quotes/{quote}/download', [QuoteController::class, 'downloadPdf'])->name('quotes.download');
     
+    // Quote file management routes
+    Route::post('quotes/{quote}/attach-file', [QuoteController::class, 'attachFile'])->name('quotes.attach-file');
+    Route::get('quotes/{quote}/files/{file}/download', [QuoteController::class, 'downloadFile'])->name('quotes.download-file');
+    Route::delete('quotes/{quote}/files/{file}', [QuoteController::class, 'deleteFile'])->name('quotes.delete-file');
+
     // Reports route
     Route::get('reports', [ReportsController::class, 'index'])->middleware('role:manager')->name('reports');
 

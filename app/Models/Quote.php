@@ -19,12 +19,16 @@ class Quote extends Model
         'valid_until',
         'rejection_reason',
         'rejection_details',
-        'reference'
+        'reference',
+        'has_rfq',
+        'rfq_files_count'
     ];
 
     protected $casts = [
         'valid_until' => 'date',
-        'amount' => 'decimal:2'
+        'amount' => 'decimal:2',
+        'has_rfq' => 'boolean',
+        'rfq_files_count' => 'integer'
     ];
 
     // Relationships
@@ -36,6 +40,11 @@ class Quote extends Model
     public function items()
     {
         return $this->hasMany(QuoteItem::class);
+    }
+
+    public function files()
+    {
+        return $this->hasMany(QuoteFile::class);
     }
 
     public function productItems()
@@ -68,5 +77,19 @@ class Quote extends Model
     public function markAsConverted()
     {
         return $this->update(['status' => 'converted']);
+    }
+
+    public function updateRfqFileCount()
+    {
+        $count = $this->files()->count();
+        $this->update([
+            'rfq_files_count' => $count,
+            'has_rfq' => $count > 0
+        ]);
+    }
+
+    public function canDeleteFile()
+    {
+        return $this->rfq_files_count > 1;
     }
 }

@@ -3,11 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Quote;
+use App\Models\QuoteFile;
 use App\Models\QuoteItem;
+use App\Models\UnquotedItem;
 use App\Services\PdfService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class QuoteController extends Controller
 {
@@ -114,7 +119,11 @@ class QuoteController extends Controller
             'items' => 'required|array|min:1',
             'items.*.item' => 'required|string',
             'items.*.quantity' => 'required|integer|min:1',
-            'items.*.price' => 'required|numeric|min:0'
+            'items.*.price' => 'required|numeric|min:0',
+            'items.*.comment' => 'nullable|string',
+            'files' => 'required|array|min:1', // At least one file required
+            'files.*' => 'required|file|max:10240', // 10MB max per file
+            'descriptions.*' => 'nullable|string|max:255',
         ]);
 
         $quote = DB::transaction(function() use ($validated, $request) {
@@ -131,7 +140,9 @@ class QuoteController extends Controller
                 'amount' => $totalAmount,
                 'status' => 'pending',
                 'user_id' => Auth::id(),
-                'reference' => 'Q' . str_pad($nextQuoteId, 6, '0', STR_PAD_LEFT)
+                'reference' => 'Q' . str_pad($nextQuoteId, 6, '0', STR_PAD_LEFT),
+                'has_rfq' => true,
+                'rfq_files_count' => count($request->file('files'))
             ]);
 
             foreach ($request->items as $item) {
@@ -142,6 +153,25 @@ class QuoteController extends Controller
                     'approved' => false,
                     'comment' => $item['comment'] ?? null
                 ]);
+            }
+
+            // Handle file attachments if any
+            if ($request->hasFile('files')) {
+                foreach ($request->file('files') as $index => $file) {
+                    $originalName = $file->getClientOriginalName();
+                    $fileName = Str::random(40) . '.' . $file->getClientOriginalExtension();
+                    
+                    // Store file in the quote files folder
+                    $path = $file->storeAs("quote-files/{$quote->id}", $fileName, 'public');
+                    
+                    $quote->files()->create([
+                        'original_name' => $originalName,
+                        'file_name' => $fileName,
+                        'file_type' => $file->getClientMimeType(),
+                        'path' => $path,
+                        'description' => $request->descriptions[$index] ?? null
+                    ]);
+                }
             }
 
             return $quote;
@@ -198,7 +228,10 @@ class QuoteController extends Controller
                 'required_if:unquoted_items.*.reason,other',
                 'nullable',
                 'string'
-            ]
+            ],
+            'files' => 'sometimes|array|min:1', // At least one file required when files are present
+            'files.*' => 'sometimes|file|max:10240', // 10MB max per file
+            'descriptions.*' => 'nullable|string|max:255',
         ]);
 
         DB::transaction(function() use ($validated, $request, $quote) {
@@ -208,7 +241,8 @@ class QuoteController extends Controller
             
             $quote->update([
                 ...$validated,
-                'amount' => $totalAmount
+                'amount' => $totalAmount,
+                'has_rfq' => true // We know it has RFQ because quote creation requires it
             ]);
 
             // Delete existing items and create new ones
@@ -392,5 +426,89 @@ class QuoteController extends Controller
                 'more' => ($page * $pageSize) < $total
             ]
         ]);
+    }
+
+    public function attachFile(Request $request, Quote $quote)
+    {
+        $this->authorize('update', $quote);
+
+        $request->validate([
+            'file' => 'required|file|max:10240', // 10MB max
+            'description' => 'nullable|string|max:255',
+        ]);
+
+        $file = $request->file('file');
+        $originalName = $file->getClientOriginalName();
+        $fileName = Str::random(40) . '.' . $file->getClientOriginalExtension();
+        
+        // Store file in the quote files folder
+        $path = $file->storeAs("quote-files/{$quote->id}", $fileName, 'public');
+        
+        try {
+            $quoteFile = $quote->files()->create([
+                'original_name' => $originalName,
+                'file_name' => $fileName,
+                'file_type' => $file->getClientMimeType(),
+                'path' => $path,
+                'description' => $request->description
+            ]);
+
+            if (!$quoteFile) {
+                Storage::disk('public')->delete($path);
+                return back()->with('error', 'Failed to attach file to quote. Please try again.');
+            }
+
+            // Update the quote's RFQ file count
+            $quote->updateRfqFileCount();
+            
+            return back()->with('success', 'File attached successfully.');
+        } catch (\Exception $e) {
+            Storage::disk('public')->delete($path);
+            Log::error('QuoteFile creation failed: ' . $e->getMessage());
+            return back()->with('error', 'An error occurred while attaching the file. Please try again.');
+        }
+    }
+
+    public function downloadFile(Quote $quote, QuoteFile $file)
+    {
+        $this->authorize('view', $quote);
+        
+        if ($file->quote_id !== $quote->id) {
+            abort(404);
+        }
+
+        if (!Storage::disk('public')->exists($file->path)) {
+            return back()->with('error', 'File not found.');
+        }
+
+        return response()->download(
+            storage_path('app/public/' . $file->path),
+            $file->original_name
+        );
+    }
+
+    public function deleteFile(Quote $quote, QuoteFile $file)
+    {
+        $this->authorize('update', $quote);
+        
+        if ($file->quote_id !== $quote->id) {
+            abort(404);
+        }
+
+        // Check if this is the last file
+        if (!$quote->canDeleteFile()) {
+            return back()->with('error', 'Cannot delete the last RFQ file. At least one file must remain.');
+        }
+        
+        if (Storage::disk('public')->exists($file->path)) {
+            Storage::disk('public')->delete($file->path);
+        }
+        
+        $file->delete();
+        
+        // Update the quote's RFQ file count
+        $quote->updateRfqFileCount();
+        
+        return back()->with('success', 'File deleted successfully.');
     }
 }
