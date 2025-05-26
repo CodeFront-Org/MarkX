@@ -10,7 +10,7 @@
                         @if(auth()->user()->isManager())
                             @include('partials.export-button')
                         @endif
-                        @if(auth()->user()->role !== 'manager')
+                        @if(auth()->user()->isMarketer())
                             <a href="{{ route('quotes.create') }}" class="btn bg-gradient-primary">Create New Quote</a>
                         @endif
                     </div>
@@ -27,10 +27,11 @@
                             <label class="form-label">Status</label>
                             <select name="status" class="form-select search-input">
                                 <option value="">All Status</option>
-                                <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
-                                <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved</option>
+                                <option value="pending_manager" {{ request('status') == 'pending_manager' ? 'selected' : '' }}>Pending Manager Approval</option>
+                                <option value="pending_customer" {{ request('status') == 'pending_customer' ? 'selected' : '' }}>Pending Customer Review</option>
+                                <option value="pending_finance" {{ request('status') == 'pending_finance' ? 'selected' : '' }}>Pending Finance Review</option>
+                                <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed</option>
                                 <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Rejected</option>
-                                <option value="converted" {{ request('status') == 'converted' ? 'selected' : '' }}>Converted</option>
                             </select>
                         </div>
                         <div class="col-md-3">

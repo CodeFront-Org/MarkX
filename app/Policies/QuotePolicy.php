@@ -15,42 +15,64 @@ class QuotePolicy
 
     public function view(User $user, Quote $quote): bool
     {
-        return $user->role === 'manager' || $user->id === $quote->user_id;
+        return $user->role === 'manager' || $user->role === 'finance' || $user->id === $quote->user_id;
     }
 
     public function create(User $user): bool
     {
-        return $user->role !== 'manager'; // Managers cannot create quotes
+        return $user->role === 'marketer'; // Only marketers can create quotes
     }
 
     public function update(User $user, Quote $quote): bool
     {
-        return $user->id === $quote->user_id && $quote->status === 'pending';
+        // Only finance can update quotes, and only if they're not already completed
+        return $user->role === 'finance' && $quote->status !== 'completed';
     }
 
     public function delete(User $user, Quote $quote): bool
     {
-        return $user->id === $quote->user_id && $quote->status === 'pending';
+        return $user->id === $quote->user_id && $quote->status === 'pending_manager';
     }
 
     public function approve(User $user, Quote $quote): bool
     {
-        return $user->id === $quote->user_id && $quote->status === 'pending';
+        // Managers can approve quotes in pending_manager status (whole quote approval)
+        if ($user->role === 'manager') {
+            return $quote->status === 'pending_manager';
+        }
+
+        // Finance can approve quotes in pending_finance status (finalize after reviewing items)
+        if ($user->role === 'finance') {
+            return $quote->status === 'pending_finance';
+        }
+
+        return false;
     }
 
     public function reject(User $user, Quote $quote): bool
     {
-        return $user->id === $quote->user_id && $quote->status === 'pending';
+        // Managers can reject quotes in pending_manager status
+        if ($user->role === 'manager') {
+            return $quote->status === 'pending_manager';
+        }
+
+        // Finance can reject quotes in pending_finance status
+        if ($user->role === 'finance') {
+            return $quote->status === 'pending_finance';
+        }
+
+        return false;
     }
 
-    public function convert(User $user, Quote $quote): bool
+    public function submitToFinance(User $user, Quote $quote): bool
     {
-        return $user->id === $quote->user_id && $quote->status === 'approved';
+        // Only the marketer who created the quote can submit it to finance
+        return $user->id === $quote->user_id && $quote->status === 'pending_customer';
     }
 
     public function restore(User $user, Quote $quote): bool
     {
-        return $user->id === $quote->user_id;
+        return $user->role === 'manager';
     }
 
     public function forceDelete(User $user, Quote $quote): bool

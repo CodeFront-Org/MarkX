@@ -11,6 +11,7 @@
                     <div>
                         <a href="{{ route('users.create', 'marketer') }}" class="btn bg-gradient-primary">Register New Marketer</a>
                         <a href="{{ route('users.create', 'manager') }}" class="btn bg-gradient-info">Register New Manager</a>
+                        <a href="{{ route('users.create', 'finance') }}" class="btn bg-gradient-warning">Register New Finance User</a>
                     </div>
                 </div>
             </div>

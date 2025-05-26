@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\ServiceProvider;
+use App\Observers\SupplierProductObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -23,6 +25,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
+        // Register the supplier product observer for pivot models
+        Pivot::observe(SupplierProductObserver::class);
     }
 }

@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->enum('role', ['manager', 'marketer'])->default('marketer');
+        Schema::table('quotes', function (Blueprint $table) {
+            $table->integer('total_rfq_items')->default(0);
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            //
+        Schema::table('quotes', function (Blueprint $table) {
+            $table->dropColumn('total_rfq_items');
         });
     }
 };

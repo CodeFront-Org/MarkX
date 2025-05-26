@@ -100,36 +100,23 @@
                                                 </td>
                                                 <td>
                                                     <div class="form-check">
+                                                        <input type="hidden" name="items[{{ $index }}][approved]" value="0">
                                                         <input type="checkbox" name="items[{{ $index }}][approved]"
                                                             class="form-check-input approval-checkbox" value="1"
-                                                            {{ old("items.$index.approved", $item->approved) ? 'checked' : '' }}>
+                                                            {{ old("items.$index.approved", $item->approved) ? 'checked' : '' }}
+                                                            {{ auth()->user()->isFinance() ? '' : 'disabled' }}>
+                                                        @if(!auth()->user()->isFinance())
+                                                        <small class="text-muted d-block">Only finance can approve items</small>
+                                                        @endif
                                                     </div>
                                                 </td>
                                                 <td class="rejection-reason" style="display: {{ old("items.$index.approved", $item->approved) ? 'none' : 'table-cell' }}">
-                                                    <select name="items[{{ $index }}][reason]" class="form-control reason-select @error(" items.$index.reason") is-invalid @enderror" required>
-                                                        <optgroup label="Product Related">
-                                                            <option value="out_of_stock">Out of Stock</option>
-                                                            <option value="discontinued">Discontinued</option>
-                                                            <option value="price_unavailable">Price Unavailable</option>
-                                                            <option value="lead_time_too_long">Lead Time Too Long</option>
-                                                        </optgroup>
-                                                        <optgroup label="Administrative">
-                                                            <option value="suspended">Account Suspended</option>
-                                                            <option value="credit_limit">Credit Limit Exceeded</option>
-                                                            <option value="pending_payment">Pending Previous Payment</option>
-                                                            <option value="policy_violation">Policy Violation</option>
-                                                            <option value="other">Other Reason</option>
-                                                        </optgroup>
-                                                    </select>
+                                                    <input type="text" name="items[{{ $index }}][reason]"
+                                                        class="form-control @error(" items.$index.reason") is-invalid @enderror"
+                                                        value="{{ old("items.$index.reason", $item->reason) }}"
+                                                        placeholder="Enter rejection reason"
+                                                        required>
                                                     @error("items.$index.reason")
-                                                    <div class="invalid-feedback">{{ $message }}</div>
-                                                    @enderror
-                                                    <textarea name="items[{{ $index }}][reason_details]"
-                                                        class="form-control mt-2 reason-details @error(" items.$index.reason_details") is-invalid @enderror"
-                                                        rows="1"
-                                                        placeholder="Additional details..."
-                                                        style="display: none">{{ old("items.$index.reason_details") }}</textarea>
-                                                    @error("items.$index.reason_details")
                                                     <div class="invalid-feedback">{{ $message }}</div>
                                                     @enderror
                                                 </td>
@@ -137,6 +124,13 @@
                                             @endforeach
                                         </tbody>
                                         <tfoot>
+                                            <tr>
+                                                <td colspan="7">
+                                                    <button type="button" class="btn btn-success btn-sm" id="add-item">
+                                                        <i class="fas fa-plus"></i> Add Item
+                                                    </button>
+                                                </td>
+                                            </tr>
                                             <tr>
                                                 <td colspan="3" class="text-end">
                                                     <strong>Total:</strong>
@@ -163,47 +157,28 @@
                                             <tr>
                                                 <th width="40%">Item Description</th>
                                                 <th width="20%">Requested Quantity</th>
-                                                <th width="35%">Reason</th>
-                                                <th width="5%">Actions</th>
+                                                <th width="35%">Rejection Reason</th>
+                                                <th width="5%">Status</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach($quote->unquotedItems ?? [] as $index => $item)
+                                            @foreach($quote->items->where('approved', false) as $index => $item)
                                             <tr class="unquoted-item-row">
+                                                <td>{{ $item->item }}</td>
+                                                <td>{{ $item->quantity }}</td>
+                                                <td>{{ $item->reason }}</td>
                                                 <td>
-                                                    <input type="text" name="unquoted_items[{{ $index }}][item]"
-                                                        class="form-control"
-                                                        value="{{ old("unquoted_items.$index.item", $item->item) }}" required>
-                                                </td>
-                                                <td>
-                                                    <input type="number" name="unquoted_items[{{ $index }}][quantity]"
-                                                        class="form-control" min="1"
-                                                        value="{{ old("unquoted_items.$index.quantity", $item->quantity) }}" required>
-                                                </td>
-                                                <td>
-                                                    <select name="unquoted_items[{{ $index }}][reason]" class="form-control" required>
-                                                        <option value="">Select reason</option>
-                                                        <option value="out_of_stock" {{ old("unquoted_items.$index.reason", $item->reason) == 'out_of_stock' ? 'selected' : '' }}>Out of Stock</option>
-                                                        <option value="discontinued" {{ old("unquoted_items.$index.reason", $item->reason) == 'discontinued' ? 'selected' : '' }}>Discontinued</option>
-                                                        <option value="price_unavailable" {{ old("unquoted_items.$index.reason", $item->reason) == 'price_unavailable' ? 'selected' : '' }}>Price Unavailable</option>
-                                                        <option value="lead_time_too_long" {{ old("unquoted_items.$index.reason", $item->reason) == 'lead_time_too_long' ? 'selected' : '' }}>Lead Time Too Long</option>
-                                                        <option value="other" {{ old("unquoted_items.$index.reason", $item->reason) == 'other' ? 'selected' : '' }}>Other</option>
-                                                    </select>
-                                                    <textarea name="unquoted_items[{{ $index }}][reason_details]"
-                                                        class="form-control mt-2 reason-details"
-                                                        rows="1"
-                                                        placeholder="Additional details..."
-                                                        style="display: {{ old("unquoted_items.$index.reason", $item->reason) == 'other' ? 'block' : 'none' }}">{{ old("unquoted_items.$index.reason_details", $item->reason_details) }}</textarea>
-                                                </td>
-                                                <td>
-                                                    <button type="button" class="btn btn-danger btn-sm delete-unquoted-row">
-                                                        <i class="fas fa-times"></i>
-                                                    </button>
+                                                    <span class="badge bg-warning">Not Approved</span>
                                                 </td>
                                             </tr>
                                             @endforeach
                                         </tbody>
                                     </table>
+                                    @if($quote->items->where('approved', false)->isEmpty())
+                                    <div class="text-center text-muted py-3">
+                                        No unapproved items
+                                    </div>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -212,11 +187,64 @@
                             <div class="col-12">
                                 <h6 class="mb-3">Update RFQ</h6>
 
-                                <!-- File Upload Form -->
                                 <div class="p-3 bg-light rounded">
+                                    <!-- Total RFQ Items -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="total_rfq_items" class="form-control-label">Total Items in RFQ</label>
+                                                <input type="number" id="total_rfq_items" name="total_rfq_items"
+                                                    class="form-control @error('total_rfq_items') is-invalid @enderror"
+                                                    min="0" value="{{ old('total_rfq_items', $quote->total_rfq_items) }}" required>
+                                                <small class="text-secondary">Enter the total number of items in the original RFQ</small>
+                                                @error('total_rfq_items')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <div class="p-3 bg-light rounded">
+                                                <h6 class="mb-2">RFQ Items Tracking</h6>
+                                                <div class="progress-wrapper">
+                                                    <div class="progress-info mb-2">
+                                                        <div class="progress-percentage">
+                                                            <span class="text-sm font-weight-bold">
+                                                                {{ $quote->total_items_count }} of {{ $quote->total_rfq_items }} items processed
+                                                                ({{ $quote->total_rfq_items > 0 ? round(($quote->total_items_count / $quote->total_rfq_items) * 100) : 0 }}%)
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="progress">
+                                                        @php
+                                                        $quotedPercent = $quote->total_rfq_items > 0 ? ($quote->quoted_items_count / $quote->total_rfq_items) * 100 : 0;
+                                                        $unquotedPercent = $quote->total_rfq_items > 0 ? ($quote->unquoted_items_count / $quote->total_rfq_items) * 100 : 0;
+                                                        @endphp
+                                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ $quotedPercent }}%" aria-valuenow="{{ $quotedPercent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                                        <div class="progress-bar bg-warning" role="progressbar" style="width: {{ $unquotedPercent }}%" aria-valuenow="{{ $unquotedPercent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="mt-3">
+                                                    <div class="d-flex justify-content-between text-sm">
+                                                        <div>
+                                                            <i class="fas fa-circle text-success"></i> Quoted Items: {{ $quote->quoted_items_count }}
+                                                        </div>
+                                                        <div>
+                                                            <i class="fas fa-circle text-warning"></i> Unapproved Items: {{ $quote->unquoted_items_count }}
+                                                        </div>
+                                                        <div>
+                                                            <i class="fas fa-circle text-secondary"></i> Remaining: {{ $quote->remaining_items_count }}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- File Upload Form -->
                                     <div id="file-upload-container">
-                                        <div class="row">                                            <div class="col-md-4">
-                                                <div class="form-group">                                                    <label for="file">Update RFQ File</label>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="form-group"> <label for="file">Update RFQ File</label>
                                                     <input type="file" class="form-control @error('files.*') is-invalid @enderror" name="files[]" multiple {{ $quote->files->isEmpty() ? 'required' : '' }}>
                                                     <small class="text-secondary">{{ $quote->files->isEmpty() ? 'At least one RFQ file is required' : 'Optional: Add new RFQ files or keep existing ones' }}</small>
                                                     @error('files.*')
@@ -264,8 +292,13 @@
                                                 <td>{{ $file->created_at->format('M d, Y') }}</td>
                                                 <td>
                                                     <div class="d-flex">
+                                                        <a href="{{ route('quotes.view-file', [$quote, $file]) }}"
+                                                            class="btn btn-sm btn-info me-2"
+                                                            target="_blank">
+                                                            <i class="fas fa-eye"></i> View
+                                                        </a>
                                                         <a href="{{ route('quotes.download-file', [$quote, $file]) }}"
-                                                            class="btn btn-sm btn-info me-2">
+                                                            class="btn btn-sm btn-secondary">
                                                             <i class="fas fa-download"></i> Download
                                                         </a>
                                                     </div>
@@ -296,6 +329,9 @@
 </div>
 
 @push('styles')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 <style>
     .product-suggestions {
         position: absolute;
@@ -384,6 +420,32 @@
         box-shadow: 0 0 0 2px rgba(233, 236, 239, 0.05);
     }
 
+    .form-control.is-invalid {
+        border-color: #fd5c70;
+        padding-right: calc(1.5em + 0.75rem);
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23fd5c70'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23fd5c70' stroke='none'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right calc(0.375em + 0.1875rem) center;
+        background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+    }
+
+    .form-control.is-invalid:focus {
+        border-color: #fd5c70;
+        box-shadow: 0 0 0 2px rgba(253, 92, 112, 0.25);
+    }
+
+    .invalid-feedback {
+        display: none;
+        width: 100%;
+        margin-top: 0.25rem;
+        font-size: 0.875em;
+        color: #fd5c70;
+    }
+
+    .is-invalid~.invalid-feedback {
+        display: block;
+    }
+
     .select2-container--bootstrap-5 .select2-results__option--highlighted {
         background-color: #cb0c9f !important;
         color: #fff !important;
@@ -403,22 +465,20 @@
 @endpush
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const itemsTable = document.getElementById('items-table');
         const unquotedItemsTable = document.getElementById('unquoted-items-table');
         const addItemBtn = document.getElementById('add-item');
-        const addUnquotedItemBtn = document.getElementById('add-unquoted-item');
-        const itemCount = parseInt("{{ count($quote->items) }}");
-        const unquotedItemCount = parseInt("{{ count($quote->unquotedItems ?? []) }}");
-        let currentItemCount = itemCount;
-        let currentUnquotedItemCount = unquotedItemCount;
+        let currentItemCount = {{ count($quote->items) }};
 
         function updateLineTotal(row) {
             const quantity = parseFloat(row.querySelector('.item-quantity').value) || 0;
             const price = parseFloat(row.querySelector('.item-price').value) || 0;
             const total = quantity * price;
             row.querySelector('.line-total').textContent = total.toFixed(2);
+            updateTotal();
             return total;
         }
 
@@ -435,7 +495,7 @@
                 width: '100%',
                 placeholder: 'Start typing to search items or enter new item...',
                 allowClear: true,
-                tags: true, // Allow creating new tags
+                tags: true,
                 createTag: function(params) {
                     return {
                         id: params.term,
@@ -449,15 +509,20 @@
                     dataType: 'json',
                     delay: 250,
                     cache: true,
+                    data: function(params) {
+                        return {
+                            search: params.term,
+                            page: params.page || 1
+                        };
+                    },
                     processResults: function(data) {
                         return {
                             results: data.results.map(function(item) {
-                                // Store the original text without description
                                 const originalText = item.text;
                                 return {
                                     ...item,
                                     originalText: originalText,
-                                    text: item.text + ' - ' + item.description
+                                    text: item.text + (item.description ? ' - ' + item.description : '')
                                 };
                             }),
                             pagination: data.pagination
@@ -467,7 +532,6 @@
                 templateResult: function(item) {
                     if (!item.id) return item.text;
 
-                    // For new items, just show the text
                     if (item.newOption) {
                         return $(`
                             <div>
@@ -477,21 +541,18 @@
                         `);
                     }
 
-                    // For existing items, split the text to separate name and description
                     const name = item.text.split(' - ')[0];
                     return $(`
                         <div>
                             <strong>${name}</strong>
-                            <small class="text-muted d-block">${item.description}</small>
+                            ${item.description ? `<small class="text-muted d-block">${item.description}</small>` : ''}
                         </div>
                     `);
                 },
                 templateSelection: function(item) {
-                    // For new items or when originalText is not available, just use text
                     if (item.newOption || !item.originalText) {
                         return item.text;
                     }
-                    // For existing items, use the originalText (without the description)
                     return item.originalText;
                 }
             }).on('select2:select', function(e) {
@@ -501,7 +562,6 @@
                 if (data.price && !priceInput.value) {
                     priceInput.value = data.price;
                     updateLineTotal(row);
-                    updateTotal();
                 }
             });
         }
@@ -511,44 +571,55 @@
             setupSelect2(input);
         });
 
-        // Handle adding new rows
+        // Initialize line totals
+        document.querySelectorAll('.item-row').forEach(row => {
+            updateLineTotal(row);
+        });
+
+        // Handle adding new items
         if (addItemBtn) {
             addItemBtn.addEventListener('click', function() {
                 const newRow = document.createElement('tr');
                 newRow.className = 'item-row';
                 newRow.innerHTML = `
                     <td>
-                        <select name="items[${itemCount}][item]" 
+                        <select name="items[${currentItemCount}][item]" 
                             class="form-control item-description product-search" 
                             required>
                         </select>
                     </td>
                     <td>
-                        <input type="number" name="items[${itemCount}][quantity]" 
+                        <input type="number" name="items[${currentItemCount}][quantity]" 
                             class="form-control item-quantity" min="1" value="1" required>
                     </td>
                     <td>
-                        <input type="number" name="items[${itemCount}][price]" 
+                        <input type="number" name="items[${currentItemCount}][price]" 
                             class="form-control item-price" step="0.01" min="0" required>
-                    </td>                    <td>
+                    </td>
+                    <td>
                         <span class="line-total">0.00</span>
                     </td>
                     <td>
-                        <textarea name="items[${itemCount}][comment]" 
+                        <textarea name="items[${currentItemCount}][comment]" 
                             class="form-control item-comment" 
                             rows="1" 
                             placeholder="Add notes..."></textarea>
                     </td>
                     <td>
                         <div class="form-check">
-                            <input type="checkbox" name="items[${itemCount}][approved]" 
-                                class="form-check-input" value="1">
+                            <input type="hidden" name="items[${currentItemCount}][approved]" value="0">
+                            <input type="checkbox" name="items[${currentItemCount}][approved]" 
+                                class="form-check-input approval-checkbox" value="1" checked>
                         </div>
+                    </td>
+                    <td class="rejection-reason" style="display: none;">
+                        <input type="text" name="items[${currentItemCount}][reason]" 
+                            class="form-control"
+                            placeholder="Enter rejection reason">
                     </td>
                 `;
                 itemsTable.querySelector('tbody').appendChild(newRow);
                 setupSelect2(newRow.querySelector('.product-search'));
-                itemCount++;
 
                 // Add event listeners to new inputs
                 const newInputs = newRow.querySelectorAll('input');
@@ -556,166 +627,93 @@
                     if (input.classList.contains('item-quantity') || input.classList.contains('item-price')) {
                         input.addEventListener('input', function() {
                             updateLineTotal(newRow);
-                            updateTotal();
+                        });
+                    } else if (input.classList.contains('approval-checkbox')) {
+                        input.addEventListener('change', function() {
+                            const reasonCell = newRow.querySelector('.rejection-reason');
+                            const reasonInput = reasonCell.querySelector('input[type="text"]');
+                            reasonCell.style.display = this.checked ? 'none' : 'table-cell';
+                            if (!this.checked) {
+                                reasonInput.setAttribute('required', '');
+                            } else {
+                                reasonInput.removeAttribute('required');
+                            }
                         });
                     }
                 });
+
+                currentItemCount++;
+                updateTotal();
             });
         }
 
-        // Add event listeners to existing rows for quantity and price changes
-        const existingRows = itemsTable.querySelectorAll('.item-row');
-        existingRows.forEach(row => {
-            const inputs = row.querySelectorAll('input');
-            inputs.forEach(input => {
-                if (input.classList.contains('item-quantity') || input.classList.contains('item-price')) {
-                    input.addEventListener('input', function() {
-                        updateLineTotal(row);
-                        updateTotal();
-                    });
-                }
-            });
-        });
-
-        // Set minimum date for valid_until field
-        const validUntilInput = document.getElementById('valid_until');
-        if (validUntilInput) {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            validUntilInput.min = tomorrow.toISOString().split('T')[0];
-        }
-
-        // Handle adding new unquoted items
-        if (addUnquotedItemBtn) {
-            addUnquotedItemBtn.addEventListener('click', function() {
+        function updateUnquotedItemsTable() {
+            const tbody = unquotedItemsTable.querySelector('tbody');
+            tbody.innerHTML = '';
+            
+            document.querySelectorAll('.item-row').forEach((row, index) => {
+                const checkbox = row.querySelector('.approval-checkbox');
+                if (!checkbox.checked) {
+                    const itemDescription = row.querySelector('.product-search').value;
+                    const quantity = row.querySelector('.item-quantity').value;
+                    const reason = row.querySelector('.rejection-reason input[type="text"]').value;
+                    
                 const newRow = document.createElement('tr');
                 newRow.className = 'unquoted-item-row';
                 newRow.innerHTML = `
-                    <td>
-                        <input type="text" name="unquoted_items[${currentUnquotedItemCount}][item]" 
-                            class="form-control" required>
-                    </td>
-                    <td>
-                        <input type="number" name="unquoted_items[${currentUnquotedItemCount}][quantity]" 
-                            class="form-control" min="1" value="1" required>
-                    </td>
-                    <td>
-                        <select name="unquoted_items[${currentUnquotedItemCount}][reason]" class="form-control" required>
-                            <option value="">Select reason</option>
-                            <option value="out_of_stock">Out of Stock</option>
-                            <option value="discontinued">Discontinued</option>
-                            <option value="price_unavailable">Price Unavailable</option>
-                            <option value="lead_time_too_long">Lead Time Too Long</option>
-                            <option value="other">Other</option>
-                        </select>
-                        <textarea name="unquoted_items[${currentUnquotedItemCount}][reason_details]" 
-                            class="form-control mt-2 reason-details" 
-                            rows="1" 
-                            placeholder="Additional details..."
-                            style="display: none">
-                        </textarea>
-                    </td>
-                `;
-                unquotedItemsTable.querySelector('tbody').appendChild(newRow);
-                currentUnquotedItemCount++;
-
-                // Add event listener for reason select
-                const reasonSelect = newRow.querySelector('select');
-                const reasonDetails = newRow.querySelector('.reason-details');
-                reasonSelect.addEventListener('change', function() {
-                    reasonDetails.style.display = this.value === 'other' ? 'block' : 'none';
-                });
-            });
-        }
-
-        // Handle delete unquoted row clicks
-        if (unquotedItemsTable) {
-            unquotedItemsTable.addEventListener('click', function(e) {
-                if (e.target.classList.contains('delete-unquoted-row') || e.target.closest('.delete-unquoted-row')) {
-                    const row = e.target.closest('tr');
-                    row.remove();
+                        <td>${itemDescription}</td>
+                        <td>${quantity}</td>
+                        <td>${reason}</td>
+                        <td><span class="badge bg-warning">Not Approved</span></td>
+                    `;
+                    tbody.appendChild(newRow);
                 }
             });
 
-            // Add event listeners to existing reason selects
-            document.querySelectorAll('.unquoted-item-row select').forEach(select => {
-                select.addEventListener('change', function() {
-                    const reasonDetails = this.closest('td').querySelector('.reason-details');
-                    reasonDetails.style.display = this.value === 'other' ? 'block' : 'none';
-                });
-            });
-        }
-    });
-</script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Handle approval checkbox changes
-        document.querySelectorAll('.approval-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                const row = this.closest('tr');
-                const reasonCell = row.querySelector('.rejection-reason');
-                const reasonSelect = reasonCell.querySelector('.reason-select');
-                const reasonDetails = reasonCell.querySelector('.reason-details');
-
-                // Show/hide reason cell based on approval status
-                reasonCell.style.display = this.checked ? 'none' : 'table-cell';
-
-                // If showing reason cell, make fields required, otherwise remove required
-                if (!this.checked) {
-                    reasonSelect.setAttribute('required', '');
-                    if (shouldShowReasonDetails(reasonSelect.value)) {
-                        reasonDetails.setAttribute('required', '');
-                    }
-                } else {
-                    reasonSelect.removeAttribute('required');
-                    reasonDetails.removeAttribute('required');
+            // Show/hide no items message
+            const noItemsMessage = unquotedItemsTable.nextElementSibling;
+            if (tbody.children.length === 0) {
+                if (!noItemsMessage || !noItemsMessage.classList.contains('text-muted')) {
+                    const message = document.createElement('div');
+                    message.className = 'text-center text-muted py-3';
+                    message.textContent = 'No unapproved items';
+                    unquotedItemsTable.parentNode.appendChild(message);
                 }
-            });
-        });
-
-        // Helper function to determine if reason details should be shown
-        function shouldShowReasonDetails(value) {
-            const adminReasons = ['suspended', 'credit_limit', 'pending_payment', 'policy_violation', 'other'];
-            return value === 'other' || adminReasons.includes(value);
-        }
-
-        // Handle reason select changes
-        document.querySelectorAll('.reason-select').forEach(select => {
-            select.addEventListener('change', function() {
-                const reasonDetails = this.closest('td').querySelector('.reason-details');
-                const showDetails = shouldShowReasonDetails(this.value);
-                reasonDetails.style.display = showDetails ? 'block' : 'none';
-                reasonDetails.required = showDetails;
-            });
-        });
-
-        // Initialize state for existing rows
-        document.querySelectorAll('.item-row').forEach(row => {
-            const checkbox = row.querySelector('.approval-checkbox');
-            const reasonCell = row.querySelector('.rejection-reason');
-            const reasonSelect = reasonCell.querySelector('.reason-select');
-            const reasonDetails = reasonCell.querySelector('.reason-details');
-
-            if (checkbox.checked) {
-                reasonCell.style.display = 'none';
-                reasonSelect.removeAttribute('required');
-                reasonDetails.removeAttribute('required');
-            } else {
-                reasonSelect.setAttribute('required', '');
-                if (shouldShowReasonDetails(reasonSelect.value)) {
-                    reasonDetails.setAttribute('required', '');
-                }
+            } else if (noItemsMessage && noItemsMessage.classList.contains('text-muted')) {
+                noItemsMessage.remove();
             }
-        });
+        }
 
-        // Handle dynamic file upload fields
-        const fileUploadContainer = document.getElementById('file-upload-container');
-        const addFileButton = document.getElementById('add-file');
+        // Add event listener to all approval checkboxes
+        function setupApprovalCheckbox(checkbox) {
+                    checkbox.addEventListener('change', function() {
+                        const row = this.closest('tr');
+                        const reasonCell = row.querySelector('.rejection-reason');
+                        const reasonInput = reasonCell.querySelector('input[type="text"]');
 
-        addFileButton.addEventListener('click', function() {
-            const newRow = document.createElement('div');
-            newRow.className = 'row mt-3';
-            newRow.innerHTML = `
+                        reasonCell.style.display = this.checked ? 'none' : 'table-cell';
+                        if (!this.checked) {
+                            reasonInput.setAttribute('required', '');
+                        } else {
+                            reasonInput.removeAttribute('required');
+                    reasonInput.value = '';
+                }
+                
+                updateUnquotedItemsTable();
+            });
+        }
+
+        // Setup existing checkboxes
+        document.querySelectorAll('.approval-checkbox').forEach(setupApprovalCheckbox);
+
+                // Handle dynamic file upload fields
+                const fileUploadContainer = document.getElementById('file-upload-container');
+                const addFileButton = document.getElementById('add-file');
+
+                addFileButton.addEventListener('click', function() {
+                    const newRow = document.createElement('div');
+                    newRow.className = 'row mt-3';
+                    newRow.innerHTML = `
                 <div class="col-md-4">
                     <div class="form-group">
                         <input type="file" class="form-control" name="files[]">
@@ -732,32 +730,77 @@
                     </button>
                 </div>
             `;
-            fileUploadContainer.appendChild(newRow);
+                    fileUploadContainer.appendChild(newRow); // Add remove handler
+                    newRow.querySelector('.remove-file').addEventListener('click', function() {
+                        newRow.remove();
+                    });
 
-            // Add remove handler
-            newRow.querySelector('.remove-file').addEventListener('click', function() {
-                newRow.remove();
-            });            // Update file input required state
-            if (document.querySelectorAll('input[type="file"]').length === 1) {
-                document.querySelector('input[type="file"]').setAttribute('required', '');
+                    // Update file input required state
+                    if (document.querySelectorAll('input[type="file"]').length === 1) {
+                        document.querySelector('input[type="file"]').setAttribute('required', '');
+                    }
+                });
+
+                // Handle form submission
+                document.getElementById('quote-form').addEventListener('submit', function(e) {
+                    // Only check for required files if there are no existing files
+                    const hasExistingFiles = {{ $quote->files->isNotEmpty() ? 'true' : 'false' }};
+
+                    if (!hasExistingFiles) {
+                        const newFiles = Array.from(document.querySelectorAll('input[type="file"]'))
+                            .some(input => input.files.length > 0);
+
+                        if (!newFiles) {
+                            e.preventDefault();
+                            alert('At least one RFQ file is required');
+                            return;
+                        }
+                    }
+
+                    // Additional validation for rejection reasons
+                    let hasValidationErrors = false;
+                    const approvalCheckboxes = document.querySelectorAll('.approval-checkbox');
+                    approvalCheckboxes.forEach(checkbox => {
+                        const row = checkbox.closest('tr');
+                        const reasonCell = row.querySelector('.rejection-reason');
+                        const reasonInput = reasonCell.querySelector('input[type="text"]');
+
+                        // Remove existing validation states
+                        reasonInput.classList.remove('is-invalid');
+
+                        // If not approved, require a rejection reason
+                        if (!checkbox.checked && !reasonInput.value.trim()) {
+                            hasValidationErrors = true;
+                            reasonInput.classList.add('is-invalid');
+                            if (!reasonCell.querySelector('.invalid-feedback')) {
+                                const feedback = document.createElement('div');
+                                feedback.className = 'invalid-feedback';
+                                feedback.textContent = 'Please provide a reason for rejection.';
+                                reasonCell.appendChild(feedback);
+                            }
+                        }
+                    });
+
+                    if (hasValidationErrors) {
+                        e.preventDefault();
+                        const firstError = document.querySelector('.is-invalid');
+                        if (firstError) {
+                            firstError.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'center'
+                            });
+                            firstError.focus();
+                        }
+                    }
+
+            // Add debug logging for form submission
+            const formData = new FormData(this);
+            console.log('Form data before submission:');
+            for (let pair of formData.entries()) {
+                console.log(pair[0] + ': ' + pair[1]);
             }
         });
-
-        // Handle form submission
-        document.getElementById('quote-form').addEventListener('submit', function(e) {            // Only check for required files if there are no existing files
-            const hasExistingFiles = {{ $quote->files->isNotEmpty() ? 'true' : 'false' }};
-            
-            if (!hasExistingFiles) {
-                const newFiles = Array.from(document.querySelectorAll('input[type="file"]'))
-                    .some(input => input.files.length > 0);
-
-                if (!newFiles) {
-                    e.preventDefault();
-                    alert('At least one RFQ file is required');
-                }
-            }
-        });
-    });
+                });
 </script>
 @endpush
 @endsection

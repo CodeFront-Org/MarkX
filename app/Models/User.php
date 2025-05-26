@@ -79,6 +79,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if user is a finance user
+     */
+    public function isFinance(): bool
+    {
+        return $this->hasRole('finance');
+    }
+
+    /**
      * Get the user's role
      *
      * @return string
@@ -86,5 +94,15 @@ class User extends Authenticatable
     public function getRole()
     {
         return $this->role;
+    }
+
+    /**
+     * Get available roles
+     *
+     * @return array
+     */
+    public static function getAvailableRoles(): array
+    {
+        return ['manager', 'marketer', 'finance'];
     }
 }

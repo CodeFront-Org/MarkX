@@ -18,22 +18,38 @@ class PdfService
      * Generate a PDF for a quote
      *
      * @param Quote $quote
+     * @param bool $showInternalDetails Whether to show internal details like approval status
      * @return \Barryvdh\DomPDF\PDF
      */
-    public function generateQuotePdf(Quote $quote)
+    public function generateQuotePdf(Quote $quote, bool $showInternalDetails = false)
     {
-        $quoteData = $this->prepareQuoteData($quote);
+        $quoteData = $this->prepareQuoteData($quote, $showInternalDetails);
         return Pdf::loadView('pdf.quote', $quoteData);
     }
 
     /**
-     * Prepare quote data with approved items only for PDF generation
+     * Prepare quote data for PDF generation
+     * For completed quotes, show only approved items
+     * For non-completed quotes, show all items
      *
      * @param Quote $quote
+     * @param bool $showInternalDetails Whether to show internal details like approval status
      * @return array
      */
-    protected function prepareQuoteData(Quote $quote)
+    protected function prepareQuoteData(Quote $quote, bool $showInternalDetails = false)
     {
+        // For completed quotes, show only approved items
+        // For non-completed quotes, show all items
+        $items = $quote->status === 'completed' 
+            ? $quote->items->filter(function ($item) {
+                return $item->approved;
+              }) 
+            : $quote->items;
+
+        $itemsTotal = $items->sum(function ($item) {
+            return $item->quantity * $item->price;
+        });
+
         $approvedItems = $quote->items->filter(function ($item) {
             return $item->approved;
         });
@@ -44,9 +60,12 @@ class PdfService
 
         return [
             'quote' => $quote,
-            'items' => $approvedItems,
+            'items' => $items,
+            'itemsTotal' => $itemsTotal,
             'approvedTotal' => $approvedTotal,
-            'hasUnapprovedItems' => $quote->items->count() !== $approvedItems->count()
+            'showOnlyApproved' => $quote->status === 'completed',
+            'hasUnapprovedItems' => $quote->items->count() !== $approvedItems->count(),
+            'showInternalDetails' => $showInternalDetails
         ];
     }
 
@@ -62,11 +81,12 @@ class PdfService
      * Save a quote PDF to storage
      *
      * @param Quote $quote
+     * @param bool $showInternalDetails Whether to show internal details like approval status
      * @return string The path where the PDF was saved
      */
-    public function saveQuotePdf(Quote $quote)
+    public function saveQuotePdf(Quote $quote, bool $showInternalDetails = false)
     {
-        $pdf = $this->generateQuotePdf($quote);
+        $pdf = $this->generateQuotePdf($quote, $showInternalDetails);
         $path = storage_path('app/public/quotes/' . $quote->id . '.pdf');
         
         // Ensure the directory exists
@@ -89,11 +109,12 @@ class PdfService
      * Stream a quote PDF to the browser
      *
      * @param Quote $quote
+     * @param bool $showInternalDetails Whether to show internal details like approval status
      * @return \Symfony\Component\HttpFoundation\Response
      */
-    public function streamQuotePdf(Quote $quote)
+    public function streamQuotePdf(Quote $quote, bool $showInternalDetails = false)
     {
-        return $this->generateQuotePdf($quote)->stream("quote-{$quote->id}.pdf");
+        return $this->generateQuotePdf($quote, $showInternalDetails)->stream("quote-{$quote->id}.pdf");
     }
 
     /**

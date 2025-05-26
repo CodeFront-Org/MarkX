@@ -135,10 +135,13 @@
         <table>
             <thead>
                 <tr>
-                    <th width="45%">Item Description</th>
+                    <th width="40%">Item Description</th>
                     <th width="15%">Quantity</th>
-                    <th width="20%">Unit Price</th>
-                    <th width="20%">Subtotal</th>
+                    <th width="15%">Unit Price</th>
+                    <th width="15%">Subtotal</th>
+                    @if(!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails)
+                    <th width="15%">Status</th>
+                    @endif
                 </tr>
             </thead>
             <tbody>
@@ -148,14 +151,36 @@
                     <td>{{ $item->quantity }}</td>
                     <td>KES {{ number_format($item->price, 2) }}</td>
                     <td>KES {{ number_format($item->quantity * $item->price, 2) }}</td>
+                    @if(!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails)
+                    <td>
+                        @if($item->approved)
+                        <span class="item-status item-approved">Approved</span>
+                        @else
+                        <span class="item-status item-pending">Pending</span>
+                        @endif
+                    </td>
+                    @endif
                 </tr>
                 @endforeach
             </tbody>
             <tfoot>
+                @if($showOnlyApproved)
                 <tr>
-                    <td colspan="3" style="text-align: right;"><strong>Total Amount (Approved Items):</strong></td>
+                    <td colspan="3" style="text-align: right;"><strong>Total Amount:</strong></td>
                     <td><strong>KES {{ number_format($approvedTotal, 2) }}</strong></td>
                 </tr>
+                @else
+                <tr>
+                    <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '4' : '3' }}" style="text-align: right;"><strong>Total Amount:</strong></td>
+                    <td><strong>KES {{ number_format($itemsTotal, 2) }}</strong></td>
+                </tr>
+                @if($hasUnapprovedItems && isset($showInternalDetails) && $showInternalDetails)
+                <tr>
+                    <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '4' : '3' }}" style="text-align: right;"><strong>Approved Items Total:</strong></td>
+                    <td><strong>KES {{ number_format($approvedTotal, 2) }}</strong></td>
+                </tr>
+                @endif
+                @endif
             </tfoot>
         </table>
     </div>

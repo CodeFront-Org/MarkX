@@ -17,4 +17,14 @@ class ProductItem extends Model
     {
         return $this->belongsToMany(Quote::class, 'quote_items');
     }
+    
+    /**
+     * Get the suppliers that provide this product.
+     */
+    public function suppliers(): BelongsToMany
+    {
+        return $this->belongsToMany(Supplier::class, 'supplier_product')
+            ->withPivot('price', 'supplier_product_code', 'notes', 'updated_by')
+            ->withTimestamps();
+    }
 }

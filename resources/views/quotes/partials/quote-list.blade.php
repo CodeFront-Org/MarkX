@@ -29,8 +29,14 @@
                         <p class="text-sm font-weight-bold mb-0">KES {{ number_format($quote->amount, 2) }}</p>
                     </td>
                     <td>
-                        <span class="badge badge-sm bg-gradient-{{ $quote->status === 'approved' ? 'success' : ($quote->status === 'pending' ? 'info' : ($quote->status === 'converted' ? 'primary' : 'danger')) }}">
-                            {{ ucfirst($quote->status) }}
+                        <span class="badge badge-sm bg-gradient-{{ 
+                            $quote->status === 'completed' ? 'success' : 
+                            ($quote->status === 'pending_manager' ? 'info' : 
+                            ($quote->status === 'pending_customer' ? 'warning' : 
+                            ($quote->status === 'pending_finance' ? 'primary' : 'danger'))) 
+                        }}">
+                            {{ ucwords(str_replace('_', ' ', $quote->status)) }}
+                            ({{ $quote->created_at->diffInDays() }} days)
                         </span>
                     </td>
                     <td>
@@ -44,28 +50,20 @@
                             <a href="{{ route('quotes.show', $quote) }}" class="btn btn-link text-info px-3 mb-0">
                                 <i class="fas fa-eye text-info me-2" aria-hidden="true"></i>View
                             </a>
-                            @if($quote->status === 'pending')
-                                @if(auth()->user()->role !== 'manager' && auth()->id() === $quote->user_id)
-                                    <form action="{{ route('quotes.approve', $quote) }}" method="POST" class="d-inline">
-                                        @csrf
-                                        <button type="submit" class="btn btn-link text-success px-3 mb-0">
-                                            <i class="fas fa-check text-success me-2" aria-hidden="true"></i>Approve
-                                        </button>
-                                    </form>
-                                    <form action="{{ route('quotes.reject', $quote) }}" method="POST" class="d-inline">
-                                        @csrf
-                                        <button type="submit" class="btn btn-link text-danger px-3 mb-0">
-                                            <i class="fas fa-times text-danger me-2" aria-hidden="true"></i>Reject
-                                        </button>
-                                    </form>
-                                    <a href="{{ route('quotes.edit', $quote) }}" class="btn btn-link text-dark px-3 mb-0">
-                                        <i class="fas fa-pencil-alt text-dark me-2" aria-hidden="true"></i>Edit
-                                    </a>
-                                @endif
-                            @endif                            {{-- Removed invoice conversion button --}}
+                            
+                            @if($quote->status === 'pending_finance' && auth()->user()->isFinance())
+                            <a href="{{ route('quotes.edit', $quote) }}" class="btn btn-link text-dark px-3 mb-0">
+                                <i class="fas fa-pencil-alt text-dark me-2" aria-hidden="true"></i>Edit
+                            </a>
+                            @endif
+                            
+                            @if($quote->status === 'pending_customer' && auth()->id() === $quote->user_id || 
+                                $quote->status === 'pending_finance' || 
+                                $quote->status === 'completed')
                             <a href="{{ route('quotes.download', $quote) }}" class="btn btn-link text-dark px-3 mb-0" target="_blank">
                                 <i class="fas fa-file-pdf text-dark me-2" aria-hidden="true"></i>PDF
                             </a>
+                            @endif
                         </div>
                     </td>
                 </tr>

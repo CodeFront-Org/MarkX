@@ -21,14 +21,24 @@ class Quote extends Model
         'rejection_details',
         'reference',
         'has_rfq',
-        'rfq_files_count'
+        'rfq_files_count',
+        'contact_person',
+        'total_rfq_items'
     ];
 
     protected $casts = [
         'valid_until' => 'date',
         'amount' => 'decimal:2',
         'has_rfq' => 'boolean',
+        'total_rfq_items' => 'integer',
         'rfq_files_count' => 'integer'
+    ];
+
+    protected $appends = [
+        'quoted_items_count',
+        'unquoted_items_count',
+        'total_items_count',
+        'remaining_items_count'
     ];
 
     // Relationships
@@ -66,6 +76,27 @@ class Quote extends Model
     public function scopeApproved($query)
     {
         return $query->where('status', 'approved');
+    }
+
+    // Computed Properties
+    public function getQuotedItemsCountAttribute()
+    {
+        return $this->items()->count();
+    }
+
+    public function getUnquotedItemsCountAttribute()
+    {
+        return $this->unquotedItems()->count();
+    }
+
+    public function getTotalItemsCountAttribute()
+    {
+        return $this->quoted_items_count + $this->unquoted_items_count;
+    }
+
+    public function getRemainingItemsCountAttribute()
+    {
+        return $this->total_rfq_items - $this->total_items_count;
     }
 
     // Methods

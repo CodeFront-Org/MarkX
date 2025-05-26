@@ -15,6 +15,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\ProductItemController;
 use App\Http\Controllers\CompanyFileController;
+use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -69,17 +70,22 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
     Route::post('/user-profile', [InfoUserController::class, 'store']);
 
     // Quote routes
+    Route::get('/quotes/fetch-customers', [QuoteController::class, 'fetchCustomers'])->name('quotes.fetch-customers');
     Route::get('/quotes/fetch-products', [QuoteController::class, 'fetchProductItems'])->name('quotes.fetch-products');
     Route::resource('quotes', QuoteController::class);
     Route::post('quotes/{quote}/approve', [QuoteController::class, 'approve'])->name('quotes.approve');
     Route::post('quotes/{quote}/reject', [QuoteController::class, 'reject'])->name('quotes.reject');
-    // Removed invoice conversion route
-    Route::get('quotes/{quote}/download', [QuoteController::class, 'downloadPdf'])->name('quotes.download');
+    Route::post('quotes/{quote}/submit-to-finance', [QuoteController::class, 'submitToFinance'])->name('quotes.submit-to-finance');
+    Route::get('quotes/{quote}/download', [QuoteController::class, 'download'])->name('quotes.download');
     
     // Quote file management routes
     Route::post('quotes/{quote}/attach-file', [QuoteController::class, 'attachFile'])->name('quotes.attach-file');
     Route::get('quotes/{quote}/files/{file}/download', [QuoteController::class, 'downloadFile'])->name('quotes.download-file');
+    Route::get('quotes/{quote}/files/{file}/view', [QuoteController::class, 'viewFile'])->name('quotes.view-file');
     Route::delete('quotes/{quote}/files/{file}', [QuoteController::class, 'deleteFile'])->name('quotes.delete-file');
+    
+    // Quote item management routes
+    Route::post('quotes/items/{item}/toggle-approval', [QuoteController::class, 'toggleItemApproval'])->name('quotes.toggle-item-approval');
 
     // Reports route
     Route::get('reports', [ReportsController::class, 'index'])->middleware('role:manager')->name('reports');
@@ -101,15 +107,23 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
 
         // User registration routes (for marketers and managers)
         Route::get('users/{role}/create', [UserRegistrationController::class, 'create'])
-            ->where('role', 'marketer|manager')
+            ->where('role', 'marketer|manager|finance')
             ->name('users.create');
         Route::post('users/{role}', [UserRegistrationController::class, 'store'])
-            ->where('role', 'marketer|manager')
+            ->where('role', 'marketer|manager|finance')
             ->name('users.store');
     });
 
     // Product Items routes
     Route::resource('product-items', ProductItemController::class);
+    
+    // Supplier routes
+    Route::resource('suppliers', SupplierController::class);
+    Route::get('suppliers/{supplier}/products/add', [SupplierController::class, 'addProduct'])->name('suppliers.products.add');
+    Route::post('suppliers/{supplier}/products', [SupplierController::class, 'attachProduct'])->name('suppliers.products.attach');
+    Route::get('suppliers/{supplier}/products/{product}/edit', [SupplierController::class, 'editProduct'])->name('suppliers.products.edit');
+    Route::put('suppliers/{supplier}/products/{product}', [SupplierController::class, 'updateProduct'])->name('suppliers.products.update');
+    Route::delete('suppliers/{supplier}/products/{product}', [SupplierController::class, 'detachProduct'])->name('suppliers.products.detach');
 });
 
 Route::group(['middleware' => 'guest'], function () {

@@ -11,15 +11,16 @@
                         <span class="badge bg-gradient-success">Reference: {{ $reference }}</span>
                     </div>
                 </div>
-                <div class="card-body">                    <form method="POST" action="{{ route('quotes.store') }}" id="quote-form" enctype="multipart/form-data">
+                <div class="card-body">
+                    <form method="POST" action="{{ route('quotes.store') }}" id="quote-form" enctype="multipart/form-data">
                         @csrf
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="title" class="form-control-label">Title</label>
-                                    <input class="form-control @error('title') is-invalid @enderror" type="text" 
-                                        id="title" name="title" value="{{ old('title') }}" required
-                                        placeholder="Enter quote title">
+                                    <label for="title" class="form-control-label">Customer</label>
+                                    <select class="form-control @error('title') is-invalid @enderror customer-search" 
+                                        name="title" id="title" required>
+                                    </select>
                                     @error('title')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -29,7 +30,7 @@
                                 <div class="form-group">
                                     <label for="valid_until" class="form-control-label">Validity</label>
                                     <input class="form-control @error('valid_until') is-invalid @enderror" type="date" 
-                                        id="valid_until" name="valid_until" value="{{ old('valid_until') }}" required
+                                        name="valid_until" id="valid_until"
                                         min="{{ date('Y-m-d', strtotime('+1 day')) }}">
                                     @error('valid_until')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -37,12 +38,27 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="contact_person" class="form-control-label">Attention To</label>
+                                    <input class="form-control @error('contact_person') is-invalid @enderror" 
+                                        type="text" name="contact_person" id="contact_person"
+                                        placeholder="Enter contact person name">
+                                    @error('contact_person')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group">
                                     <label for="description" class="form-control-label">Description</label>
                                     <textarea class="form-control @error('description') is-invalid @enderror" 
-                                        id="description" name="description" rows="3" required
+                                        name="description" id="description"
                                         placeholder="Detailed description of the quote">{{ old('description') }}</textarea>
                                     @error('description')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -124,6 +140,20 @@
                             <div class="col-12">
                                 <h6 class="mb-3">Attach RFQ</h6>
                                 <div class="p-3 bg-light rounded">
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="total_rfq_items" class="form-control-label">Total Items in RFQ</label>
+                                                <input type="number" id="total_rfq_items" name="total_rfq_items"
+                                                    class="form-control @error('total_rfq_items') is-invalid @enderror"
+                                                    min="0" value="{{ old('total_rfq_items', 0) }}" required>
+                                                <small class="text-secondary">Enter the total number of items in the original RFQ</small>
+                                                @error('total_rfq_items')
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        </div>
+                                    </div>
                                     <div class="row" id="file-upload-container">
                                         <div class="col-md-4">
                                             <div class="form-group">                                                <label for="file">Select RFQ File *</label>
@@ -271,9 +301,79 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const itemsTable = document.getElementById('items-table');
-        const unquotedItemsTable = document.getElementById('unquoted-items-table');
+        
+        // Setup Select2 for customer search
+        $('.customer-search').select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: 'Start typing to search customers or enter new customer...',
+            allowClear: true,
+            tags: true,
+            createTag: function(params) {
+                return {
+                    id: params.term,
+                    text: params.term,
+                    description: '',
+                    contact_person: '',
+                    newOption: true
+                }
+            },
+            ajax: {
+                url: '{{ route("quotes.fetch-customers") }}',
+                dataType: 'json',
+                delay: 250,
+                cache: true,
+                processResults: function(data) {
+                    return {
+                        results: data.results.map(function(item) {
+                            return {
+                                id: item.id,
+                                text: item.text,
+                                description: item.description,
+                                contact_person: item.contact_person,
+                                quoteInfo: item.quoteInfo
+                            };
+                        }),
+                        pagination: data.pagination
+                    };
+                }
+            },
+            templateResult: function(item) {
+                if (!item.id) return item.text;
+                
+                // For new items, just show the text
+                if (item.newOption) {
+                    return $(`
+                        <div>
+                            <strong>${item.text}</strong>
+                            <small class="text-muted d-block">New customer</small>
+                        </div>
+                    `);
+                }
+                
+                return $(`
+                    <div>
+                        <strong>${item.text}</strong>
+                        ${item.contact_person ? `<small class="text-muted d-block">Attn: ${item.contact_person}</small>` : ''}
+                        <small class="text-muted d-block">${item.quoteInfo}</small>
+                    </div>
+                `);
+            }
+        }).on('select2:select', function(e) {
+            const data = e.params.data;
+            
+            // Auto-populate description and contact person if available
+            if (data.description) {
+                document.getElementById('description').value = data.description;
+            }
+            
+            if (data.contact_person) {
+                document.getElementById('contact_person').value = data.contact_person;
+            }
+        });
+
         const addItemBtn = document.getElementById('add-item');
-        const addUnquotedItemBtn = document.getElementById('add-unquoted-item');        let itemCount = 1;
+        let itemCount = 1;
 
         function updateLineTotal(row) {
             const quantity = parseFloat(row.querySelector('.item-quantity').value) || 0;

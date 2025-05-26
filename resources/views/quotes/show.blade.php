@@ -31,22 +31,57 @@
                 <div class="card-header pb-0 d-flex justify-content-between align-items-center">
                     <h6>Quote Details</h6>
                     <div>
-                        @if($quote->status === 'pending')
-                        @if(auth()->id() === $quote->user_id)
+                        @if($quote->status === 'pending_manager' && auth()->user()->isManager())
                         <form action="{{ route('quotes.approve', $quote) }}" method="POST" class="d-inline">
                             @csrf
-                            <button type="submit" class="btn bg-gradient-success mx-1">Approve</button>
+                            <button type="submit" class="btn bg-gradient-success mx-1">Approve Quote</button>
                         </form>
                         <button type="button" class="btn bg-gradient-danger mx-1" data-bs-toggle="modal" data-bs-target="#rejectQuoteModal">
-                            Reject
+                            Reject Quote
                         </button>
+                        @endif
 
-                        <a href="{{ route('quotes.edit', $quote) }}" class="btn bg-gradient-info mx-1">Edit</a>
-                        @endif
-                        @endif
-                        <a href="{{ route('quotes.download', $quote) }}" class="btn bg-gradient-dark mx-1" target="_blank">
-                            <i class="fas fa-file-pdf me-2"></i> Download PDF
+                        @if($quote->status === 'pending_customer' && auth()->id() === $quote->user_id)
+                        <a href="{{ route('quotes.download', $quote) }}" class="btn bg-gradient-info mx-1" target="_blank">
+                            <i class="fas fa-file-pdf me-2"></i> Download PDF for Customer
                         </a>
+                        <form action="{{ route('quotes.submit-to-finance', $quote) }}" method="POST" class="d-inline">
+                            @csrf
+                            <button type="submit" class="btn bg-gradient-warning mx-1">Submit to Finance</button>
+                        </form>
+                        @endif
+
+                        @if($quote->status === 'pending_manager' && auth()->user()->isMarketer() && auth()->id() === $quote->user_id)
+                        <a href="{{ route('quotes.download', $quote) }}" class="btn bg-gradient-info mx-1" target="_blank">
+                            <i class="fas fa-file-pdf me-2"></i> Download Working PDF
+                        </a>
+                        @endif
+
+                        @if(auth()->user()->isMarketer() && auth()->id() === $quote->user_id && $quote->status === 'pending_finance')
+                        <a href="{{ route('quotes.download', $quote) }}" class="btn bg-gradient-info mx-1" target="_blank">
+                            <i class="fas fa-file-pdf me-2"></i> Download Working PDF
+                        </a>
+                        @endif
+
+                        @if(auth()->user()->isFinance())
+                            @if($quote->status === 'pending_finance')
+                                <button type="button" class="btn bg-gradient-success mx-1" data-bs-toggle="modal" data-bs-target="#finalizeQuoteModal">
+                                    Finalize Quote
+                                </button>
+                                <a href="{{ route('quotes.download', $quote) }}" class="btn bg-gradient-info mx-1" target="_blank">
+                                    <i class="fas fa-file-pdf me-2"></i> Download Working PDF
+                                </a>
+                            @endif
+                            @if($quote->status !== 'completed')
+                                <a href="{{ route('quotes.edit', $quote) }}" class="btn bg-gradient-info mx-1">Update Items & Prices</a>
+                            @endif
+                        @endif
+
+                        @if($quote->status === 'completed')
+                        <a href="{{ route('quotes.download', $quote) }}" class="btn bg-gradient-dark mx-1" target="_blank">
+                            <i class="fas fa-file-pdf me-2"></i> Download Final PDF
+                        </a>
+                        @endif
                     </div>
                 </div>
                 <div class="card-body">
@@ -63,13 +98,28 @@
                     <div class="row mt-4">
                         <div class="col-md-6">
                             <p class="text-sm mb-0 text-uppercase font-weight-bold">Status</p>
-                            <span class="badge badge-sm bg-gradient-{{ $quote->status === 'approved' ? 'success' : ($quote->status === 'pending' ? 'info' : ($quote->status === 'converted' ? 'primary' : 'danger')) }}">
-                                {{ ucfirst($quote->status) }}
+                            <span class="badge badge-sm bg-gradient-{{ 
+                                $quote->status === 'completed' ? 'success' : 
+                                ($quote->status === 'pending_manager' ? 'info' : 
+                                ($quote->status === 'pending_customer' ? 'warning' : 
+                                ($quote->status === 'pending_finance' ? 'primary' : 'danger'))) 
+                            }}">
+                                {{ ucwords(str_replace('_', ' ', $quote->status)) }}
                             </span>
                         </div>
                         <div class="col-md-6">
                             <p class="text-sm mb-0 text-uppercase font-weight-bold">Valid Until</p>
                             <p class="text-sm">{{ $quote->valid_until->format('M d, Y') }}</p>
+                        </div>
+                    </div>
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <p class="text-sm mb-0 text-uppercase font-weight-bold">Contact Person</p>
+                            <p class="text-sm">{{ $quote->contact_person ?: 'Not specified' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="text-sm mb-0 text-uppercase font-weight-bold">Created By</p>
+                            <p class="text-sm">{{ $quote->user->name }}</p>
                         </div>
                     </div>
                     <div class="row mt-4">
@@ -89,9 +139,9 @@
                                             <th>Quantity</th>
                                             <th>Unit Price</th>
                                             <th>Subtotal</th>
-                                            @if($quote->status === 'pending' && auth()->user()->role === 'manager')
+                                            @if($quote->status === 'pending_finance' && auth()->user()->isFinance())
                                             <th>Approve</th>
-                                            @elseif($quote->status !== 'pending')
+                                            @else
                                             <th>Status</th>
                                             @endif
                                         </tr>
@@ -103,7 +153,7 @@
                                             <td>{{ $item->quantity }}</td>
                                             <td>KES {{ number_format($item->price, 2) }}</td>
                                             <td>KES {{ number_format($item->total, 2) }}</td>
-                                            @if($quote->status === 'pending' && auth()->user()->role === 'manager')
+                                            @if($quote->status === 'pending_finance' && auth()->user()->isFinance())
                                             <td>
                                                 <div class="form-check">
                                                     <input type="checkbox" class="form-check-input item-approval"
@@ -111,7 +161,7 @@
                                                         {{ $item->approved ? 'checked' : '' }}>
                                                 </div>
                                             </td>
-                                            @elseif($quote->status !== 'pending')
+                                            @else
                                             <td>
                                                 <span class="badge badge-sm bg-gradient-{{ $item->approved ? 'success' : 'secondary' }}">
                                                     {{ $item->approved ? 'Approved' : 'Not Approved' }}
@@ -192,6 +242,11 @@
                                             <td>{{ $file->description ?: '-' }}</td>
                                             <td>{{ $file->created_at->format('M d, Y') }}</td>
                                             <td>
+                                                <a href="{{ route('quotes.view-file', [$quote, $file]) }}"
+                                                    class="btn btn-sm btn-info me-2"
+                                                    target="_blank">
+                                                    <i class="fas fa-eye"></i> View
+                                                </a>
                                                 <a href="{{ route('quotes.download-file', [$quote, $file]) }}"
                                                     class="btn btn-sm bg-gradient-info">
                                                     <i class="fas fa-download me-2"></i>Download
@@ -220,7 +275,7 @@
     </div>
 </div>
 
-@if($quote->status === 'pending' && auth()->user()->role === 'manager')
+@if($quote->status === 'pending_finance' && auth()->user()->isFinance())
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -311,5 +366,61 @@
     });
 </script>
 @endpush
+
+<!-- Quote Finalization Modal -->
+<div class="modal fade" id="finalizeQuoteModal" tabindex="-1" role="dialog" aria-labelledby="finalizeQuoteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <form action="{{ route('quotes.approve', $quote) }}" method="POST">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title" id="finalizeQuoteModalLabel">Confirm Quote Finalization</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning" role="alert">
+                        <div class="d-flex">
+                            <div class="text-white">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                            </div>
+                            <div class="ps-2">
+                                <h6 class="text-sm text-white mb-1">Warning</h6>
+                                <p class="text-sm mb-0 text-white">
+                                    Once finalized, this quote cannot be edited again. Are you sure you want to proceed?
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h6 class="text-sm font-weight-bold mb-2">Quote Summary:</h6>
+                        <ul class="list-group">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Total Items
+                                <span class="badge bg-primary rounded-pill">{{ $quote->items->count() }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Approved Items
+                                <span class="badge bg-success rounded-pill">{{ $quote->items->where('approved', true)->count() }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Not Approved Items
+                                <span class="badge bg-warning rounded-pill">{{ $quote->items->where('approved', false)->count() }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Total Amount
+                                <span class="fw-bold">KES {{ number_format($quote->amount, 2) }}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn bg-gradient-success">Confirm Finalization</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 @endsection

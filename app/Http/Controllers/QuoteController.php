@@ -22,11 +22,14 @@ class QuoteController extends Controller
     {
         $this->middleware('auth');
         $this->pdfService = $pdfService;
+        
+        // Prevent finance users from creating quotes
+        $this->middleware('role:marketer')->only(['create', 'store']);
     }
 
     public function index(Request $request)
     {
-        $query = Auth::user()->role === 'manager'
+        $query = Auth::user()->role === 'manager' || Auth::user()->role === 'finance'
             ? Quote::query()
             : Quote::where('user_id', Auth::id());
 
@@ -116,13 +119,15 @@ class QuoteController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'valid_until' => 'required|date|after:today',
+            'contact_person' => 'nullable|string|max:255',
             'items' => 'required|array|min:1',
             'items.*.item' => 'required|string',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.price' => 'required|numeric|min:0',
             'items.*.comment' => 'nullable|string',
-            'files' => 'required|array|min:1', // At least one file required
-            'files.*' => 'required|file|max:10240', // 10MB max per file
+            'total_rfq_items' => 'required|integer|min:0',
+            'files' => 'required|array|min:1',
+            'files.*' => 'required|file|max:10240',
             'descriptions.*' => 'nullable|string|max:255',
         ]);
 
@@ -131,14 +136,13 @@ class QuoteController extends Controller
                 return $item['quantity'] * $item['price'];
             });
             
-            // Get the latest quote ID
             $latestQuoteId = Quote::max('id') ?? 0;
             $nextQuoteId = $latestQuoteId + 1;
             
             $quote = Quote::create([
                 ...$validated,
                 'amount' => $totalAmount,
-                'status' => 'pending',
+                'status' => 'pending_manager',  // New initial status
                 'user_id' => Auth::id(),
                 'reference' => 'Q' . str_pad($nextQuoteId, 6, '0', STR_PAD_LEFT),
                 'has_rfq' => true,
@@ -155,13 +159,10 @@ class QuoteController extends Controller
                 ]);
             }
 
-            // Handle file attachments if any
             if ($request->hasFile('files')) {
                 foreach ($request->file('files') as $index => $file) {
                     $originalName = $file->getClientOriginalName();
                     $fileName = Str::random(40) . '.' . $file->getClientOriginalExtension();
-                    
-                    // Store file in the quote files folder
                     $path = $file->storeAs("quote-files/{$quote->id}", $fileName, 'public');
                     
                     $quote->files()->create([
@@ -178,7 +179,7 @@ class QuoteController extends Controller
         });
 
         return redirect()->route('quotes.index')
-            ->with('success', 'Quote created successfully.');
+            ->with('success', 'Quote created successfully and sent for manager approval.');
     }
 
     public function show(Quote $quote)
@@ -190,6 +191,18 @@ class QuoteController extends Controller
     public function edit(Quote $quote)
     {
         $this->authorize('update', $quote);
+        
+        // Extra check to ensure only finance can access edit and quote is not completed
+        if (!auth()->user()->isFinance()) {
+            return redirect()->route('quotes.show', $quote)
+                ->with('error', 'Only finance users can edit quotes.');
+        }
+        
+        if ($quote->status === 'completed') {
+            return redirect()->route('quotes.show', $quote)
+                ->with('error', 'Completed quotes cannot be edited.');
+        }
+        
         return view('quotes.edit', compact('quote'));
     }
 
@@ -197,40 +210,33 @@ class QuoteController extends Controller
     {
         $this->authorize('update', $quote);
 
+        // Count total items being processed
+        $totalProcessedItems = count($request->items ?? []) + count($request->unquoted_items ?? []);
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'valid_until' => 'required|date|after:today',
+            'contact_person' => 'nullable|string|max:255',
             'items' => 'required|array|min:1',
             'items.*.item' => 'required|string',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.price' => 'required|numeric|min:0',
-            'items.*.approved' => 'boolean',
+            'items.*.approved' => 'required|in:0,1',
             'items.*.reason' => [
-                'required_if:items.*.approved,false',
-                'string',
-                'in:out_of_stock,discontinued,price_unavailable,lead_time_too_long,other'
-            ],
-            'items.*.reason_details' => [
-                'required_if:items.*.reason,other',
+                'required_if:items.*.approved,0',
                 'nullable',
-                'string'
+                'string',
+                'max:1000'
             ],
-            'unquoted_items' => 'nullable|array',
-            'unquoted_items.*.item' => 'required|string',
-            'unquoted_items.*.quantity' => 'required|integer|min:1',
-            'unquoted_items.*.reason' => [
+            'items.*.comment' => 'nullable|string',
+            'total_rfq_items' => [
                 'required',
-                'string',
-                'in:out_of_stock,discontinued,price_unavailable,lead_time_too_long,other'
+                'integer',
+                'min:' . $totalProcessedItems,
             ],
-            'unquoted_items.*.reason_details' => [
-                'required_if:unquoted_items.*.reason,other',
-                'nullable',
-                'string'
-            ],
-            'files' => 'sometimes|array|min:1', // At least one file required when files are present
-            'files.*' => 'sometimes|file|max:10240', // 10MB max per file
+            'files' => 'sometimes|array|min:1',
+            'files.*' => 'sometimes|file|max:10240',
             'descriptions.*' => 'nullable|string|max:255',
         ]);
 
@@ -242,42 +248,44 @@ class QuoteController extends Controller
             $quote->update([
                 ...$validated,
                 'amount' => $totalAmount,
-                'has_rfq' => true // We know it has RFQ because quote creation requires it
+                'has_rfq' => true
             ]);
 
-            // Delete existing items and create new ones
+            // Delete existing items
             $quote->items()->delete();
-            $quote->unquotedItems()->delete();
-
-            // Collect items that weren't approved
-            $nonApprovedItems = collect($request->items)
-                ->reject(function($item) {
-                    return $item['approved'] ?? false;
-                })
-                ->map(function($item) {
-                    // Create an unquoted item for each non-approved item
-                    return [
-                        'item' => $item['item'],
-                        'quantity' => $item['quantity'],
-                        'reason' => $item['reason'] ?? 'price_unavailable',  // Default reason
-                        'reason_details' => $item['reason_details'] ?? null
-                    ];
-                });
 
             // Create the quote items
             foreach ($request->items as $item) {
+                $isApproved = isset($item['approved']) && $item['approved'] == '1';
+                
                 $quote->items()->create([
                     'item' => $item['item'],
                     'quantity' => $item['quantity'],
                     'price' => $item['price'],
-                    'approved' => $item['approved'] ?? false,
+                    'approved' => $isApproved,
+                    'reason' => !$isApproved ? ($item['reason'] ?? null) : null,
                     'comment' => $item['comment'] ?? null
                 ]);
             }
 
-            // Create unquoted items for non-approved items
-            foreach ($nonApprovedItems as $item) {
-                $quote->unquotedItems()->create($item);
+            // Handle new file uploads if any
+            if ($request->hasFile('files')) {
+                foreach ($request->file('files') as $index => $file) {
+                    $originalName = $file->getClientOriginalName();
+                    $fileName = Str::random(40) . '.' . $file->getClientOriginalExtension();
+                    $path = $file->storeAs("quote-files/{$quote->id}", $fileName, 'public');
+
+                    $quote->files()->create([
+                        'original_name' => $originalName,
+                        'file_name' => $fileName,
+                        'file_type' => $file->getClientMimeType(),
+                        'path' => $path,
+                        'description' => $request->descriptions[$index] ?? null
+                    ]);
+                }
+                
+                // Update RFQ file count
+                $quote->updateRfqFileCount();
             }
         });
 
@@ -300,11 +308,39 @@ class QuoteController extends Controller
         $this->authorize('approve', $quote);
 
         DB::transaction(function() use ($quote) {
-            $quote->update(['status' => 'approved']);
+            if (auth()->user()->isManager() && $quote->status === 'pending_manager') {
+                // Manager approves the entire quote to move to customer review
+                $quote->update(['status' => 'pending_customer']);
+                return redirect()->route('quotes.show', $quote)
+                    ->with('success', 'Quote approved. Marketer can now download PDF for customer review.');
+            }
+
+            if (auth()->user()->isFinance() && $quote->status === 'pending_finance') {
+                // Finance finalizes the quote after reviewing and approving items
+                $quote->update(['status' => 'completed']);
+                return redirect()->route('quotes.show', $quote)
+                    ->with('success', 'Quote finalized and closed.');
+            }
+
+            throw new \Exception('Invalid approval action for current quote status.');
         });
+        
+        return redirect()->route('quotes.show', $quote)
+            ->with('success', 'Quote status updated successfully.');
+    }
+
+    public function submitToFinance(Quote $quote)
+    {
+        $this->authorize('submit-to-finance', $quote);
+
+        if ($quote->status !== 'pending_customer') {
+            return back()->with('error', 'Quote must be approved by manager and reviewed by customer before submitting to finance.');
+        }
+
+        $quote->update(['status' => 'pending_finance']);
 
         return redirect()->route('quotes.show', $quote)
-            ->with('success', 'Quote approved successfully.');
+            ->with('success', 'Quote submitted to finance for final review.');
     }
 
     public function reject(Request $request, Quote $quote)
@@ -367,10 +403,15 @@ class QuoteController extends Controller
             ->with('success', 'Quote converted to invoice successfully with approved items only.');
     }
 
-    public function downloadPdf(Quote $quote)
+    public function download(Quote $quote)
     {
         $this->authorize('view', $quote);
-        return $this->pdfService->streamQuotePdf($quote);
+        
+        // Only show internal details (approval status, etc.) for finance users
+        // For marketers and managers, hide these details as the PDF might be shared with clients
+        $showInternalDetails = auth()->user()->isFinance();
+        
+        return $this->pdfService->streamQuotePdf($quote, $showInternalDetails);
     }
 
     public function fetchProductItems(Request $request)
@@ -428,6 +469,62 @@ class QuoteController extends Controller
         ]);
     }
 
+    public function fetchCustomers(Request $request)
+    {
+        $search = $request->get('q'); // Select2 uses 'q' parameter
+        $page = $request->get('page', 1);
+        $pageSize = 10;
+
+        $baseQuery = Quote::select([
+                'title',
+                'description',
+                'contact_person',
+                DB::raw('COUNT(*) as quote_count'),
+                DB::raw('MAX(created_at) as last_quoted')
+            ])
+            ->groupBy('title', 'description', 'contact_person');
+
+        if ($search) {
+            $terms = array_filter(explode(' ', trim($search)));
+            if (!empty($terms)) {
+                $baseQuery->where(function($q) use ($terms) {
+                    foreach ($terms as $term) {
+                        $q->where('title', 'like', '%' . $term . '%')
+                          ->orWhere('contact_person', 'like', '%' . $term . '%');
+                    }
+                });
+            }
+        }
+
+        $total = $baseQuery->get()->count();
+        
+        $customers = $baseQuery
+            ->orderByRaw('COUNT(*) DESC, MAX(created_at) DESC')
+            ->offset(($page - 1) * $pageSize)
+            ->limit($pageSize)
+            ->get()
+            ->map(function($customer) {
+                $quotedTimes = $customer->quote_count;
+                $timePhrase = $quotedTimes === 1 ? 'Quoted once' : "Quoted {$quotedTimes} times";
+                
+                return [
+                    'id' => $customer->title,
+                    'text' => $customer->title,
+                    'description' => $customer->description,
+                    'contact_person' => $customer->contact_person,
+                    'quoteInfo' => $timePhrase,
+                    'lastQuoted' => $customer->last_quoted
+                ];
+            });
+        
+        return response()->json([
+            'results' => $customers,
+            'pagination' => [
+                'more' => ($page * $pageSize) < $total
+            ]
+        ]);
+    }
+
     public function attachFile(Request $request, Quote $quote)
     {
         $this->authorize('update', $quote);
@@ -473,18 +570,38 @@ class QuoteController extends Controller
     {
         $this->authorize('view', $quote);
         
-        if ($file->quote_id !== $quote->id) {
-            abort(404);
-        }
+        $path = Storage::disk('public')->path($file->path);
+        return response()->download($path, $file->original_name);
+    }
 
-        if (!Storage::disk('public')->exists($file->path)) {
-            return back()->with('error', 'File not found.');
+    public function viewFile(Quote $quote, QuoteFile $file)
+    {
+        $this->authorize('view', $quote);
+        
+        $path = Storage::disk('public')->path($file->path);
+        $contentType = $file->file_type;
+        
+        // For PDFs and images, display in browser
+        if (in_array($contentType, ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'])) {
+            return response()->file($path, ['Content-Type' => $contentType]);
         }
-
-        return response()->download(
-            storage_path('app/public/' . $file->path),
-            $file->original_name
-        );
+        
+        // For other file types that can be displayed in browser
+        if (in_array($contentType, [
+            'text/plain',
+            'text/html',
+            'text/css',
+            'text/javascript',
+            'application/json',
+            'application/xml',
+            'text/xml'
+        ])) {
+            $content = file_get_contents($path);
+            return response($content)->header('Content-Type', $contentType);
+        }
+        
+        // If file type is not supported for browser viewing, fall back to download
+        return response()->download($path, $file->original_name);
     }
 
     public function deleteFile(Quote $quote, QuoteFile $file)
@@ -510,5 +627,24 @@ class QuoteController extends Controller
         $quote->updateRfqFileCount();
         
         return back()->with('success', 'File deleted successfully.');
+    }
+
+    public function toggleItemApproval(Request $request, $itemId)
+    {
+        $item = QuoteItem::findOrFail($itemId);
+        $quote = $item->quote;
+        
+        $this->authorize('update', $quote);
+        
+        if ($quote->status !== 'pending_finance' || !auth()->user()->isFinance()) {
+            return response()->json(['error' => 'Only finance users can approve items'], 403);
+        }
+        
+        $item->update([
+            'approved' => !$item->approved,
+            'reason' => !$item->approved ? null : ($item->reason ?? 'Not approved by finance')
+        ]);
+        
+        return response()->json(['success' => true, 'approved' => $item->approved]);
     }
 }

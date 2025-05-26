@@ -123,7 +123,16 @@
         </a>
       </li>
 
-      @if(Auth::user()->role !== 'manager')
+      <li class="nav-item">
+        <a class="nav-link {{ Request::is('suppliers*') ? 'active' : '' }}" href="{{ route('suppliers.index') }}">
+          <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+            <i class="fas fa-industry text-md opacity-10" style="color: #000;" aria-hidden="true"></i>
+          </div>
+          <span class="nav-link-text ms-1">Suppliers</span>
+        </a>
+      </li>
+
+      @if(Auth::user()->isMarketer())
       <li class="nav-link mb-0">
         <a href="{{ route('quotes.create') }}" class="btn btn-primary btn-md active px-5 text-white" role="button" aria-pressed="true">
           Create Quote</a>
