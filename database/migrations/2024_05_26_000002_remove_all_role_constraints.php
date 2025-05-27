@@ -17,12 +17,12 @@ class RemoveAllRoleConstraints extends Migration
         // Drop backup table if it exists
         Schema::dropIfExists('users_backup');
         
-        // For SQLite, we need to recreate the table without constraints
-        // First, create a backup table
-        DB::statement('CREATE TABLE users_backup AS SELECT * FROM users');
+        // For MySQL, we can directly remove triggers and constraints
+        DB::statement('CREATE TABLE users_backup LIKE users');
+        DB::statement('INSERT INTO users_backup SELECT * FROM users');
         
-        // Get the column names from the backup table
-        $columns = collect(DB::select('PRAGMA table_info(users_backup)'))->pluck('name')->toArray();
+        // Get the column names from information schema
+        $columns = collect(DB::select("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users_backup'"))->pluck('COLUMN_NAME')->toArray();
         
         // Drop the original table
         Schema::dropIfExists('users');

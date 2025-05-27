@@ -44,20 +44,22 @@ class UpdateQuotesStatusColumn extends Migration
         // Add check constraint
         DB::statement("CREATE TRIGGER check_quote_status
             BEFORE INSERT ON quotes
+            FOR EACH ROW
             BEGIN
-                SELECT CASE
-                    WHEN NEW.status NOT IN ('pending_manager', 'pending_customer', 'pending_finance', 'completed', 'rejected')
-                    THEN RAISE (ABORT, 'Invalid status')
-                END;
+                IF NEW.status NOT IN ('pending_manager', 'pending_customer', 'pending_finance', 'completed', 'rejected') THEN
+                    SIGNAL SQLSTATE '45000'
+                    SET MESSAGE_TEXT = 'Invalid quote status';
+                END IF;
             END;");
 
         DB::statement("CREATE TRIGGER check_quote_status_update
             BEFORE UPDATE ON quotes
+            FOR EACH ROW
             BEGIN
-                SELECT CASE
-                    WHEN NEW.status NOT IN ('pending_manager', 'pending_customer', 'pending_finance', 'completed', 'rejected')
-                    THEN RAISE (ABORT, 'Invalid status')
-                END;
+                IF NEW.status NOT IN ('pending_manager', 'pending_customer', 'pending_finance', 'completed', 'rejected') THEN
+                    SIGNAL SQLSTATE '45000'
+                    SET MESSAGE_TEXT = 'Invalid quote status';
+                END IF;
             END;");
     }
 
@@ -102,20 +104,22 @@ class UpdateQuotesStatusColumn extends Migration
         // Add check constraint for original values
         DB::statement("CREATE TRIGGER check_quote_status
             BEFORE INSERT ON quotes
+            FOR EACH ROW
             BEGIN
-                SELECT CASE
-                    WHEN NEW.status NOT IN ('pending', 'approved', 'rejected')
-                    THEN RAISE (ABORT, 'Invalid status')
-                END;
+                IF NEW.status NOT IN ('pending', 'approved', 'rejected') THEN
+                    SIGNAL SQLSTATE '45000'
+                    SET MESSAGE_TEXT = 'Invalid status';
+                END IF;
             END;");
 
         DB::statement("CREATE TRIGGER check_quote_status_update
             BEFORE UPDATE ON quotes
+            FOR EACH ROW
             BEGIN
-                SELECT CASE
-                    WHEN NEW.status NOT IN ('pending', 'approved', 'rejected')
-                    THEN RAISE (ABORT, 'Invalid status')
-                END;
+                IF NEW.status NOT IN ('pending', 'approved', 'rejected') THEN
+                    SIGNAL SQLSTATE '45000'
+                    SET MESSAGE_TEXT = 'Invalid status';
+                END IF;
             END;");
     }
 } 

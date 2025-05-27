@@ -19,22 +19,24 @@ class UpdateUserRoleConstraint extends Migration
         DB::statement("DROP TRIGGER IF EXISTS check_user_role_update");
 
         // Create new triggers with updated role list
-        DB::statement("CREATE TRIGGER IF NOT EXISTS check_user_role
+        DB::statement("CREATE TRIGGER check_user_role
             BEFORE INSERT ON users
+            FOR EACH ROW
             BEGIN
-                SELECT CASE
-                    WHEN NEW.role NOT IN ('manager', 'marketer', 'finance')
-                    THEN RAISE (ABORT, 'Invalid role')
-                END;
+                IF NEW.role NOT IN ('manager', 'marketer', 'finance') THEN
+                    SIGNAL SQLSTATE '45000'
+                    SET MESSAGE_TEXT = 'Invalid role';
+                END IF;
             END;");
 
-        DB::statement("CREATE TRIGGER IF NOT EXISTS check_user_role_update
+        DB::statement("CREATE TRIGGER check_user_role_update
             BEFORE UPDATE ON users
+            FOR EACH ROW
             BEGIN
-                SELECT CASE
-                    WHEN NEW.role NOT IN ('manager', 'marketer', 'finance')
-                    THEN RAISE (ABORT, 'Invalid role')
-                END;
+                IF NEW.role NOT IN ('manager', 'marketer', 'finance') THEN
+                    SIGNAL SQLSTATE '45000'
+                    SET MESSAGE_TEXT = 'Invalid role';
+                END IF;
             END;");
     }
 
@@ -50,22 +52,24 @@ class UpdateUserRoleConstraint extends Migration
         DB::statement("DROP TRIGGER IF EXISTS check_user_role_update");
 
         // Recreate original triggers
-        DB::statement("CREATE TRIGGER IF NOT EXISTS check_user_role
+        DB::statement("CREATE TRIGGER check_user_role
             BEFORE INSERT ON users
+            FOR EACH ROW
             BEGIN
-                SELECT CASE
-                    WHEN NEW.role NOT IN ('manager', 'marketer')
-                    THEN RAISE (ABORT, 'Invalid role')
-                END;
+                IF NEW.role NOT IN ('manager', 'marketer') THEN
+                    SIGNAL SQLSTATE '45000'
+                    SET MESSAGE_TEXT = 'Invalid role';
+                END IF;
             END;");
 
-        DB::statement("CREATE TRIGGER IF NOT EXISTS check_user_role_update
+        DB::statement("CREATE TRIGGER check_user_role_update
             BEFORE UPDATE ON users
+            FOR EACH ROW
             BEGIN
-                SELECT CASE
-                    WHEN NEW.role NOT IN ('manager', 'marketer')
-                    THEN RAISE (ABORT, 'Invalid role')
-                END;
+                IF NEW.role NOT IN ('manager', 'marketer') THEN
+                    SIGNAL SQLSTATE '45000'
+                    SET MESSAGE_TEXT = 'Invalid role';
+                END IF;
             END;");
     }
 } 

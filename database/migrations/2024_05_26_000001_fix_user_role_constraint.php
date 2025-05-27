@@ -18,11 +18,11 @@ class FixUserRoleConstraint extends Migration
         // This will remove any CHECK constraints on the role column
         
         // First, let's check if there are any triggers on the users table
-        $triggers = DB::select("SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'users'");
+        $triggers = DB::select("SHOW TRIGGERS WHERE `Table` = 'users'");
         
         // Drop any triggers found
         foreach ($triggers as $trigger) {
-            DB::statement("DROP TRIGGER IF EXISTS {$trigger->name}");
+            DB::statement("DROP TRIGGER IF EXISTS {$trigger->Trigger}");
         }
         
         // Now let's try a direct update to test if we can insert a finance user

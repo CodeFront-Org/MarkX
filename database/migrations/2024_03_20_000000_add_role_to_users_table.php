@@ -20,23 +20,25 @@ class AddRoleToUsersTable extends Migration
             }
         });
 
-        // Add check constraint using trigger for SQLite
-        DB::statement("CREATE TRIGGER IF NOT EXISTS check_user_role
+        // Add check constraint using trigger for MySQL
+        DB::statement("CREATE TRIGGER check_user_role
             BEFORE INSERT ON users
+            FOR EACH ROW
             BEGIN
-                SELECT CASE
-                    WHEN NEW.role NOT IN ('manager', 'marketer', 'finance')
-                    THEN RAISE (ABORT, 'Invalid role')
-                END;
+                IF NEW.role NOT IN ('manager', 'marketer', 'finance') THEN
+                    SIGNAL SQLSTATE '45000'
+                    SET MESSAGE_TEXT = 'Invalid role';
+                END IF;
             END;");
 
-        DB::statement("CREATE TRIGGER IF NOT EXISTS check_user_role_update
+        DB::statement("CREATE TRIGGER check_user_role_update
             BEFORE UPDATE ON users
+            FOR EACH ROW
             BEGIN
-                SELECT CASE
-                    WHEN NEW.role NOT IN ('manager', 'marketer', 'finance')
-                    THEN RAISE (ABORT, 'Invalid role')
-                END;
+                IF NEW.role NOT IN ('manager', 'marketer', 'finance') THEN
+                    SIGNAL SQLSTATE '45000'
+                    SET MESSAGE_TEXT = 'Invalid role';
+                END IF;
             END;");
     }
 
@@ -49,6 +51,13 @@ class AddRoleToUsersTable extends Migration
     {
         // Drop the triggers first
         DB::statement("DROP TRIGGER IF EXISTS check_user_role");
+        DB::statement("DROP TRIGGER IF EXISTS check_user_role_update");
+
+        Schema::table('users', function (Blueprint $table) {
+            if (Schema::hasColumn('users', 'role')) {
+                $table->dropColumn('role');
+            }
+        });
         DB::statement("DROP TRIGGER IF EXISTS check_user_role_update");
 
         Schema::table('users', function (Blueprint $table) {
