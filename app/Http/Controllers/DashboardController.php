@@ -19,12 +19,12 @@ class DashboardController extends Controller
         
         // Today's Money - Sum of approved quotes today
         $todaysMoney = (clone $quotesQuery)
-            ->where('status', 'approved')
+            ->whereIn('status', ['approved', 'completed'])
             ->whereDate('created_at', today())
             ->sum('amount');
         
         $yesterdayMoney = (clone $quotesQuery)
-            ->where('status', 'approved')
+            ->whereIn('status', ['approved', 'completed'])
             ->whereDate('created_at', today()->subDay())
             ->sum('amount');
         $moneyGrowth = $yesterdayMoney > 0 ? 
@@ -63,11 +63,11 @@ class DashboardController extends Controller
 
         // Monthly Sales - Sum of all approved quotes this month
         $monthlySales = (clone $quotesQuery)
-            ->where('status', 'approved')
+            ->whereIn('status', ['approved', 'completed'])
             ->whereMonth('created_at', now()->month)
             ->sum('amount');
         $lastMonthSales = (clone $quotesQuery)
-            ->where('status', 'approved')
+            ->whereIn('status', ['approved', 'completed'])
             ->whereMonth('created_at', now()->subMonth()->month)
             ->sum('amount');
         $salesGrowth = $lastMonthSales > 0 ? 
@@ -87,7 +87,7 @@ class DashboardController extends Controller
                 'approved_quotes' => (clone $quotesQuery)
                     ->whereYear('created_at', $date->year)
                     ->whereMonth('created_at', $date->month)
-                    ->where('status', 'approved')
+                    ->whereIn('status', ['approved', 'completed'])
                     ->count()
             ];
         }
@@ -102,6 +102,7 @@ class DashboardController extends Controller
             ->map(function($quote) {
                 $completion = match($quote->status) {
                     'approved' => 100,
+                    'completed' => 100,
                     'rejected' => 100,
                     'pending' => 50,
                     default => 10
@@ -146,7 +147,7 @@ class DashboardController extends Controller
             
             while ($date <= now()) {
                 $amount = Quote::where('user_id', $marketer->id)
-                    ->where('status', 'approved')
+                    ->whereIn('status', ['approved', 'completed'])
                     ->whereYear('created_at', $date->year)
                     ->whereMonth('created_at', $date->month)
                     ->sum('amount');

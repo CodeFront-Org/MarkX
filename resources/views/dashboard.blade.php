@@ -101,7 +101,7 @@
         <div class="card-body p-3">
           <div class="bg-gradient-dark border-radius-lg py-3 pe-1 mb-3">
             <div class="chart">
-              <canvas id="chart-bars" class="chart-canvas" height="170"></canvas>
+              <canvas id="chart-bars" class="chart-canvas" height="350"></canvas>
             </div>
           </div>
           <h6 class="ms-2 mt-4 mb-0">Monthly Activity</h6>
@@ -120,18 +120,18 @@
                   <div class="progress-bar bg-dark w-60" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
               </div>
-              {{-- <div class="col-3 py-3 ps-0">
+              <div class="col-3 py-3 ps-0">
                 <div class="d-flex mb-2">
                   <div class="icon icon-shape icon-xxs shadow border-radius-sm bg-gradient-info text-center me-2 d-flex align-items-center justify-content-center">
                     <i class="ni ni-chart-bar-32 text-white opacity-10"></i>
                   </div>
                   <p class="text-xs mt-1 mb-0 font-weight-bold">Success Rate</p>
                 </div>
-                <h4 class="font-weight-bolder">{{ number_format($monthlyData->avg('success_rate'), 1) }}%</h4>
+                <h4 class="font-weight-bolder">{{ $monthlyData->sum('quotes') > 0 ? number_format(($monthlyData->sum('approved_quotes') / $monthlyData->sum('quotes')) * 100, 1) : 0 }}%</h4>
                 <div class="progress w-75">
                   <div class="progress-bar bg-dark w-90" role="progressbar" aria-valuenow="90" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
-              </div> --}}
+              </div>
             </div>
           </div>
         </div>
@@ -148,7 +148,7 @@
         </div>
         <div class="card-body p-3">
           <div class="chart">
-            <canvas id="chart-line" class="chart-canvas" height="300"></canvas>
+            <canvas id="chart-line" class="chart-canvas" height="350"></canvas>
           </div>
         </div>
       </div>
@@ -228,7 +228,7 @@
               <h6>Recent Projects</h6>
               <p class="text-sm mb-0">
                 <i class="fa fa-check text-info" aria-hidden="true"></i>
-                <span class="font-weight-bold ms-1">{{ $recentProjects->where('status', 'converted')->count() }}</span> completed this month
+                <span class="font-weight-bold ms-1">{{ $recentProjects->whereIn('status', ['approved', 'completed'])->count() }}</span> completed this month
               </p>
             </div>
           </div>
@@ -296,7 +296,7 @@
             @foreach($recentActivity as $activity)
             <div class="timeline-block mb-3">
               <span class="timeline-step">
-                <i class="ni ni-{{ $activity['status'] === 'approved' ? 'check-bold' : 'bell-55' }} text-{{ $activity['status'] === 'approved' ? 'success' : 'warning' }} text-gradient"></i>
+                <i class="ni ni-{{ in_array($activity['status'], ['approved', 'completed']) ? 'check-bold' : 'bell-55' }} text-{{ in_array($activity['status'], ['approved', 'completed']) ? 'success' : 'warning' }} text-gradient"></i>
               </span>
               <div class="timeline-content">
                 <h6 class="text-dark text-sm font-weight-bold mb-0">
@@ -317,6 +317,19 @@
 @endsection
 
 @push('dashboard')
+  <style>
+    .chart {
+      position: relative;
+      height: 350px;
+      width: 100%;
+    }
+    
+    .chart-canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+  </style>
+  
   <script>
     document.addEventListener("DOMContentLoaded", function() {
       try {
@@ -343,7 +356,19 @@
               backgroundColor: "#fff",
               data: monthlyData.map(d => d.quotes),
               maxBarThickness: 6
-            },],
+            }, {
+              label: "Success Rate (%)",
+              tension: 0.4,
+              borderWidth: 0,
+              borderRadius: 4,
+              borderSkipped: false,
+              backgroundColor: "rgba(23,193,232,0.8)",
+              data: monthlyData.map(d => {
+                // Calculate success rate safely, avoiding division by zero
+                return d.quotes > 0 ? Math.round((d.approved_quotes / d.quotes) * 100) : 0;
+              }),
+              maxBarThickness: 6
+            }],
           },
           options: {
             responsive: true,
