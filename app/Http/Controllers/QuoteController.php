@@ -139,11 +139,15 @@ class QuoteController extends Controller
             $latestQuoteId = Quote::max('id') ?? 0;
             $nextQuoteId = $latestQuoteId + 1;
             
+            // Get the current authenticated user
+            $currentUser = Auth::user();
+            
             $quote = Quote::create([
                 ...$validated,
                 'amount' => $totalAmount,
                 'status' => 'pending_manager',  // New initial status
                 'user_id' => Auth::id(),
+                'marketer_id' => $currentUser->id, // Set the current user (marketer) as marketer_id
                 'reference' => 'Q' . str_pad($nextQuoteId, 6, '0', STR_PAD_LEFT),
                 'has_rfq' => true,
                 'rfq_files_count' => count($request->file('files'))

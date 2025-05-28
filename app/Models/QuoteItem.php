@@ -2,11 +2,19 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
 class QuoteItem extends Model
 {
+    use HasFactory;
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'quote_id',
         'item',
@@ -31,6 +39,9 @@ class QuoteItem extends Model
         return $this->quantity * $this->price;
     }
 
+    /**
+     * Get the quote that the item belongs to
+     */
     public function quote()
     {
         return $this->belongsTo(Quote::class);

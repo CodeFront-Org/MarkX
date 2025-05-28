@@ -106,34 +106,6 @@
           </div>
           <h6 class="ms-2 mt-4 mb-0">Monthly Activity</h6>
           <p class="text-sm ms-2">Quotes vs Success Rate</p>
-          <div class="container border-radius-lg">
-            <div class="row">
-              <div class="col-3 py-3 ps-0">
-                <div class="d-flex mb-2">
-                  <div class="icon icon-shape icon-xxs shadow border-radius-sm bg-gradient-primary text-center me-2 d-flex align-items-center justify-content-center">
-                    <i class="ni ni-money-coins text-white opacity-10"></i>
-                  </div>
-                  <p class="text-xs mt-1 mb-0 font-weight-bold">Quotes</p>
-                </div>
-                <h4 class="font-weight-bolder">{{ $monthlyData->sum('quotes') }}</h4>
-                <div class="progress w-75">
-                  <div class="progress-bar bg-dark w-60" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-              </div>
-              <div class="col-3 py-3 ps-0">
-                <div class="d-flex mb-2">
-                  <div class="icon icon-shape icon-xxs shadow border-radius-sm bg-gradient-info text-center me-2 d-flex align-items-center justify-content-center">
-                    <i class="ni ni-chart-bar-32 text-white opacity-10"></i>
-                  </div>
-                  <p class="text-xs mt-1 mb-0 font-weight-bold">Success Rate</p>
-                </div>
-                <h4 class="font-weight-bolder">{{ $monthlyData->sum('quotes') > 0 ? number_format(($monthlyData->sum('approved_quotes') / $monthlyData->sum('quotes')) * 100, 1) : 0 }}%</h4>
-                <div class="progress w-75">
-                  <div class="progress-bar bg-dark w-90" role="progressbar" aria-valuenow="90" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -356,19 +328,8 @@
               backgroundColor: "#fff",
               data: monthlyData.map(d => d.quotes),
               maxBarThickness: 6
-            }, {
-              label: "Success Rate (%)",
-              tension: 0.4,
-              borderWidth: 0,
-              borderRadius: 4,
-              borderSkipped: false,
-              backgroundColor: "rgba(23,193,232,0.8)",
-              data: monthlyData.map(d => {
-                // Calculate success rate safely, avoiding division by zero
-                return d.quotes > 0 ? Math.round((d.approved_quotes / d.quotes) * 100) : 0;
-              }),
-              maxBarThickness: 6
-            }],
+            }
+          ],
           },
           options: {
             responsive: true,

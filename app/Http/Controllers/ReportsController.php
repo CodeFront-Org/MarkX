@@ -61,10 +61,10 @@ class ReportsController extends Controller
         return User::where('role', 'marketer')
             ->withCount(['marketedQuotes as total_quotes'])
             ->withCount(['marketedQuotes as successful_quotes' => function($query) {
-                $query->where('status', 'approved');
+                $query->whereIn('status', ['approved', 'completed']);
             }])
             ->withSum(['marketedQuotes as quote_value' => function($query) {
-                $query->where('status', 'approved');
+                $query->whereIn('status', ['approved', 'completed']);
             }], 'amount')
             ->get()
             ->map(function($marketer) {
@@ -113,21 +113,27 @@ class ReportsController extends Controller
         $lowProducts = $sorted->reverse()->take(5);
 
         return [$topProducts, $lowProducts];
-    }    private function getQuoteTrends()
+    }
+
+    private function getQuoteTrends()
     {
         // Add debug logging for SQL query
         try {
             $query = Quote::select(
-                DB::raw("strftime('%Y-%m', created_at) as month"),
+                DB::raw(DB::connection()->getDriverName() === 'sqlite' 
+                    ? "strftime('%Y-%m', created_at) as month" 
+                    : "DATE_FORMAT(created_at, '%Y-%m') as month"),
                 DB::raw('COUNT(*) as total'),
-                DB::raw('SUM(CASE WHEN status = "approved" THEN 1 ELSE 0 END) as approved'),
+                DB::raw('SUM(CASE WHEN status IN ("approved", "completed") THEN 1 ELSE 0 END) as approved'),
                 DB::raw('SUM(amount) as total_amount'),
-                DB::raw('SUM(CASE WHEN status = "approved" THEN amount ELSE 0 END) as approved_amount'),
-                DB::raw('AVG(CASE WHEN status = "approved" THEN amount ELSE NULL END) as avg_amount'),
+                DB::raw('SUM(CASE WHEN status IN ("approved", "completed") THEN amount ELSE 0 END) as approved_amount'),
+                DB::raw('AVG(CASE WHEN status IN ("approved", "completed") THEN amount ELSE NULL END) as avg_amount'),
                 DB::raw('COUNT(DISTINCT user_id) as unique_users')
             )
             ->where('created_at', '>=', now()->subMonths(12))
-            ->groupBy(DB::raw("strftime('%Y-%m', created_at)"));
+            ->groupBy(DB::connection()->getDriverName() === 'sqlite' 
+                ? DB::raw("strftime('%Y-%m', created_at)") 
+                : DB::raw("DATE_FORMAT(created_at, '%Y-%m')"));
             
             // Get the raw SQL query for debugging
             $sql = $query->toSql();
@@ -147,6 +153,33 @@ class ReportsController extends Controller
             \Log::info('Quote trends data: ' . json_encode($trends));
             
             $currentYear = now()->format('Y');
+            
+            // If we have fewer than 3 data points, add some synthetic data points
+            // to ensure charts display properly
+            if ($trends->count() < 3) {
+                $currentMonth = now();
+                $existingMonths = $trends->pluck('month')->toArray();
+                
+                // Add previous months if needed
+                for ($i = 1; $i <= 3; $i++) {
+                    $prevMonth = now()->subMonths($i)->format('Y-m');
+                    
+                    if (!in_array($prevMonth, $existingMonths)) {
+                        $trends->push((object)[
+                            'month' => $prevMonth,
+                            'total' => 0,
+                            'approved' => 0,
+                            'total_amount' => 0,
+                            'approved_amount' => 0,
+                            'avg_amount' => 0,
+                            'unique_users' => 0
+                        ]);
+                    }
+                }
+                
+                // Sort by month to ensure chronological order
+                $trends = $trends->sortBy('month')->values();
+            }
             
             return (object)[
                 'labels' => $trends->pluck('month'),
@@ -193,29 +226,42 @@ class ReportsController extends Controller
                 'total_quotes_ytd' => 0
             ];
         }
-    }    private function getQuoteStats()
+    }
+
+    private function getQuoteStats()
     {
         $totalQuotes = Quote::where('created_at', '>=', now()->subYear())->count();
-        $successfulQuotes = Quote::where('status', 'approved')
+        $successfulQuotes = Quote::whereIn('status', ['approved', 'completed'])
             ->where('created_at', '>=', now()->subYear())
             ->count();
 
-        // Calculate average time from creation to approval using SQLite-compatible functions
-        $avgTimeToApprove = Quote::where('status', 'approved')
+        // Calculate average time from creation to approval using database-agnostic functions
+        $avgTimeToApprove = Quote::whereIn('status', ['approved', 'completed'])
             ->whereNotNull('updated_at')
             ->where('created_at', '>=', now()->subYear())
-            ->selectRaw('ROUND(AVG(julianday(updated_at) - julianday(created_at))) AS days')
+            ->selectRaw(DB::connection()->getDriverName() === 'sqlite'
+                ? 'ROUND(AVG(julianday(updated_at) - julianday(created_at))) AS days'
+                : 'ROUND(AVG(TIMESTAMPDIFF(DAY, created_at, updated_at))) AS days')
             ->value('days') ?? 0;
 
-        // Get monthly trend using SQLite-compatible date functions
+        // Get monthly trend using database-agnostic date functions
         $currentMonth = now()->format('Y-m');
         $lastMonth = now()->subMonth()->format('Y-m');
         
-        $monthlyTrend = Quote::whereRaw("strftime('%Y-%m', created_at) = ?", [$currentMonth])
-            ->count();
+        // Use database-specific date formatting
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            $monthlyTrend = Quote::whereRaw("strftime('%Y-%m', created_at) = ?", [$currentMonth])
+                ->count();
 
-        $lastMonthTrend = Quote::whereRaw("strftime('%Y-%m', created_at) = ?", [$lastMonth])
-            ->count();
+            $lastMonthTrend = Quote::whereRaw("strftime('%Y-%m', created_at) = ?", [$lastMonth])
+                ->count();
+        } else {
+            $monthlyTrend = Quote::whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$currentMonth])
+                ->count();
+
+            $lastMonthTrend = Quote::whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$lastMonth])
+                ->count();
+        }
 
         $trendPercentage = $lastMonthTrend > 0 
             ? (($monthlyTrend - $lastMonthTrend) / $lastMonthTrend) * 100 
@@ -223,8 +269,8 @@ class ReportsController extends Controller
 
         return (object)[
             'success_rate' => $totalQuotes > 0 ? ($successfulQuotes / $totalQuotes) * 100 : 0,
-            'avg_value' => Quote::where('status', 'approved')->avg('amount') ?? 0,
-            'total_value' => Quote::where('status', 'approved')->sum('amount') ?? 0,
+            'avg_value' => Quote::whereIn('status', ['approved', 'completed'])->avg('amount') ?? 0,
+            'total_value' => Quote::whereIn('status', ['approved', 'completed'])->sum('amount') ?? 0,
             'conversion_time' => round($avgTimeToApprove),
             'trend_percentage' => round($trendPercentage, 1),
             'month_to_date' => $monthlyTrend,
@@ -234,15 +280,15 @@ class ReportsController extends Controller
             'pending_quotes' => Quote::where('status', 'pending')->count(),
             'rejected_quotes' => Quote::where('status', 'rejected')->count(),
             'average_quotes_per_day' => round($totalQuotes / 365, 1),
-            'highest_value' => Quote::where('status', 'approved')->max('amount') ?? 0,
-            'lowest_value' => Quote::where('status', 'approved')->min('amount') ?? 0
+            'highest_value' => Quote::whereIn('status', ['approved', 'completed'])->max('amount') ?? 0,
+            'lowest_value' => Quote::whereIn('status', ['approved', 'completed'])->min('amount') ?? 0
         ];
     }
 
     private function getApprovalStats()
     {
         $totalQuotes = Quote::where('created_at', '>=', now()->subYear())->count();
-        $approvedQuotes = Quote::where('status', 'approved')
+        $approvedQuotes = Quote::whereIn('status', ['approved', 'completed'])
             ->where('created_at', '>=', now()->subYear())
             ->count();
         
@@ -271,10 +317,18 @@ class ReportsController extends Controller
         foreach ($ranges as $label => [$min, $max]) {
             $query = Quote::where('status', 'pending');
 
-            if ($max) {
-                $query->whereRaw("ROUND(julianday('now') - julianday(created_at)) BETWEEN ? AND ?", [$min, $max]);
+            if (DB::connection()->getDriverName() === 'sqlite') {
+                if ($max) {
+                    $query->whereRaw("ROUND(julianday('now') - julianday(created_at)) BETWEEN ? AND ?", [$min, $max]);
+                } else {
+                    $query->whereRaw("ROUND(julianday('now') - julianday(created_at)) >= ?", [$min]);
+                }
             } else {
-                $query->whereRaw("ROUND(julianday('now') - julianday(created_at)) >= ?", [$min]);
+                if ($max) {
+                    $query->whereRaw("TIMESTAMPDIFF(DAY, created_at, NOW()) BETWEEN ? AND ?", [$min, $max]);
+                } else {
+                    $query->whereRaw("TIMESTAMPDIFF(DAY, created_at, NOW()) >= ?", [$min]);
+                }
             }
 
             $results[] = (object)[
@@ -289,6 +343,10 @@ class ReportsController extends Controller
 
     private function getTopClients()
     {
+        $daysFunction = DB::connection()->getDriverName() === 'sqlite'
+            ? "ROUND(julianday(updated_at) - julianday(created_at))"
+            : "TIMESTAMPDIFF(DAY, created_at, updated_at)";
+            
         return User::where('role', 'client')
             ->withCount(['quotes as total_quotes'])
             ->withCount(['quotes as approved_quotes' => function($query) {
@@ -300,7 +358,7 @@ class ReportsController extends Controller
             ->withAvg(['quotes as avg_response_days' => function($query) {
                 $query->whereNotNull('updated_at')
                     ->whereIn('status', ['approved', 'rejected']);
-            }], DB::raw('ROUND(julianday(updated_at) - julianday(created_at))'))
+            }], DB::raw($daysFunction))
             ->orderByDesc('total_value')
             ->limit(10)
             ->get()
@@ -337,7 +395,9 @@ class ReportsController extends Controller
         $responseTimeWeight = 0.3;
         
         return ($approvalRate * $approvalWeight) + ($responseTimeScore * $responseTimeWeight);
-    }    private function getFinancialHealthMetrics()
+    }
+
+    private function getFinancialHealthMetrics()
     {
         // Get current month and year
         $currentMonth = now()->format('Y-m');
@@ -345,14 +405,23 @@ class ReportsController extends Controller
         $currentYear = now()->format('Y');
         $lastYear = now()->subYear()->format('Y');
         
+        // Use database-specific date formatting
+        $dateFormat = DB::connection()->getDriverName() === 'sqlite'
+            ? "strftime('%Y-%m', created_at)"
+            : "DATE_FORMAT(created_at, '%Y-%m')";
+            
+        $yearFormat = DB::connection()->getDriverName() === 'sqlite'
+            ? "strftime('%Y', created_at)"
+            : "YEAR(created_at)";
+        
         // Calculate current month's projected revenue
-        $currentMonthRevenue = Quote::where('status', 'approved')
-            ->whereRaw("strftime('%Y-%m', created_at) = ?", [$currentMonth])
+        $currentMonthRevenue = Quote::whereIn('status', ['approved', 'completed'])
+            ->whereRaw("$dateFormat = ?", [$currentMonth])
             ->sum('amount');
 
         // Calculate last month's revenue
-        $lastMonthRevenue = Quote::where('status', 'approved')
-            ->whereRaw("strftime('%Y-%m', created_at) = ?", [$lastMonth])
+        $lastMonthRevenue = Quote::whereIn('status', ['approved', 'completed'])
+            ->whereRaw("$dateFormat = ?", [$lastMonth])
             ->sum('amount');
 
         // Calculate growth rate
@@ -372,11 +441,11 @@ class ReportsController extends Controller
             ->sum('amount');
 
         // Calculate conversion rate (approval rate) for current month
-        $thisMonthQuotes = Quote::whereRaw("strftime('%Y-%m', created_at) = ?", [$currentMonth])
+        $thisMonthQuotes = Quote::whereRaw("$dateFormat = ?", [$currentMonth])
             ->count();
         
-        $thisMonthApproved = Quote::whereRaw("strftime('%Y-%m', created_at) = ?", [$currentMonth])
-            ->where('status', 'approved')
+        $thisMonthApproved = Quote::whereRaw("$dateFormat = ?", [$currentMonth])
+            ->whereIn('status', ['approved', 'completed'])
             ->count();
 
         $conversion_rate = $thisMonthQuotes > 0 
@@ -384,12 +453,12 @@ class ReportsController extends Controller
             : 0;
 
         // Get YTD and previous year metrics
-        $ytdRevenue = Quote::where('status', 'approved')
-            ->whereRaw("strftime('%Y', created_at) = ?", [$currentYear])
+        $ytdRevenue = Quote::whereIn('status', ['approved', 'completed'])
+            ->whereRaw("$yearFormat = ?", [$currentYear])
             ->sum('amount');
         
-        $lastYearRevenue = Quote::where('status', 'approved')
-            ->whereRaw("strftime('%Y', created_at) = ?", [$lastYear])
+        $lastYearRevenue = Quote::whereIn('status', ['approved', 'completed'])
+            ->whereRaw("$yearFormat = ?", [$lastYear])
             ->sum('amount');
 
         $yearOverYearGrowth = $lastYearRevenue > 0 
@@ -417,8 +486,8 @@ class ReportsController extends Controller
             'target_achievement' => $projected_monthly_revenue > 0 
                 ? ($currentMonthRevenue / $projected_monthly_revenue) * 100 
                 : 0,
-            'average_quote_size' => Quote::where('status', 'approved')
-                ->whereRaw("strftime('%Y', created_at) = ?", [$currentYear])
+            'average_quote_size' => Quote::whereIn('status', ['approved', 'completed'])
+                ->whereRaw("$yearFormat = ?", [$currentYear])
                 ->avg('amount') ?? 0
         ];
     }

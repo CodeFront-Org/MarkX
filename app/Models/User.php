@@ -14,21 +14,19 @@ class User extends Authenticatable
     /**
      * The attributes that are mass assignable.
      *
-     * @var string[]
+     * @var array<int, string>
      */
     protected $fillable = [
         'name',
         'email',
         'password',
-        'phone',
-        'location',
         'role',
     ];
 
     /**
      * The attributes that should be hidden for serialization.
      *
-     * @var array
+     * @var array<int, string>
      */
     protected $hidden = [
         'password',
@@ -38,22 +36,47 @@ class User extends Authenticatable
     /**
      * The attributes that should be cast.
      *
-     * @var array
+     * @var array<string, string>
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'password' => 'hashed',
     ];
 
     /**
-     * Get all quotes created by the user
+     * Check if user is a manager
      */
-    public function quotes()
+    public function isManager()
     {
-        return $this->hasMany(Quote::class);
+        return $this->role === 'manager';
     }
 
     /**
-     * Get all quotes where the user is the marketer
+     * Check if user is a marketer
+     */
+    public function isMarketer()
+    {
+        return $this->role === 'marketer';
+    }
+
+    /**
+     * Check if user is a client
+     */
+    public function isClient()
+    {
+        return $this->role === 'client';
+    }
+
+    /**
+     * Get the quotes that belong to the user (as a client)
+     */
+    public function quotes()
+    {
+        return $this->hasMany(Quote::class, 'user_id');
+    }
+
+    /**
+     * Get the quotes that were created by the user (as a marketer)
      */
     public function marketedQuotes()
     {
@@ -68,22 +91,6 @@ class User extends Authenticatable
     public function hasRole(string $role): bool
     {
         return $this->role === $role;
-    }
-
-    /**
-     * Check if user is a manager
-     */
-    public function isManager(): bool
-    {
-        return $this->role === 'manager';
-    }
-
-    /**
-     * Check if user is a marketer
-     */
-    public function isMarketer(): bool
-    {
-        return $this->hasRole('marketer');
     }
 
     /**

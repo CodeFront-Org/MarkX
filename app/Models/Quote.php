@@ -10,13 +10,20 @@ class Quote extends Model
 {
     use HasFactory, SoftDeletes;
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
-        'title',
-        'description',
-        'amount',
-        'status',
         'user_id',
         'marketer_id',
+        'amount',
+        'status',
+        'created_at',
+        'updated_at',
+        'title',
+        'description',
         'valid_until',
         'rejection_reason',
         'rejection_details',
@@ -45,7 +52,7 @@ class Quote extends Model
     // Relationships
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function marketer()
@@ -74,6 +81,11 @@ class Quote extends Model
     }
 
     // Scopes
+    public function scopeStatus($query, $status)
+    {
+        return $query->where('status', $status);
+    }
+
     public function scopePending($query)
     {
         return $query->where('status', 'pending');
