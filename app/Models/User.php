@@ -52,6 +52,14 @@ class User extends Authenticatable
         return $this->hasMany(Quote::class);
     }
 
+    /**
+     * Get all quotes where the user is the marketer
+     */
+    public function marketedQuotes()
+    {
+        return $this->hasMany(Quote::class, 'marketer_id');
+    }
+
     // No invoice relationship
 
     /**

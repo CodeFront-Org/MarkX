@@ -2,6 +2,25 @@
 
 @section('content')
 <div class="container-fluid py-4">
+    <!-- Flash Messages -->
+    @if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span class="alert-text"><strong>Error!</strong> {{ session('error') }}</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    @endif
+
+    @if(session('export_success') || session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <span class="alert-text"><strong>Success!</strong> {{ session('export_success') ?? session('success') }}</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    @endif
+
     <!-- KPI Metrics Row -->
     <div class="row mb-4">
         <div class="col-xl-3 col-sm-6">
@@ -22,28 +41,6 @@
                         <div class="col-4 text-end">
                             <div class="icon icon-shape bg-gradient-primary shadow text-center border-radius-md">
                                 <i class="ni ni-money-coins text-lg opacity-10" aria-hidden="true"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-sm-6">
-            <div class="card">
-                <div class="card-body p-3">
-                    <div class="row">
-                        <div class="col-8">
-                            <div class="numbers">
-                                <p class="text-sm mb-0 text-uppercase font-weight-bold">Outstanding Amount</p>
-                                <h5 class="font-weight-bolder mb-0">
-                                    KES <span class="count-up" data-value="{{ $financialHealth->outstanding_amount }}">0</span>
-                                </h5>
-                            </div>
-                        </div>
-                        <div class="col-4 text-end">
-                            <div class="icon icon-shape bg-gradient-warning shadow text-center border-radius-md">
-                                <i class="ni ni-credit-card text-lg opacity-10" aria-hidden="true"></i>
                             </div>
                         </div>
                     </div>
@@ -81,7 +78,7 @@
                             <div class="numbers">
                                 <p class="text-sm mb-0 text-uppercase font-weight-bold">Success Rate</p>
                                 <h5 class="font-weight-bolder mb-0">
-                                    <span class="count-up" data-value="{{ $quoteStats->success_rate }}">0</span>%
+                                    <span class="count-up" data-value="{{ $quoteStats->success_rate }}">0</span>
                                 </h5>
                             </div>
                         </div>
@@ -184,88 +181,6 @@
         </div>
     </div>
 
-    <!-- Product Performance Cards -->
-    <div class="row">
-        <div class="col-xl-6">
-            <div class="card mb-4">
-                <div class="card-header pb-0">
-                    <h6>Top Performing Products</h6>
-                </div>
-                <div class="card-body px-0 pt-0 pb-2">
-                    <div class="table-responsive p-0">
-                        <table class="table align-items-center mb-0">
-                            <thead>
-                                <tr>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Product</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Revenue</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Success Rate</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($topProducts as $product)
-                                    <tr>
-                                        <td>
-                                            <div class="d-flex px-3 py-1">
-                                                <div class="d-flex flex-column justify-content-center">
-                                                    <h6 class="mb-0 text-sm">{{ $product->item }}</h6>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <p class="text-sm font-weight-bold mb-0">KES {{ number_format($product->total_revenue, 2) }}</p>
-                                        </td>
-                                        <td>
-                                            <p class="text-sm font-weight-bold mb-0">{{ number_format($product->success_rate, 1) }}%</p>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-xl-6">
-            <div class="card mb-4">
-                <div class="card-header pb-0">
-                    <h6>Underperforming Products</h6>
-                </div>
-                <div class="card-body px-0 pt-0 pb-2">
-                    <div class="table-responsive p-0">
-                        <table class="table align-items-center mb-0">
-                            <thead>
-                                <tr>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Product</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Revenue</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Success Rate</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($lowProducts as $product)
-                                    <tr>
-                                        <td>
-                                            <div class="d-flex px-3 py-1">
-                                                <div class="d-flex flex-column justify-content-center">
-                                                    <h6 class="mb-0 text-sm">{{ $product->item }}</h6>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <p class="text-sm font-weight-bold mb-0">KES {{ number_format($product->total_revenue, 2) }}</p>
-                                        </td>
-                                        <td>
-                                            <p class="text-sm font-weight-bold mb-0">{{ number_format($product->success_rate, 1) }}%</p>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Quote Analytics -->
     <div class="row">
@@ -307,6 +222,26 @@
                             <h4 class="font-weight-bolder mb-0">{{ $quoteStats->conversion_time }} days</h4>
                             <p class="text-sm mb-0 text-uppercase font-weight-bold">Avg. Time to Convert</p>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue Forecast Chart -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header pb-0">
+                    <h6>Revenue Forecast vs Actual</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart">
+                        <canvas id="revenue-forecast-chart" class="chart-canvas" 
+                            data-labels="{{ json_encode($quoteTrends->labels) }}"
+                            data-projected="{{ json_encode($quoteTrends->monthly_approved_amounts) }}"
+                            data-actual="{{ json_encode($quoteTrends->monthly_amounts) }}">
+                        </canvas>
                     </div>
                 </div>
             </div>
@@ -605,4 +540,27 @@
     }
 </style>
 @endpush
+
+<!-- Export Modal -->
+@include('partials.modals.export-modal', ['marketers' => isset($marketers) ? $marketers : [], 'report_type' => 'reports'])
+
+<!-- Correct script for export modal -->
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const exportModal = document.getElementById('exportModal');
+        const typeSelect = document.querySelector('select[name="type"]');
+
+        exportModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const exportType = button.getAttribute('data-export-type');
+            if (exportType && typeSelect) {
+                typeSelect.value = exportType;
+                typeSelect.dispatchEvent(new Event('change'));
+            }
+        });
+    });
+</script>
+@endpush
+
 @endsection

@@ -27,7 +27,7 @@ class ExportController extends Controller
         try {
             // Validate request
             $request->validate([
-                'type' => 'required|in:quotes,marketers,products,performance,analytics',
+                'type' => 'required|in:quotes,marketers,products,performance,analytics,items',
                 'format' => 'required|in:excel,csv,pdf',
                 'dateFrom' => 'nullable|date',
                 'dateTo' => 'nullable|date|after_or_equal:dateFrom',
@@ -39,7 +39,7 @@ class ExportController extends Controller
             $data = $this->buildQuery($request);
 
             if ($data->isEmpty()) {
-                return back()->with('export_error', 'No data available for the selected filters.');
+                return back()->with('error', 'No data available for export with the selected filters. Please try different filters.');
             }
 
             // Format data based on export type
@@ -53,7 +53,8 @@ class ExportController extends Controller
 
             return $response;
         } catch (\Exception $e) {
-            return back()->with('export_error', 'Error exporting data: ' . $e->getMessage());
+            \Log::error('Export error: ' . $e->getMessage());
+            return back()->with('error', 'Error exporting data: ' . $e->getMessage());
         }
     }
 
@@ -74,15 +75,15 @@ class ExportController extends Controller
                 break;
 
             case 'marketers':
-                $query = User::role('marketer')
-                    ->withCount(['quotes' => function($q) use ($dateFrom, $dateTo) {
+                $query = User::where('role', 'marketer')
+                    ->withCount(['marketedQuotes as quotes_count' => function($q) use ($dateFrom, $dateTo) {
                         $q->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
                           ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo));
                     }])
-                    ->withSum(['quotes' => function($q) use ($dateFrom, $dateTo) {
+                    ->withSum(['marketedQuotes as quotes_sum_total_amount' => function($q) use ($dateFrom, $dateTo) {
                         $q->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
                           ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo));
-                    }], 'total_amount');
+                    }], 'amount');
                 break;
 
             case 'products':
@@ -93,17 +94,33 @@ class ExportController extends Controller
                     }]);
                 break;
 
+            case 'items':
+                $query = QuoteItem::select(
+                        'quote_items.item',
+                        DB::raw('COUNT(*) as total_count'),
+                        DB::raw('SUM(quantity) as total_quantity'),
+                        DB::raw('AVG(price) as average_price'),
+                        DB::raw('SUM(quantity * price) as total_value')
+                    )
+                    ->join('quotes', 'quote_items.quote_id', '=', 'quotes.id')
+                    ->when($dateFrom, fn($q) => $q->whereDate('quotes.created_at', '>=', $dateFrom))
+                    ->when($dateTo, fn($q) => $q->whereDate('quotes.created_at', '<=', $dateTo))
+                    ->when($request->marketer, fn($q) => $q->where('quotes.marketer_id', $request->marketer))
+                    ->when($request->status, fn($q) => $q->where('quotes.status', $request->status))
+                    ->groupBy('quote_items.item')
+                    ->orderByDesc('total_value');
+                break;
+
             case 'performance':
                 $query = DB::table('quotes')
                     ->join('users', 'quotes.marketer_id', '=', 'users.id')
-                    ->join('quote_items', 'quotes.id', '=', 'quote_items.quote_id')
-                    ->join('product_items', 'quote_items.product_item_id', '=', 'product_items.id')
+                    ->leftJoin('quote_items', 'quotes.id', '=', 'quote_items.quote_id')
                     ->select(
                         'users.name as marketer_name',
                         DB::raw('COUNT(DISTINCT quotes.id) as total_quotes'),
-                        DB::raw('SUM(quotes.total_amount) as total_amount'),
-                        DB::raw('AVG(quotes.total_amount) as average_quote_value'),
-                        DB::raw('COUNT(DISTINCT product_items.id) as unique_products_sold')
+                        DB::raw('SUM(quotes.amount) as total_amount'),
+                        DB::raw('AVG(quotes.amount) as average_quote_value'),
+                        DB::raw('COUNT(DISTINCT quote_items.item) as unique_products_sold')
                     )
                     ->when($dateFrom, fn($q) => $q->whereDate('quotes.created_at', '>=', $dateFrom))
                     ->when($dateTo, fn($q) => $q->whereDate('quotes.created_at', '<=', $dateTo))
@@ -115,8 +132,8 @@ class ExportController extends Controller
                 $query = Quote::selectRaw('
                     DATE(created_at) as date,
                     COUNT(*) as total_quotes,
-                    SUM(total_amount) as total_revenue,
-                    AVG(total_amount) as average_quote_value,
+                    SUM(amount) as total_revenue,
+                    AVG(amount) as average_quote_value,
                     COUNT(DISTINCT marketer_id) as active_marketers
                 ')
                 ->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
@@ -127,47 +144,59 @@ class ExportController extends Controller
                 break;
         }
 
-        return $query->get();
+        return $query ? $query->get() : collect([]);
     }
 
     private function formatData($data, $type)
     {
+        if ($data->isEmpty()) {
+            return [];
+        }
+        
         $data = collect($data);
         
         switch ($type) {
             case 'quotes':
-                return $data->map(fn($quote) => [
-                    'ID' => $quote->id,
-                    'Date' => $quote->created_at->format('Y-m-d'),
-                    'Marketer' => $quote->marketer->name,
-                    'Status' => $quote->status,
-                    'Total Amount' => $quote->total_amount,
-                    'Items Count' => $quote->items->count(),
-                ]);
+                return $data->map(function($quote) {
+                    return [
+                        'ID' => $quote->id,
+                        'Date' => $quote->created_at->format('Y-m-d'),
+                        'Marketer' => $quote->marketer ? $quote->marketer->name : 'N/A',
+                        'Status' => $quote->status,
+                        'Amount' => $quote->amount,
+                        'Items Count' => $quote->items ? $quote->items->count() : 0,
+                    ];
+                });
 
             case 'marketers':
-                return $data->map(fn($user) => [
-                    'ID' => $user->id,
-                    'Name' => $user->name,
-                    'Email' => $user->email,
-                    'Total Quotes' => $user->quotes_count,
-                    'Total Revenue' => $user->quotes_sum_total_amount,
-                    'Average Quote Value' => $user->quotes_count ? 
-                        $user->quotes_sum_total_amount / $user->quotes_count : 0,
-                ]);
+                return $data->map(function($user) {
+                    return [
+                        'ID' => $user->id,
+                        'Name' => $user->name,
+                        'Email' => $user->email,
+                        'Total Quotes' => $user->quotes_count ?? 0,
+                        'Total Revenue' => $user->quotes_sum_total_amount ?? 0,
+                        'Average Quote Value' => ($user->quotes_count && $user->quotes_sum_total_amount) ? 
+                            $user->quotes_sum_total_amount / $user->quotes_count : 0,
+                    ];
+                });
 
             case 'products':
-                return $data->map(fn($item) => [
-                    'ID' => $item->id,
-                    'Name' => $item->name,
-                    'Description' => $item->description,
-                    'Price' => $item->price,
-                    'Times Quoted' => $item->quotes_count,
-                ]);
+                return $data->map(function($item) {
+                    return [
+                        'ID' => $item->id,
+                        'Name' => $item->name,
+                        'Description' => $item->description ?? 'N/A',
+                        'Price' => $item->price ?? 0,
+                        'Times Quoted' => $item->quotes_count ?? 0,
+                    ];
+                });
 
             // Performance and analytics data is already formatted by the query
             default:
-                return $data;
+                return $data->map(function($item) {
+                    return (array) $item;
+                });
         }
     }
 
@@ -175,30 +204,117 @@ class ExportController extends Controller
     {
         $filename = sprintf('%s_export_%s', $type, now()->format('Y-m-d'));
 
-        switch ($format) {
-            case 'excel':
-                return Excel::download(new DataExport($data), $filename . '.xlsx');
+        try {
+            // Check if data is empty
+            if (empty($data)) {
+                return back()->with('error', 'No data available to export with the selected filters.');
+            }
+            
+            switch ($format) {
+                case 'excel':
+                    return Excel::download(new DataExport($data), $filename . '.xlsx');
 
-            case 'csv':
-                return response($this->arrayToCsv($data))
-                    ->header('Content-Type', 'text/csv')
-                    ->header('Content-Disposition', "attachment; filename=\"$filename.csv\"");            case 'pdf':
-                $pdf = Pdf::loadView('exports.pdf', [
-                    'type' => $type,
-                    'headers' => array_keys($data[0]),
-                    'data' => $data,
-                    'filters' => array_filter([
-                        'date range' => request('dateFrom') && request('dateTo') ? 
-                            request('dateFrom') . ' to ' . request('dateTo') : null,
-                        'marketer' => request('marketer') ? User::find(request('marketer'))->name : null,
-                        'status' => request('status'),
-                    ])
-                ]);
-                return $pdf->download($filename . '.pdf');
+                case 'csv':
+                    return response($this->arrayToCsv($data))
+                        ->header('Content-Type', 'text/csv')
+                        ->header('Content-Disposition', "attachment; filename=\"$filename.csv\"");
+                        
+                case 'pdf':
+                    $headers = !empty($data) ? array_keys((array)$data[0]) : [];
+                    
+                    // Format data for better PDF display
+                    $formattedData = $this->formatDataForPdf($data, $type);
+                    
+                    // Determine page orientation based on number of columns
+                    $orientation = count($headers) > 5 ? 'landscape' : 'portrait';
+                    
+                    // Use specialized templates based on export type
+                    $view = match($type) {
+                        'performance' => 'exports.performance-report',
+                        'quotes' => 'exports.quotes-report',
+                        'analytics' => 'exports.analytics-report',
+                        'products' => 'exports.products-report',
+                        'items' => 'exports.items-report',
+                        default => 'exports.pdf'
+                    };
+                    
+                    $pdf = Pdf::loadView($view, [
+                        'type' => $type,
+                        'headers' => $headers,
+                        'data' => $formattedData,
+                        'filters' => array_filter([
+                            'date range' => request('dateFrom') && request('dateTo') ? 
+                                request('dateFrom') . ' to ' . request('dateTo') : null,
+                            'marketer' => request('marketer') ? User::find(request('marketer'))->name : null,
+                            'status' => request('status'),
+                        ])
+                    ]);
+                    
+                    // Set PDF options
+                    $pdf->setPaper('a4', $orientation);
+                    $pdf->setOptions([
+                        'dpi' => 150,
+                        'defaultFont' => 'sans-serif',
+                        'isHtml5ParserEnabled' => true,
+                        'isRemoteEnabled' => true
+                    ]);
+                    
+                    return $pdf->download($filename . '.pdf');
 
-            default:
-                return response()->json($data);
+                default:
+                    return response()->json($data);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Export error: ' . $e->getMessage());
+            return back()->with('error', 'Error generating export: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Format data specifically for PDF display
+     */
+    private function formatDataForPdf($data, $type)
+    {
+        if (empty($data)) {
+            return [];
+        }
+        
+        $formattedData = [];
+        
+        foreach ($data as $row) {
+            $newRow = [];
+            
+            foreach ((array)$row as $key => $value) {
+                // Format numeric values
+                if (is_numeric($value) && !in_array($key, ['id', 'ID'])) {
+                    if (stripos($key, 'amount') !== false || stripos($key, 'revenue') !== false || 
+                        stripos($key, 'value') !== false || stripos($key, 'price') !== false) {
+                        $newRow[$key] = $value; // Keep raw value for calculations in template
+                    } elseif (stripos($key, 'rate') !== false || stripos($key, 'percentage') !== false) {
+                        $newRow[$key] = $value; // Keep raw value for calculations in template
+                    } else {
+                        $newRow[$key] = $value;
+                    }
+                }
+                // Format dates
+                elseif ($value instanceof \DateTime || (is_string($value) && strtotime($value) !== false)) {
+                    try {
+                        $date = $value instanceof \DateTime ? $value : new \DateTime($value);
+                        $newRow[$key] = $date->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $newRow[$key] = $value;
+                    }
+                }
+                // Handle everything else
+                else {
+                    $newRow[$key] = $value;
+                }
+            }
+            
+            $formattedData[] = $newRow;
+        }
+        
+        return $formattedData;
     }
 
     private function arrayToCsv($data)

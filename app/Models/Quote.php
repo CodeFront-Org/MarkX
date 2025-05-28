@@ -16,6 +16,7 @@ class Quote extends Model
         'amount',
         'status',
         'user_id',
+        'marketer_id',
         'valid_until',
         'rejection_reason',
         'rejection_details',
@@ -45,6 +46,11 @@ class Quote extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function marketer()
+    {
+        return $this->belongsTo(User::class, 'marketer_id');
     }
 
     public function items()

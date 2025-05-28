@@ -28,7 +28,6 @@ class UserSeeder extends Seeder
             User::create(array_merge($manager, [
                 'password' => bcrypt('password'),
                 'remember_token' => Str::random(10),
-                'email_verified_at' => now(),
             ]));
         }
 
@@ -55,7 +54,6 @@ class UserSeeder extends Seeder
             User::create(array_merge($marketer, [
                 'password' => bcrypt('password'),
                 'remember_token' => Str::random(10),
-                'email_verified_at' => now(),
             ]));
         }
     }

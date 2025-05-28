@@ -1,4 +1,4 @@
-@include('partials.modals.header')
+{{-- Remove the header include since it's not needed --}}
 
 <div id="exportModal" class="modal fade" role="dialog" aria-labelledby="exportModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -7,9 +7,16 @@
                 <h5 class="modal-title" id="exportModalLabel">Export Data</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="exportForm" action="{{ route('exports.data') }}" method="POST">
-                @csrf
+            <form id="exportForm" action="{{ route('exports.data') }}" method="GET">
                 <div class="modal-body">
+                    <!-- Alert for empty data warning -->
+                    <div class="alert alert-info mb-3">
+                        <small>
+                            <i class="fas fa-info-circle me-1"></i>
+                            If no data matches your filters, you'll be redirected back to this page with an error message.
+                        </small>
+                    </div>
+                    
                     <div class="row">
                         <!-- Data Type Selection -->
                         <div class="col-md-6 mb-3">
@@ -45,13 +52,15 @@
 
                         <!-- Marketer Selection -->
                         <div class="col-md-12 mb-3">
-                            <label class="form-control-label">Select Marketers</label>
-                            <select name="marketers[]" class="form-control" multiple>
-                                @foreach($marketers as $marketer)
-                                    <option value="{{ $marketer->id }}">{{ $marketer->name }}</option>
-                                @endforeach
+                            <label class="form-control-label">Select Marketer</label>
+                            <select name="marketer" class="form-control">
+                                <option value="">All Marketers</option>
+                                @isset($marketers)
+                                    @foreach($marketers as $marketer)
+                                        <option value="{{ $marketer->id }}">{{ $marketer->name }}</option>
+                                    @endforeach
+                                @endisset
                             </select>
-                            <small class="form-text text-muted">Leave empty to include all marketers</small>
                         </div>
 
                         <!-- Status Filter -->
@@ -68,7 +77,13 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Export</button>
+                    <button type="submit" class="btn btn-primary" id="exportBtn">
+                        <span class="normal-text">Export</span>
+                        <span class="loading-text d-none">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            Exporting...
+                        </span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -81,20 +96,45 @@
         // Initialize export form
         const exportForm = document.getElementById('exportForm');
         
-        exportForm.addEventListener('submit', async function(e) {
+        exportForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const formData = new FormData(this);
-            const queryString = new URLSearchParams(formData).toString();
+            // Show loading indicator
+            const submitBtn = document.getElementById('exportBtn');
+            submitBtn.disabled = true;
+            submitBtn.querySelector('.normal-text').classList.add('d-none');
+            submitBtn.querySelector('.loading-text').classList.remove('d-none');
+            
+            // Build the query string manually
+            const formData = new FormData(exportForm);
+            const queryParams = new URLSearchParams();
+            
+            for (const [key, value] of formData.entries()) {
+                if (value) { // Only add non-empty values
+                    queryParams.append(key, value);
+                }
+            }
             
             // Redirect to export endpoint
-            window.location.href = this.action + '?' + queryString;
+            const url = exportForm.action + '?' + queryParams.toString();
+            
+            // Use a timeout to allow the browser to show the loading state
+            setTimeout(() => {
+                window.location.href = url;
+                
+                // Reset button after a delay (in case the download starts but the page doesn't reload)
+                setTimeout(() => {
+                    submitBtn.disabled = false;
+                    submitBtn.querySelector('.normal-text').classList.remove('d-none');
+                    submitBtn.querySelector('.loading-text').classList.add('d-none');
+                }, 3000);
+            }, 500);
         });
 
         // Dynamic form updates based on type selection
         const typeSelect = document.querySelector('select[name="type"]');
         const statusSelect = document.querySelector('select[name="status"]');
-        const marketerSelect = document.querySelector('select[name="marketers[]"]');
+        const marketerSelect = document.querySelector('select[name="marketer"]');
         
         typeSelect.addEventListener('change', function() {
             // Show/hide status filter for relevant types
