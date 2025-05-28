@@ -111,7 +111,7 @@ class ReportsController extends Controller
     }    private function getQuoteTrends()
     {
         $trends = Quote::select(
-            DB::raw("strftime('%Y-%m', created_at) as month"),
+            DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
             DB::raw('COUNT(*) as total'),
             DB::raw('SUM(CASE WHEN status = "approved" THEN 1 ELSE 0 END) as approved'),
             DB::raw('SUM(amount) as total_amount'),
@@ -120,7 +120,7 @@ class ReportsController extends Controller
             DB::raw('COUNT(DISTINCT user_id) as unique_users')
         )
         ->where('created_at', '>=', now()->subMonths(12))
-        ->groupBy(DB::raw("strftime('%Y-%m', created_at)"))
+        ->groupBy(DB::raw("DATE_FORMAT(created_at, '%Y-%m')"))
         ->orderBy('month')
         ->get();
 
@@ -155,7 +155,7 @@ class ReportsController extends Controller
         $avgTimeToApprove = Quote::where('status', 'approved')
             ->whereNotNull('updated_at')
             ->where('created_at', '>=', now()->subYear())
-            ->selectRaw('round(avg(julianday(updated_at) - julianday(created_at))) as days')
+            ->selectRaw('ROUND(AVG(DATEDIFF(updated_at, created_at))) AS days')
             ->value('days') ?? 0;
 
         // Get monthly trend
@@ -222,9 +222,9 @@ class ReportsController extends Controller
             $query = Quote::where('status', 'pending');
 
             if ($max) {
-                $query->whereRaw("(julianday('now') - julianday(created_at)) BETWEEN ? AND ?", [$min, $max]);
+                $query->whereRaw("DATEDIFF(NOW(), created_at) BETWEEN ? AND ?", [$min, $max]);
             } else {
-                $query->whereRaw("(julianday('now') - julianday(created_at)) >= ?", [$min]);
+                $query->whereRaw("DATEDIFF(NOW(), created_at) >= ?", [$min]);
             }
 
             $results[] = (object)[
@@ -250,7 +250,7 @@ class ReportsController extends Controller
             ->withAvg(['quotes as avg_response_days' => function($query) {
                 $query->whereNotNull('updated_at')
                     ->whereIn('status', ['approved', 'rejected']);
-            }], DB::raw('round(julianday(updated_at) - julianday(created_at))'))
+            }], DB::raw('ROUND(TIMESTAMPDIFF(DAY, created_at, updated_at))'))
             ->orderByDesc('total_value')
             ->limit(10)
             ->get()

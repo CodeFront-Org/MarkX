@@ -29,10 +29,10 @@
                         <table class="table align-items-center mb-0">
                             <thead>
                                 <tr>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Name</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Product</th>
+                                    <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Supplier</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Contact</th>
-                                    <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Products</th>
-                                    <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Last Updated</th>
+                                                                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Last Updated</th>
                                     <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Actions</th>
                                 </tr>
                             </thead>
@@ -42,17 +42,25 @@
                                     <td>
                                         <div class="d-flex px-2 py-1">
                                             <div class="d-flex flex-column justify-content-center">
-                                                <h6 class="mb-0 text-sm">{{ $supplier->name }}</h6>
+                                                <h6 class="mb-0 text-sm">{{ $supplier->notes }}</h6>
                                             </div>
                                         </div>
                                     </td>
                                     <td>
+                                        <div class="d-flex px-2 py-1">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-sm">{{ $supplier->name }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                      
                                         <p class="text-xs font-weight-bold mb-0">{{ $supplier->contact_person }}</p>
                                         <p class="text-xs text-secondary mb-0">{{ $supplier->email }}</p>
+                                        <p class="text-xs text-secondary mb-0">{{ $supplier->phone }}</p>
                                     </td>
-                                    <td class="align-middle text-center text-sm">
-                                        <span class="badge badge-sm bg-gradient-success">{{ $supplier->products_count }}</span>
-                                    </td>
+                                
                                     <td class="align-middle text-center">
                                         <span class="text-secondary text-xs font-weight-bold">
                                             {{ $supplier->updated_at->format('M d, Y') }}

@@ -123,7 +123,7 @@
         <div style="float: left; width: 50%;">
             <strong>Date Created:</strong> {{ $quote->created_at->format('F d, Y') }}<br>
             <strong>Valid Until:</strong> {{ $quote->valid_until->format('F d, Y') }}<br>
-            <strong>Status:</strong> <span class="status-badge status-{{ strtolower($quote->status) }}">{{ ucfirst($quote->status) }}</span>
+            {{-- <strong>Status:</strong> <span class="status-badge status-{{ strtolower($quote->status) }}">{{ ucfirst($quote->status) }}</span> --}}
         </div>
         <div class="clear"></div>
     </div>
@@ -131,7 +131,8 @@
     <div class="section">
         <div class="quote-title">{{ $quote->title }}</div>
         <p>{{ $quote->description }}</p>
-
+        <p>Attn:{{ $quote->contact_person }}</p>
+        
         <table>
             <thead>
                 <tr>

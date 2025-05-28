@@ -2,7 +2,7 @@
 
 @section('content')
 
-  <div class="row">
+  {{-- <div class="row">
     <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
       <div class="card">
         <div class="card-body p-3">
@@ -93,7 +93,8 @@
         </div>
       </div>
     </div>
-  </div>
+  </div> --}}
+
   <div class="row mt-4">
     <div class="col-lg-5 mb-lg-0 mb-4">
       <div class="card z-index-2">
@@ -119,7 +120,7 @@
                   <div class="progress-bar bg-dark w-60" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
               </div>
-              <div class="col-3 py-3 ps-0">
+              {{-- <div class="col-3 py-3 ps-0">
                 <div class="d-flex mb-2">
                   <div class="icon icon-shape icon-xxs shadow border-radius-sm bg-gradient-info text-center me-2 d-flex align-items-center justify-content-center">
                     <i class="ni ni-chart-bar-32 text-white opacity-10"></i>
@@ -130,7 +131,7 @@
                 <div class="progress w-75">
                   <div class="progress-bar bg-dark w-90" role="progressbar" aria-valuenow="90" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
-              </div>
+              </div> --}}
             </div>
           </div>
         </div>
@@ -160,7 +161,7 @@
           <h6>Quote Items Per Person Per Day (Last 30 Days)</h6>
           <p class="text-sm">
             <i class="fa fa-table text-success"></i>
-            <span class="font-weight-bold">Daily</span> distribution of quoted items by person (Baseline of 10 items per day)
+            {{-- <span class="font-weight-bold">Daily</span> distribution of quoted items by person (Baseline of 10 items per day) --}}
           </p>
         </div>
         <div class="card-body px-0 pt-0 pb-2">
@@ -171,7 +172,7 @@
                   <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Person</th>
                   <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Date</th>
                   <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Items Quoted</th>
-                  <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Daily Performance</th>
+                  {{-- <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Daily Performance</th> --}}
                 </tr>
               </thead>
               <tbody>
@@ -193,7 +194,7 @@
                   <td class="align-middle text-center">
                     <span class="text-secondary text-sm font-weight-bold">{{ $item->item_count }}</span>
                   </td>
-                  <td class="align-middle">
+                  {{-- <td class="align-middle">
                     <div class="progress-wrapper w-75 mx-auto">
                       <div class="progress-info">
                         <div class="progress-percentage">
@@ -208,7 +209,7 @@
                              style="width: {{ min(100, ($item->item_count / 10) * 100) }}%"></div>
                       </div>
                     </div>
-                  </td>
+                  </td> --}}
                 </tr>
                 @endforeach
               </tbody>
@@ -268,11 +269,8 @@
                     <div class="progress-wrapper w-75 mx-auto">
                       <div class="progress-info">
                         <div class="progress-percentage">
-                          <span class="text-xs font-weight-bold">{{ $project['completion'] }}%</span>
+                          <span class="text-xs font-weight-bold">{{ $project['status'] }}</span>
                         </div>
-                      </div>
-                      <div class="progress">
-                        <div class="progress-bar bg-gradient-info w-{{ $project['completion'] }}" role="progressbar" aria-valuenow="{{ $project['completion'] }}" aria-valuemin="0" aria-valuemax="100"></div>
                       </div>
                     </div>
                   </td>

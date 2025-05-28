@@ -9,7 +9,7 @@
                     <h6>Supplier Details</h6>
                     <div>
                         <a href="{{ route('suppliers.edit', $supplier) }}" class="btn bg-gradient-primary">Edit Supplier</a>
-                        <a href="{{ route('suppliers.products.add', $supplier) }}" class="btn bg-gradient-success">Add Product</a>
+                        {{-- <a href="{{ route('suppliers.products.add', $supplier) }}" class="btn bg-gradient-success">Add Product</a> --}}
                     </div>
                 </div>
                 <div class="card-body">
@@ -56,7 +56,7 @@
                     </div>
                     
                     <!-- Products Section -->
-                    <div class="row mt-5">
+                    {{-- <div class="row mt-5">
                         <div class="col-12">
                             <h6 class="mb-3">Products Supplied</h6>
                             <div class="table-responsive">
@@ -127,7 +127,7 @@
                                 </table>
                             </div>
                         </div>
-                    </div>
+                    </div> --}}
                     
                     <div class="row mt-4">
                         <div class="col-md-12">
