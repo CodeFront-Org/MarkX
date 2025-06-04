@@ -1,0 +1,19 @@
+Invitro Store
+->Store 
+->Manager is (RFQ Approver)
+->FRQ processor (Marketer)
+Rename from Finance to LPO Admin
+
+
+change from Manager approval to RFQ approver
+
+Approval report and time stamp
+
+Change from Finalize quote to - Close Quote
+
+Logo-SoftCopy of the Letter Head
+
+
+--Send Josephine SOW--
+(Domain is invistro property)
+And Report and 6 months support
