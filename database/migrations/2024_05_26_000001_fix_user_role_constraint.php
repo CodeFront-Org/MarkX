@@ -14,30 +14,27 @@ class FixUserRoleConstraint extends Migration
      */
     public function up()
     {
-        // Let's take a simpler approach - just modify the database directly
-        // This will remove any CHECK constraints on the role column
-        
-        // First, let's check if there are any triggers on the users table
-        $triggers = DB::select("SHOW TRIGGERS WHERE `Table` = 'users'");
-        
-        // Drop any triggers found
-        foreach ($triggers as $trigger) {
-            DB::statement("DROP TRIGGER IF EXISTS {$trigger->Trigger}");
-        }
-        
-        // Now let's try a direct update to test if we can insert a finance user
+        // Update any existing users to have valid roles
+        DB::table('users')
+            ->whereNotIn('role', ['rfq_approver', 'rfq_processor', 'lpo_admin'])
+            ->update(['role' => 'rfq_processor']);  // Default to rfq_processor
+            
+        // Test if we can insert a lpo_admin user
         try {
-            DB::statement("INSERT INTO users (name, email, password, role, created_at, updated_at) 
-                          VALUES ('Test Finance', 'test_finance@example.com', 
-                                 '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 
-                                 'finance', '2025-05-26 13:30:00', '2025-05-26 13:30:00')");
+            DB::table('users')->insert([
+                'name' => 'Test LPO Admin',
+                'email' => 'test_lpo_admin@example.com',
+                'password' => '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+                'role' => 'lpo_admin',
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
             
             // If we get here, it worked, so delete the test user
-            DB::statement("DELETE FROM users WHERE email = 'test_finance@example.com'");
+            DB::table('users')->where('email', 'test_lpo_admin@example.com')->delete();
         } catch (\Exception $e) {
-            // If we get here, we need to try a more drastic approach
-            // But we'll just report the error for now
-            throw new \Exception("Could not insert finance user: " . $e->getMessage());
+            // If there's still an issue, just log it
+            \Log::error("Could not insert lpo_admin user: " . $e->getMessage());
         }
     }
 

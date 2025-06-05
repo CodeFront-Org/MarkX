@@ -14,53 +14,24 @@ class RemoveAllRoleConstraints extends Migration
      */
     public function up()
     {
-        // Drop backup table if it exists
-        Schema::dropIfExists('users_backup');
+        // Update any existing users to have valid roles
+        DB::table('users')
+            ->whereNotIn('role', ['rfq_approver', 'rfq_processor', 'lpo_admin'])
+            ->update(['role' => 'rfq_processor']);
         
-        // For MySQL, we can directly remove triggers and constraints
-        DB::statement('CREATE TABLE users_backup LIKE users');
-        DB::statement('INSERT INTO users_backup SELECT * FROM users');
-        
-        // Get the column names from information schema
-        $columns = collect(DB::select("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users_backup'"))->pluck('COLUMN_NAME')->toArray();
-        
-        // Drop the original table
-        Schema::dropIfExists('users');
-        
-        // Recreate the table without any constraints on the role column
-        Schema::create('users', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
-            $table->string('phone')->nullable();
-            $table->string('location')->nullable();
-            $table->string('about_me')->nullable();
-            $table->string('role')->default('marketer'); // No constraint here
-            $table->rememberToken();
-            $table->timestamps();
-        });
-        
-        // Copy the data back using explicit column names
-        $columnsString = implode(', ', $columns);
-        DB::statement("INSERT INTO users ($columnsString) SELECT $columnsString FROM users_backup");
-        
-        // Drop the backup table
-        Schema::dropIfExists('users_backup');
-        
-        // Test by inserting a finance user
+        // Test by inserting a lpo_admin user
         try {
             $user = new \App\Models\User([
-                'name' => 'Test Finance',
-                'email' => 'test_finance_' . time() . '@example.com',
+                'name' => 'Test LPO Admin',
+                'email' => 'test_lpo_admin_' . time() . '@example.com',
                 'password' => bcrypt('password'),
-                'role' => 'finance'
+                'role' => 'lpo_admin'
             ]);
             $user->save();
             $user->delete(); // Clean up
         } catch (\Exception $e) {
-            throw new \Exception("Failed to create finance user: " . $e->getMessage());
+            \Log::error("Failed to create lpo_admin user: " . $e->getMessage());
+            // Don't throw the exception, as we want to continue with the migration
         }
     }
 

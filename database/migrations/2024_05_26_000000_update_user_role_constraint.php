@@ -14,30 +14,12 @@ class UpdateUserRoleConstraint extends Migration
      */
     public function up()
     {
-        // Drop existing triggers
-        DB::statement("DROP TRIGGER IF EXISTS check_user_role");
-        DB::statement("DROP TRIGGER IF EXISTS check_user_role_update");
-
-        // Create new triggers with updated role list
-        DB::statement("CREATE TRIGGER check_user_role
-            BEFORE INSERT ON users
-            FOR EACH ROW
-            BEGIN
-                IF NEW.role NOT IN ('manager', 'marketer', 'finance') THEN
-                    SIGNAL SQLSTATE '45000'
-                    SET MESSAGE_TEXT = 'Invalid role';
-                END IF;
-            END;");
-
-        DB::statement("CREATE TRIGGER check_user_role_update
-            BEFORE UPDATE ON users
-            FOR EACH ROW
-            BEGIN
-                IF NEW.role NOT IN ('manager', 'marketer', 'finance') THEN
-                    SIGNAL SQLSTATE '45000'
-                    SET MESSAGE_TEXT = 'Invalid role';
-                END IF;
-            END;");
+        // Update any existing users to have valid roles
+        DB::table('users')
+            ->whereNotIn('role', ['rfq_approver', 'rfq_processor', 'lpo_admin'])
+            ->update(['role' => 'rfq_processor']);  // Default to rfq_processor
+            
+        // No triggers - we'll handle validation in the application code instead
     }
 
     /**
@@ -47,29 +29,6 @@ class UpdateUserRoleConstraint extends Migration
      */
     public function down()
     {
-        // Drop the triggers
-        DB::statement("DROP TRIGGER IF EXISTS check_user_role");
-        DB::statement("DROP TRIGGER IF EXISTS check_user_role_update");
-
-        // Recreate original triggers
-        DB::statement("CREATE TRIGGER check_user_role
-            BEFORE INSERT ON users
-            FOR EACH ROW
-            BEGIN
-                IF NEW.role NOT IN ('manager', 'marketer') THEN
-                    SIGNAL SQLSTATE '45000'
-                    SET MESSAGE_TEXT = 'Invalid role';
-                END IF;
-            END;");
-
-        DB::statement("CREATE TRIGGER check_user_role_update
-            BEFORE UPDATE ON users
-            FOR EACH ROW
-            BEGIN
-                IF NEW.role NOT IN ('manager', 'marketer') THEN
-                    SIGNAL SQLSTATE '45000'
-                    SET MESSAGE_TEXT = 'Invalid role';
-                END IF;
-            END;");
+        // Nothing to do here - we're not adding constraints in the migration
     }
 } 

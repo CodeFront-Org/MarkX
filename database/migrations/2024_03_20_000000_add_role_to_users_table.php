@@ -16,30 +16,16 @@ class AddRoleToUsersTable extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             if (!Schema::hasColumn('users', 'role')) {
-                $table->string('role')->default('marketer');
+                $table->string('role')->default('rfq_processor');
             }
         });
 
-        // Add check constraint using trigger for MySQL
-        DB::statement("CREATE TRIGGER check_user_role
-            BEFORE INSERT ON users
-            FOR EACH ROW
-            BEGIN
-                IF NEW.role NOT IN ('manager', 'marketer', 'finance') THEN
-                    SIGNAL SQLSTATE '45000'
-                    SET MESSAGE_TEXT = 'Invalid role';
-                END IF;
-            END;");
-
-        DB::statement("CREATE TRIGGER check_user_role_update
-            BEFORE UPDATE ON users
-            FOR EACH ROW
-            BEGIN
-                IF NEW.role NOT IN ('manager', 'marketer', 'finance') THEN
-                    SIGNAL SQLSTATE '45000'
-                    SET MESSAGE_TEXT = 'Invalid role';
-                END IF;
-            END;");
+        // Update any existing users to have valid roles
+        DB::table('users')
+            ->whereNotIn('role', ['rfq_approver', 'rfq_processor', 'lpo_admin'])
+            ->update(['role' => 'rfq_processor']);  // Default to rfq_processor
+            
+        // No triggers - we'll handle validation in the application code instead
     }
 
     /**
@@ -49,17 +35,6 @@ class AddRoleToUsersTable extends Migration
      */
     public function down()
     {
-        // Drop the triggers first
-        DB::statement("DROP TRIGGER IF EXISTS check_user_role");
-        DB::statement("DROP TRIGGER IF EXISTS check_user_role_update");
-
-        Schema::table('users', function (Blueprint $table) {
-            if (Schema::hasColumn('users', 'role')) {
-                $table->dropColumn('role');
-            }
-        });
-        DB::statement("DROP TRIGGER IF EXISTS check_user_role_update");
-
         Schema::table('users', function (Blueprint $table) {
             if (Schema::hasColumn('users', 'role')) {
                 $table->dropColumn('role');

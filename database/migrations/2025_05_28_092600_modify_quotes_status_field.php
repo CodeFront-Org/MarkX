@@ -12,41 +12,30 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // For SQLite, we need to recreate the table to change an enum constraint
+        // The issue is that update_quotes_status_column already adds these columns
+        // So we need to check if they exist first
         
-        // First, let's create a temporary table with the right structure
-        Schema::create('quotes_new', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->foreignId('marketer_id')->nullable()->constrained('users')->onDelete('set null');
-            $table->string('title');
-            $table->text('description');
-            $table->decimal('amount', 10, 2);
-            $table->string('status')->default('pending'); // Change enum to string
-            $table->date('valid_until');
-            $table->string('rejection_reason')->nullable();
-            $table->text('rejection_details')->nullable();
-            $table->string('reference')->nullable();
-            $table->boolean('has_rfq')->default(false);
-            $table->integer('rfq_files_count')->default(0);
-            $table->string('contact_person')->nullable();
-            $table->integer('total_rfq_items')->default(0);
-            $table->timestamps();
-            $table->softDeletes();
+        // First add the new timestamp columns to track approvals if they don't exist
+        Schema::table('quotes', function (Blueprint $table) {
+            // We don't need to add these columns as they're already added in update_quotes_status_column
+            // This migration is just to ensure the status field is properly updated
         });
+
+        // Now we need to handle the status field
+        // Check if we need to update the status values
+        $pendingCount = DB::table('quotes')->where('status', 'pending')->count();
         
-        // Now move data if any exists
-        $quotes = DB::table('quotes')->get();
-        foreach ($quotes as $quote) {
-            $data = (array)$quote;
-            DB::table('quotes_new')->insert($data);
+        if ($pendingCount > 0) {
+            // If we have 'pending' status values, update them to 'pending_manager'
+            DB::table('quotes')
+                ->where('status', 'pending')
+                ->update(['status' => 'pending_manager']);
+                
+            // Also update other statuses if needed
+            DB::table('quotes')
+                ->where('status', 'approved')
+                ->update(['status' => 'completed']);
         }
-        
-        // Drop the original table
-        Schema::dropIfExists('quotes');
-        
-        // Rename the new table to the original name
-        Schema::rename('quotes_new', 'quotes');
     }
 
     /**
@@ -54,11 +43,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // This is a destructive operation, so we can't really reverse it
-        // But we'll provide a basic structure for completeness
-        Schema::table('quotes', function (Blueprint $table) {
-            // We'd need to recreate the enum, but that would require similar steps
-            // as the up method, which is complex for a down method
-        });
+        // No need for complex down logic since we're just updating values
+        // and the columns are managed by other migrations
     }
 }; 

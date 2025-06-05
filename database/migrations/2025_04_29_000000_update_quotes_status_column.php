@@ -17,13 +17,22 @@ class UpdateQuotesStatusColumn extends Migration
         // First, add a new temporary column
         Schema::table('quotes', function (Blueprint $table) {
             $table->string('new_status')->default('pending_manager');
-            $table->dateTime('approved_at')->nullable();
-            $table->unsignedBigInteger('approved_by')->nullable();
-            $table->dateTime('closed_at')->nullable();
-            $table->unsignedBigInteger('closed_by')->nullable();
             
-            $table->foreign('approved_by')->references('id')->on('users')->onDelete('set null');
-            $table->foreign('closed_by')->references('id')->on('users')->onDelete('set null');
+            // Only add these columns if they don't exist
+            if (!Schema::hasColumn('quotes', 'approved_at')) {
+                $table->dateTime('approved_at')->nullable();
+            }
+            if (!Schema::hasColumn('quotes', 'approved_by')) {
+                $table->unsignedBigInteger('approved_by')->nullable();
+                $table->foreign('approved_by')->references('id')->on('users')->onDelete('set null');
+            }
+            if (!Schema::hasColumn('quotes', 'closed_at')) {
+                $table->dateTime('closed_at')->nullable();
+            }
+            if (!Schema::hasColumn('quotes', 'closed_by')) {
+                $table->unsignedBigInteger('closed_by')->nullable();
+                $table->foreign('closed_by')->references('id')->on('users')->onDelete('set null');
+            }
         });
 
         // Update the new column with mapped values
@@ -47,27 +56,8 @@ class UpdateQuotesStatusColumn extends Migration
         Schema::table('quotes', function (Blueprint $table) {
             $table->renameColumn('new_status', 'status');
         });
-
-        // Add check constraint
-        DB::statement("CREATE TRIGGER check_quote_status
-            BEFORE INSERT ON quotes
-            FOR EACH ROW
-            BEGIN
-                IF NEW.status NOT IN ('pending_manager', 'pending_customer', 'pending_finance', 'completed', 'rejected') THEN
-                    SIGNAL SQLSTATE '45000'
-                    SET MESSAGE_TEXT = 'Invalid quote status';
-                END IF;
-            END;");
-
-        DB::statement("CREATE TRIGGER check_quote_status_update
-            BEFORE UPDATE ON quotes
-            FOR EACH ROW
-            BEGIN
-                IF NEW.status NOT IN ('pending_manager', 'pending_customer', 'pending_finance', 'completed', 'rejected') THEN
-                    SIGNAL SQLSTATE '45000'
-                    SET MESSAGE_TEXT = 'Invalid quote status';
-                END IF;
-            END;");
+        
+        // No triggers - we'll handle validation in the application code instead
     }
 
     /**
@@ -77,10 +67,6 @@ class UpdateQuotesStatusColumn extends Migration
      */
     public function down()
     {
-        // Drop the triggers
-        DB::statement("DROP TRIGGER IF EXISTS check_quote_status");
-        DB::statement("DROP TRIGGER IF EXISTS check_quote_status_update");
-
         // Add a new temporary column
         Schema::table('quotes', function (Blueprint $table) {
             $table->string('old_status')->default('pending');
@@ -107,26 +93,7 @@ class UpdateQuotesStatusColumn extends Migration
         Schema::table('quotes', function (Blueprint $table) {
             $table->renameColumn('old_status', 'status');
         });
-
-        // Add check constraint for original values
-        DB::statement("CREATE TRIGGER check_quote_status
-            BEFORE INSERT ON quotes
-            FOR EACH ROW
-            BEGIN
-                IF NEW.status NOT IN ('pending', 'approved', 'rejected') THEN
-                    SIGNAL SQLSTATE '45000'
-                    SET MESSAGE_TEXT = 'Invalid status';
-                END IF;
-            END;");
-
-        DB::statement("CREATE TRIGGER check_quote_status_update
-            BEFORE UPDATE ON quotes
-            FOR EACH ROW
-            BEGIN
-                IF NEW.status NOT IN ('pending', 'approved', 'rejected') THEN
-                    SIGNAL SQLSTATE '45000'
-                    SET MESSAGE_TEXT = 'Invalid status';
-                END IF;
-            END;");
+        
+        // No triggers - we'll handle validation in the application code instead
     }
 } 
