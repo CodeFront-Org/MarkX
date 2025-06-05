@@ -42,7 +42,7 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
     })->name('rtl');
 
     // User management routes
-    Route::middleware('role:manager')->group(function () {
+    Route::middleware('role:rfq_approver')->group(function () {
         Route::get('user-management', [UserController::class, 'index'])->name('user-management');
         Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
         Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
@@ -88,16 +88,16 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
     Route::post('quotes/items/{item}/toggle-approval', [QuoteController::class, 'toggleItemApproval'])->name('quotes.toggle-item-approval');
 
     // Reports route
-    Route::get('reports', [ReportsController::class, 'index'])->middleware('role:manager')->name('reports');
+    Route::get('reports', [ReportsController::class, 'index'])->middleware('role:rfq_approver')->name('reports');
 
     // Company Files routes
     Route::get('company-files', [CompanyFileController::class, 'index'])->name('company-files.index');
-    Route::post('company-files', [CompanyFileController::class, 'store'])->middleware(['auth', 'role:manager'])->name('company-files.store');
+    Route::post('company-files', [CompanyFileController::class, 'store'])->middleware(['auth', 'role:rfq_approver'])->name('company-files.store');
     Route::get('company-files/{fileName}/download', [CompanyFileController::class, 'download'])->name('company-files.download');
-    Route::delete('company-files/{fileName}', [CompanyFileController::class, 'destroy'])->middleware(['auth', 'role:manager'])->name('company-files.destroy');
+    Route::delete('company-files/{fileName}', [CompanyFileController::class, 'destroy'])->middleware(['auth', 'role:rfq_approver'])->name('company-files.destroy');
 
     // Manager Only Routes
-    Route::middleware('role:manager')->group(function () {
+    Route::middleware('role:rfq_approver')->group(function () {
         // Export routes
         Route::get('exports/data', [ExportController::class, 'exportData'])->name('exports.data');
         
@@ -107,10 +107,10 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
 
         // User registration routes (for marketers and managers)
         Route::get('users/{role}/create', [UserRegistrationController::class, 'create'])
-            ->where('role', 'marketer|manager|finance')
+            ->where('role', 'rfq_processor|rfq_approver|lpo_admin')
             ->name('users.create');
         Route::post('users/{role}', [UserRegistrationController::class, 'store'])
-            ->where('role', 'marketer|manager|finance')
+            ->where('role', 'rfq_processor|rfq_approver|lpo_admin')
             ->name('users.store');
     });
 

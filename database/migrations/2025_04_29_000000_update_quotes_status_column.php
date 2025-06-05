@@ -17,6 +17,13 @@ class UpdateQuotesStatusColumn extends Migration
         // First, add a new temporary column
         Schema::table('quotes', function (Blueprint $table) {
             $table->string('new_status')->default('pending_manager');
+            $table->dateTime('approved_at')->nullable();
+            $table->unsignedBigInteger('approved_by')->nullable();
+            $table->dateTime('closed_at')->nullable();
+            $table->unsignedBigInteger('closed_by')->nullable();
+            
+            $table->foreign('approved_by')->references('id')->on('users')->onDelete('set null');
+            $table->foreign('closed_by')->references('id')->on('users')->onDelete('set null');
         });
 
         // Update the new column with mapped values

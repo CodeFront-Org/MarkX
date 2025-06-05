@@ -10,10 +10,13 @@
             padding: 20px;
             color: #2c3e50;
             line-height: 1.4;
+            background-image: url('{{ public_path('assets/img/letterhead.pdf') }}');
+            background-repeat: no-repeat;
+            background-position: top center;
+            background-size: 100% auto;
         }
         .header {
-            border-bottom: 3px solid #9b59b6;
-            padding-bottom: 15px;
+            margin-top: 150px; /* Space for the letterhead */
             margin-bottom: 20px;
         }
         .header h1 {
@@ -108,10 +111,6 @@
 </head>
 <body>
     <div class="header">
-        <div class="company-info">
-            <h1>{{ config('app.name') }}</h1>
-            <p>Professional Business Solutions</p>
-        </div>
         <div class="quote-info">
             <h2>QUOTATION</h2>
             <h3>#{{ $quote->id }}</h3>

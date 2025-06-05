@@ -31,7 +31,11 @@ class Quote extends Model
         'has_rfq',
         'rfq_files_count',
         'contact_person',
-        'total_rfq_items'
+        'total_rfq_items',
+        'approved_at',
+        'approved_by',
+        'closed_at',
+        'closed_by'
     ];
 
     protected $casts = [
@@ -39,7 +43,9 @@ class Quote extends Model
         'amount' => 'decimal:2',
         'has_rfq' => 'boolean',
         'total_rfq_items' => 'integer',
-        'rfq_files_count' => 'integer'
+        'rfq_files_count' => 'integer',
+        'approved_at' => 'datetime',
+        'closed_at' => 'datetime'
     ];
 
     protected $appends = [
@@ -78,6 +84,16 @@ class Quote extends Model
     public function unquotedItems()
     {
         return $this->hasMany(UnquotedItem::class);
+    }
+
+    public function approver()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function closer()
+    {
+        return $this->belongsTo(User::class, 'closed_by');
     }
 
     // Scopes

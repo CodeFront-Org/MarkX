@@ -287,21 +287,52 @@ class ReportsController extends Controller
 
     private function getApprovalStats()
     {
-        $totalQuotes = Quote::where('created_at', '>=', now()->subYear())->count();
-        $approvedQuotes = Quote::whereIn('status', ['approved', 'completed'])
-            ->where('created_at', '>=', now()->subYear())
-            ->count();
-        
-        $pendingQuotes = Quote::where('status', 'pending')
-            ->where('created_at', '>=', now()->subYear())
-            ->count();
-
         return (object)[
-            'total_quotes' => $totalQuotes,
-            'approved_quotes' => $approvedQuotes,
-            'pending_quotes' => $pendingQuotes,
-            'approval_rate' => $totalQuotes > 0 ? ($approvedQuotes / $totalQuotes) * 100 : 0
+            'avg_approval_time' => Quote::whereNotNull('approved_at')
+                ->where('status', '!=', 'rejected')
+                ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, approved_at)) as avg_hours')
+                ->value('avg_hours') ?? 0,
+            
+            'avg_closing_time' => Quote::whereNotNull('closed_at')
+                ->where('status', 'completed')
+                ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, approved_at, closed_at)) as avg_hours')
+                ->value('avg_hours') ?? 0,
+            
+            'approval_rates' => [
+                'manager' => $this->calculateRateByRole('manager'),
+                'lpo_admin' => $this->calculateRateByRole('lpo_admin')
+            ],
+            
+            'approval_history' => Quote::with(['approver', 'closer'])
+                ->whereNotNull('approved_at')
+                ->orderBy('approved_at', 'desc')
+                ->limit(10)
+                ->get()
+                ->map(function($quote) {
+                    return [
+                        'id' => $quote->id,
+                        'title' => $quote->title,
+                        'approved_at' => $quote->approved_at->format('Y-m-d H:i:s'),
+                        'approved_by' => $quote->approver ? $quote->approver->name : 'N/A',
+                        'closed_at' => $quote->closed_at ? $quote->closed_at->format('Y-m-d H:i:s') : 'N/A',
+                        'closed_by' => $quote->closer ? $quote->closer->name : 'N/A',
+                        'status' => $quote->status
+                    ];
+                })
         ];
+    }
+
+    private function calculateRateByRole($role)
+    {
+        $total = Quote::whereHas('approver', function($query) use ($role) {
+            $query->where('role', $role);
+        })->count();
+        
+        $approved = Quote::whereHas('approver', function($query) use ($role) {
+            $query->where('role', $role);
+        })->where('status', 'completed')->count();
+        
+        return $total > 0 ? ($approved / $total) * 100 : 0;
     }
 
     private function getQuoteAging()

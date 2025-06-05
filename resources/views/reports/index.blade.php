@@ -94,7 +94,7 @@
     </div>
 
     <!-- Export Options -->
-    @if(auth()->user()->isManager())
+    @if(auth()->user()->isRfqApprover())
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
@@ -121,14 +121,14 @@
         <div class="col-12">
             <div class="card mb-4">
                 <div class="card-header pb-0">
-                    <h6>Marketer Performance Overview</h6>
+                    <h6>RFQ Processor Performance Overview</h6>
                 </div>
                 <div class="card-body px-0 pt-0 pb-2">
                     <div class="table-responsive p-0">
                         <table class="table align-items-center mb-0">
                             <thead>
                                 <tr>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Marketer</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">RFQ Processor</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Total Revenue</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Success Rate</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Total Quotes</th>
@@ -181,7 +181,6 @@
         </div>
     </div>
 
-
     <!-- Quote Analytics -->
     <div class="row">
         <div class="col-xl-8">
@@ -199,29 +198,115 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Approval Stats -->
         <div class="col-xl-4">
             <div class="card h-100">
                 <div class="card-header pb-0">
-                    <h6>Quote Statistics</h6>
+                    <h6>Approval Metrics</h6>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex mb-4">
-                        <div>
-                            <h4 class="font-weight-bolder mb-0">{{ number_format($quoteStats->success_rate, 1) }}%</h4>
-                            <p class="text-sm mb-0 text-uppercase font-weight-bold">Overall Success Rate</p>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="border-radius-md text-center p-3 bg-gradient-success bg-opacity-10 mb-4">
+                                <h6 class="text-sm mb-1">Avg. Approval Time</h6>
+                                <h4 class="font-weight-bold mb-0">{{ round($approvalStats->avg_approval_time) }} hours</h4>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border-radius-md text-center p-3 bg-gradient-info bg-opacity-10 mb-4">
+                                <h6 class="text-sm mb-1">Avg. Closing Time</h6>
+                                <h4 class="font-weight-bold mb-0">{{ round($approvalStats->avg_closing_time) }} hours</h4>
+                            </div>
                         </div>
                     </div>
-                    <div class="d-flex mb-4">
-                        <div>
-                            <h4 class="font-weight-bolder mb-0">KES {{ number_format($quoteStats->avg_value, 2) }}</h4>
-                            <p class="text-sm mb-0 text-uppercase font-weight-bold">Average Quote Value</p>
+                    
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h6 class="text-sm mb-3">Approval Rates by Role</h6>
+                            <div class="progress-wrapper">
+                                <div class="progress-info mb-2">
+                                    <div class="progress-percentage">
+                                        <span class="text-sm font-weight-bold">RFQ Approver: {{ number_format($approvalStats->approval_rates['manager'], 1) }}%</span>
+                                    </div>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress-bar bg-gradient-primary" role="progressbar" aria-valuenow="{{ $approvalStats->approval_rates['manager'] }}" aria-valuemin="0" aria-valuemax="100" style="width: {{ $approvalStats->approval_rates['manager'] }}%;"></div>
+                                </div>
+                            </div>
+                            <div class="progress-wrapper">
+                                <div class="progress-info mb-2">
+                                    <div class="progress-percentage">
+                                        <span class="text-sm font-weight-bold">LPO Admin: {{ number_format($approvalStats->approval_rates['lpo_admin'], 1) }}%</span>
+                                    </div>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress-bar bg-gradient-info" role="progressbar" aria-valuenow="{{ $approvalStats->approval_rates['lpo_admin'] }}" aria-valuemin="0" aria-valuemax="100" style="width: {{ $approvalStats->approval_rates['lpo_admin'] }}%;"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="d-flex mb-4">
-                        <div>
-                            <h4 class="font-weight-bolder mb-0">{{ $quoteStats->conversion_time }} days</h4>
-                            <p class="text-sm mb-0 text-uppercase font-weight-bold">Avg. Time to Convert</p>
-                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Approvals -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header pb-0">
+                    <h6>Recent Quote Approvals</h6>
+                </div>
+                <div class="card-body px-0 pt-0 pb-2">
+                    <div class="table-responsive p-0">
+                        <table class="table align-items-center mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Quote ID</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Title</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Approved Date</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Approved By</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Closed Date</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($approvalStats->approval_history as $history)
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex px-3 py-1">
+                                                <div class="d-flex flex-column justify-content-center">
+                                                    <h6 class="mb-0 text-sm">#{{ $history['id'] }}</h6>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <p class="text-sm font-weight-bold mb-0">{{ $history['title'] }}</p>
+                                        </td>
+                                        <td>
+                                            <p class="text-sm font-weight-bold mb-0">{{ $history['approved_at'] }}</p>
+                                        </td>
+                                        <td>
+                                            <p class="text-sm font-weight-bold mb-0">{{ $history['approved_by'] }}</p>
+                                        </td>
+                                        <td>
+                                            <p class="text-sm font-weight-bold mb-0">{{ $history['closed_at'] }}</p>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-sm bg-gradient-{{ 
+                                                $history['status'] === 'completed' ? 'success' : 
+                                                ($history['status'] === 'pending_manager' ? 'info' : 
+                                                ($history['status'] === 'pending_customer' ? 'warning' : 
+                                                ($history['status'] === 'pending_finance' ? 'primary' : 'danger'))) 
+                                            }}">
+                                                {{ ucwords(str_replace('_', ' ', $history['status'])) }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

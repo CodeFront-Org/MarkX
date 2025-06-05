@@ -24,7 +24,20 @@ class PdfService
     public function generateQuotePdf(Quote $quote, bool $showInternalDetails = false)
     {
         $quoteData = $this->prepareQuoteData($quote, $showInternalDetails);
-        return Pdf::loadView('pdf.quote', $quoteData);
+        $pdf = Pdf::loadView('pdf.quote', $quoteData);
+        
+        // Configure PDF to properly handle the letterhead
+        $pdf->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isRemoteEnabled' => true,
+            'dpi' => 150,
+            'defaultFont' => 'sans-serif',
+            'enable_php' => true,
+            'enable_remote' => true,
+            'enable_javascript' => true,
+        ]);
+        
+        return $pdf;
     }
 
     /**

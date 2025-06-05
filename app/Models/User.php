@@ -48,7 +48,7 @@ class User extends Authenticatable
      */
     public function isManager()
     {
-        return $this->role === 'manager';
+        return $this->role === 'rfq_approver';
     }
 
     /**
@@ -56,7 +56,7 @@ class User extends Authenticatable
      */
     public function isMarketer()
     {
-        return $this->role === 'marketer';
+        return $this->role === 'rfq_processor';
     }
 
     /**
@@ -98,7 +98,7 @@ class User extends Authenticatable
      */
     public function isFinance(): bool
     {
-        return $this->hasRole('finance');
+        return $this->hasRole('lpo_admin');
     }
 
     /**
@@ -118,6 +118,6 @@ class User extends Authenticatable
      */
     public static function getAvailableRoles(): array
     {
-        return ['manager', 'marketer', 'finance'];
+        return ['rfq_approver', 'rfq_processor', 'lpo_admin'];
     }
 }

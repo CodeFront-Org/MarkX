@@ -7,10 +7,10 @@
             <div class="card mb-4">                <div class="card-header pb-0 d-flex justify-content-between align-items-center">
                     <h6>Quotes</h6>
                     <div class="d-flex gap-2">
-                        @if(auth()->user()->isManager())
+                        @if(auth()->user()->isRfqApprover())
                             @include('partials.export-button')
                         @endif
-                        @if(auth()->user()->isMarketer())
+                        @if(auth()->user()->isRfqProcessor())
                             <a href="{{ route('quotes.create') }}" class="btn bg-gradient-primary">Create New Quote</a>
                         @endif
                     </div>
@@ -27,9 +27,9 @@
                             <label class="form-label">Status</label>
                             <select name="status" class="form-select search-input">
                                 <option value="">All Status</option>
-                                <option value="pending_manager" {{ request('status') == 'pending_manager' ? 'selected' : '' }}>Pending Manager Approval</option>
+                                <option value="pending_manager" {{ request('status') == 'pending_manager' ? 'selected' : '' }}>Pending RFQ Approver</option>
                                 <option value="pending_customer" {{ request('status') == 'pending_customer' ? 'selected' : '' }}>Pending Customer Review</option>
-                                <option value="pending_finance" {{ request('status') == 'pending_finance' ? 'selected' : '' }}>Pending Finance Review</option>
+                                <option value="pending_finance" {{ request('status') == 'pending_finance' ? 'selected' : '' }}>Pending LPO Admin Review</option>
                                 <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed</option>
                                 <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Rejected</option>
                             </select>
@@ -39,9 +39,10 @@
                             <input type="text" name="product_item" class="form-control search-input" value="{{ request('product_item') }}" placeholder="Search by product...">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Marketer</label>
-                            <input type="text" name="marketer" class="form-control search-input" value="{{ request('marketer') }}" placeholder="Search by marketer...">
-                        </div>                        <div class="col-md-4">
+                            <label class="form-label">RFQ Processor</label>
+                            <input type="text" name="marketer" class="form-control search-input" value="{{ request('marketer') }}" placeholder="Search by RFQ processor...">
+                        </div>
+                        <div class="col-md-4">
                             <label class="form-label">Quotes Created </label>
                             <div class="d-flex gap-2">
                                 <label>From</label>

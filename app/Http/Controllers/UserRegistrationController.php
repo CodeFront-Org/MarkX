@@ -11,7 +11,7 @@ class UserRegistrationController extends Controller
 {
     public function create($role)
     {
-        if (!in_array($role, ['marketer', 'manager', 'finance'])) {
+        if (!in_array($role, ['rfq_processor', 'rfq_approver', 'lpo_admin'])) {
             abort(404);
         }
         
@@ -20,7 +20,7 @@ class UserRegistrationController extends Controller
 
     public function store(Request $request, $role)
     {
-        if (!in_array($role, ['marketer', 'manager', 'finance'])) {
+        if (!in_array($role, ['rfq_processor', 'rfq_approver', 'lpo_admin'])) {
             abort(404);
         }
 

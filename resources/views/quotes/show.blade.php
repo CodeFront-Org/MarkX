@@ -31,7 +31,7 @@
                 <div class="card-header pb-0 d-flex justify-content-between align-items-center">
                     <h6>Quote Details</h6>
                     <div>
-                        @if($quote->status === 'pending_manager' && auth()->user()->isManager())
+                        @if($quote->status === 'pending_manager' && auth()->user()->isRfqApprover())
                         <form action="{{ route('quotes.approve', $quote) }}" method="POST" class="d-inline">
                             @csrf
                             <button type="submit" class="btn bg-gradient-success mx-1">Approve Quote</button>
@@ -47,17 +47,17 @@
                         </a>
                         <form action="{{ route('quotes.submit-to-finance', $quote) }}" method="POST" class="d-inline">
                             @csrf
-                            <button type="submit" class="btn bg-gradient-warning mx-1">Submit to Finance</button>
+                            <button type="submit" class="btn bg-gradient-warning mx-1">Submit to LPO Admin</button>
                         </form>
                         @endif
 
-                        @if($quote->status === 'pending_manager' && auth()->user()->isMarketer() && auth()->id() === $quote->user_id)
+                        @if($quote->status === 'pending_manager' && auth()->user()->isRfqProcessor() && auth()->id() === $quote->user_id)
                         <a href="{{ route('quotes.download', $quote) }}" class="btn bg-gradient-info mx-1" target="_blank">
                             <i class="fas fa-file-pdf me-2"></i> Download Working PDF
                         </a>
                         @endif
 
-                        @if(auth()->user()->isMarketer() && auth()->id() === $quote->user_id && $quote->status === 'pending_finance')
+                        @if(auth()->user()->isRfqProcessor() && auth()->id() === $quote->user_id && $quote->status === 'pending_finance')
                         <a href="{{ route('quotes.download', $quote) }}" class="btn bg-gradient-info mx-1" target="_blank">
                             <i class="fas fa-file-pdf me-2"></i> Download Working PDF
                         </a>
@@ -66,7 +66,7 @@
                         @if(auth()->user()->isFinance())
                             @if($quote->status === 'pending_finance')
                                 <button type="button" class="btn bg-gradient-success mx-1" data-bs-toggle="modal" data-bs-target="#finalizeQuoteModal">
-                                    Finalize Quote
+                                    Close Quote
                                 </button>
                                 <a href="{{ route('quotes.download', $quote) }}" class="btn bg-gradient-info mx-1" target="_blank">
                                     <i class="fas fa-file-pdf me-2"></i> Download Working PDF
@@ -104,7 +104,10 @@
                                 ($quote->status === 'pending_customer' ? 'warning' : 
                                 ($quote->status === 'pending_finance' ? 'primary' : 'danger'))) 
                             }}">
-                                {{ ucwords(str_replace('_', ' ', $quote->status)) }}
+                                {{ $quote->status === 'pending_manager' ? 'Pending RFQ Approver' : 
+                                   ($quote->status === 'pending_customer' ? 'Pending Customer Review' : 
+                                   ($quote->status === 'pending_finance' ? 'Pending LPO Admin' : 
+                                   ucwords(str_replace('_', ' ', $quote->status)))) }}
                             </span>
                         </div>
                         <div class="col-md-6">
@@ -374,7 +377,7 @@
             <form action="{{ route('quotes.approve', $quote) }}" method="POST">
                 @csrf
                 <div class="modal-header">
-                    <h5 class="modal-title" id="finalizeQuoteModalLabel">Confirm Quote Finalization</h5>
+                    <h5 class="modal-title" id="finalizeQuoteModalLabel">Confirm Quote Closure</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -386,7 +389,7 @@
                             <div class="ps-2">
                                 <h6 class="text-sm text-white mb-1">Warning</h6>
                                 <p class="text-sm mb-0 text-white">
-                                    Once finalized, this quote cannot be edited again. Are you sure you want to proceed?
+                                    Once closed, this quote cannot be edited again. Are you sure you want to proceed?
                                 </p>
                             </div>
                         </div>
@@ -416,7 +419,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn bg-gradient-success">Confirm Finalization</button>
+                    <button type="submit" class="btn bg-gradient-success">Close Quote</button>
                 </div>
             </form>
         </div>

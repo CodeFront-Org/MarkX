@@ -9,9 +9,9 @@
                 <div class="card-body d-flex justify-content-between">
                     <h6 class="mb-0">Team Registration</h6>
                     <div>
-                        <a href="{{ route('users.create', 'marketer') }}" class="btn bg-gradient-primary">Register New Marketer</a>
-                        <a href="{{ route('users.create', 'manager') }}" class="btn bg-gradient-info">Register New Manager</a>
-                        <a href="{{ route('users.create', 'finance') }}" class="btn bg-gradient-warning">Register New Finance User</a>
+                        <a href="{{ route('users.create', 'rfq_processor') }}" class="btn bg-gradient-primary">Register New RFQ Processor</a>
+                        <a href="{{ route('users.create', 'rfq_approver') }}" class="btn bg-gradient-info">Register New RFQ Approver</a>
+                        <a href="{{ route('users.create', 'lpo_admin') }}" class="btn bg-gradient-warning">Register New LPO Admin</a>
                     </div>
                 </div>
             </div>
