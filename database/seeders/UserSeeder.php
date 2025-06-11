@@ -10,51 +10,55 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        // Create two managers
+        // Create two RFQ Approvers
         $managers = [
             [
-                'name' => 'Manager One',
+                'name' => 'RFQ Approver One',
                 'email' => 'manager1@example.com',
-                'role' => 'manager',
+                'role' => 'rfq_approver',
             ],
             [
-                'name' => 'Manager Two',
+                'name' => 'RFQ Approver Two',
                 'email' => 'manager2@example.com',
-                'role' => 'manager',
+                'role' => 'rfq_approver',
             ]
         ];
 
         foreach ($managers as $manager) {
-            User::create(array_merge($manager, [
-                'password' => bcrypt('password'),
-                'remember_token' => Str::random(10),
-            ]));
+            if (!User::where('email', $manager['email'])->exists()) {
+                User::create(array_merge($manager, [
+                    'password' => bcrypt('password'),
+                    'remember_token' => Str::random(10),
+                ]));
+            }
         }
 
-        // Create three marketers
+        // Create three RFQ Processors
         $marketers = [
             [
-                'name' => 'Marketer One',
+                'name' => 'RFQ Processor One',
                 'email' => 'marketer1@example.com',
-                'role' => 'marketer',
+                'role' => 'rfq_processor',
             ],
             [
-                'name' => 'Marketer Two',
+                'name' => 'RFQ Processor Two',
                 'email' => 'marketer2@example.com',
-                'role' => 'marketer',
+                'role' => 'rfq_processor',
             ],
             [
-                'name' => 'Marketer Three',
+                'name' => 'RFQ Processor Three',
                 'email' => 'marketer3@example.com',
-                'role' => 'marketer',
+                'role' => 'rfq_processor',
             ]
         ];
 
         foreach ($marketers as $marketer) {
-            User::create(array_merge($marketer, [
-                'password' => bcrypt('password'),
-                'remember_token' => Str::random(10),
-            ]));
+            if (!User::where('email', $marketer['email'])->exists()) {
+                User::create(array_merge($marketer, [
+                    'password' => bcrypt('password'),
+                    'remember_token' => Str::random(10),
+                ]));
+            }
         }
     }
 }

@@ -22,13 +22,13 @@ class CompanyFileController extends Controller
         return view('company-files.index', compact('files', 'categories'));
     }    public function store(Request $request)
     {
-        // Ensure user is authenticated and is a manager
+        // Ensure user is authenticated and is an RFQ approver
         if (!auth()->check()) {
             return redirect()->route('login')->with('error', 'Please login to upload files.');
         }
 
-        if (auth()->user()->role !== 'manager') {
-            return back()->with('error', 'Only managers can upload files.');
+        if (auth()->user()->role !== 'rfq_approver') {
+            return back()->with('error', 'Only RFQ approvers can upload files.');
         }
 
         $userId = auth()->id();
@@ -107,8 +107,8 @@ class CompanyFileController extends Controller
             return redirect()->route('login')->with('error', 'Please login to delete files.');
         }
 
-        if (auth()->user()->role !== 'manager') {
-            return back()->with('error', 'Only managers can delete files.');
+        if (auth()->user()->role !== 'rfq_approver') {
+            return back()->with('error', 'Only RFQ approvers can delete files.');
         }
 
         $file = CompanyFile::where('file_name', $fileName)->firstOrFail();

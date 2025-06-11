@@ -1,4 +1,4 @@
-@can('role', 'manager')
+@can('role', 'rfq_approver')
     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exportModal">
         <i class="fas fa-download me-2"></i>Export Data
     </button>
@@ -17,5 +17,5 @@
         </div>
     @endif
 
-    @include('partials.modals.export-modal', ['marketers' => $marketers])
+    @include('partials.modals.export-modal', ['rfq_processors' => $rfq_processors])
 @endcan

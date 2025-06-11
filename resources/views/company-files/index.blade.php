@@ -22,8 +22,8 @@
                         </div>
                     @endif
 
-                    @if(auth()->user()->role === 'manager')
-                    <!-- File Upload Form - Only visible to managers -->
+                    @if(auth()->user()->role === 'rfq_approver')
+                    <!-- File Upload Form - Only visible to RFQ approvers -->
                     <div class="mb-4 p-3 bg-light rounded">
                         <h6 class="mb-3">Upload New File</h6>
                         <form action="{{ route('company-files.store') }}" method="POST" enctype="multipart/form-data">
@@ -103,7 +103,7 @@
                                                 <i class="fas fa-download"></i> Download
                                             </a>
 
-                                            @if(auth()->user()->role === 'manager')
+                                            @if(auth()->user()->role === 'rfq_approver')
                                             <form action="{{ route('company-files.destroy', $file->file_name) }}" 
                                                   method="POST" 
                                                   class="d-inline"

@@ -319,7 +319,7 @@
                     <th class="numeric">Total Quotes</th>
                     <th class="numeric">Total Revenue</th>
                     <th class="numeric">Avg. Quote Value</th>
-                    <th class="numeric">Active Marketers</th>
+                    <th class="numeric">Active RFQ Processors</th>
                 </tr>
             </thead>
             <tbody>
@@ -329,7 +329,7 @@
                         <td class="numeric">{{ number_format($row['total_quotes']) }}</td>
                         <td class="numeric">KES {{ number_format($row['total_revenue'], 2) }}</td>
                         <td class="numeric">KES {{ number_format($row['average_quote_value'], 2) }}</td>
-                        <td class="numeric">{{ $row['active_marketers'] }}</td>
+                        <td class="numeric">{{ $row['active_rfq_processors'] }}</td>
                     </tr>
                 @endforeach
             </tbody>

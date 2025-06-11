@@ -17,16 +17,20 @@ class ProductItemController extends Controller
 
     public function index(Request $request)
     {
-        $query = QuoteItem::query()            ->select([
+        $isUsingMysql = DB::connection()->getDriverName() === 'mysql';
+        $groupConcatFunction = $isUsingMysql ? 'GROUP_CONCAT' : 'GROUP_CONCAT';
+
+        $query = QuoteItem::query()
+            ->select([
                 'quote_items.item',
                 'quote_items.id',
                 DB::raw('COUNT(DISTINCT quote_items.quote_id) as quote_count'),
-                DB::raw('GROUP_CONCAT(DISTINCT COALESCE(quotes.reference, quotes.title)) as quote_titles'),
+                DB::raw($groupConcatFunction . '(DISTINCT COALESCE(quotes.reference, quotes.title)) as quote_titles'),
                 DB::raw('SUM(quote_items.quantity) as total_quantity'),
                 DB::raw('AVG(quote_items.price) as avg_price'),
                 DB::raw('SUM(quote_items.quantity * quote_items.price) as total_value'),
                 DB::raw('SUM(CASE WHEN quote_items.approved = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as success_rate'),
-                DB::raw('GROUP_CONCAT(DISTINCT users.name) as marketers'),
+                DB::raw($groupConcatFunction . '(DISTINCT users.name) as marketers'),
                 DB::raw('MIN(CASE WHEN quote_items.approved = 0 THEN 1 ELSE 0 END) as has_pending'),
                 DB::raw('MIN(quote_items.comment) as latest_comment')
             ])
@@ -35,7 +39,7 @@ class ProductItemController extends Controller
             ->leftJoin('users', 'users.id', '=', 'quotes.user_id')
             ->groupBy('quote_items.item', 'quote_items.id');
 
-        if (Auth::user()->role !== 'manager') {
+        if (Auth::user()->role !== 'rfq_approver' && Auth::user()->role !== 'lpo_admin') {
             $query->where('quotes.user_id', Auth::id());
         }
 
@@ -107,7 +111,7 @@ class ProductItemController extends Controller
 
     public function create()
     {
-        $quotes = Quote::when(Auth::user()->role !== 'manager', function($query) {
+        $quotes = Quote::when(Auth::user()->role !== 'rfq_approver' && Auth::user()->role !== 'lpo_admin', function($query) {
             return $query->where('user_id', Auth::id());
         })
         ->latest()

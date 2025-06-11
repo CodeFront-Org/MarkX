@@ -12,13 +12,13 @@ class ReportsController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['auth', 'role:manager']);
+        $this->middleware(['auth', 'role:rfq_approver']);
     }
 
     public function index()
     {
-        // Get marketer performance stats
-        $marketerStats = $this->getMarketerStats();
+        // Get RFQ processor performance stats
+        $rfqProcessorStats = $this->getRfqProcessorStats();
         
         // Get product performance
         [$topProducts, $lowProducts] = $this->getProductPerformance();
@@ -39,11 +39,11 @@ class ReportsController extends Controller
         // Get financial health metrics
         $financialHealth = $this->getFinancialHealthMetrics();
         
-        // Get all marketers for export modal
-        $marketers = User::where('role', 'marketer')->get();
+        // Get all RFQ processors for export modal
+        $rfq_processors = User::where('role', 'rfq_processor')->get();
         
         return view('reports.index', compact(
-            'marketerStats',
+            'rfqProcessorStats',
             'topProducts',
             'lowProducts',
             'quoteTrends',
@@ -52,34 +52,34 @@ class ReportsController extends Controller
             'quoteAging',
             'topClients',
             'financialHealth',
-            'marketers'
+            'rfq_processors'
         ));
     }
 
-    private function getMarketerStats()
+    private function getRfqProcessorStats()
     {
-        return User::where('role', 'marketer')
-            ->withCount(['marketedQuotes as total_quotes'])
-            ->withCount(['marketedQuotes as successful_quotes' => function($query) {
+        return User::where('role', 'rfq_processor')
+            ->withCount(['quotes as total_quotes'])
+            ->withCount(['quotes as successful_quotes' => function($query) {
                 $query->whereIn('status', ['approved', 'completed']);
             }])
-            ->withSum(['marketedQuotes as quote_value' => function($query) {
+            ->withSum(['quotes as quote_value' => function($query) {
                 $query->whereIn('status', ['approved', 'completed']);
             }], 'amount')
             ->get()
-            ->map(function($marketer) {
+            ->map(function($processor) {
                 return (object)[
-                    'name' => $marketer->name,
-                    'total_revenue' => $marketer->quote_value ?? 0,
-                    'success_rate' => $marketer->total_quotes > 0 
-                        ? ($marketer->successful_quotes / $marketer->total_quotes) * 100 
+                    'name' => $processor->name,
+                    'total_revenue' => $processor->quote_value ?? 0,
+                    'success_rate' => $processor->total_quotes > 0 
+                        ? ($processor->successful_quotes / $processor->total_quotes) * 100 
                         : 0,
-                    'total_quotes' => $marketer->total_quotes,
-                    'approval_rate' => $marketer->total_quotes > 0 
-                        ? ($marketer->successful_quotes / $marketer->total_quotes) * 100 
+                    'total_quotes' => $processor->total_quotes,
+                    'approval_rate' => $processor->total_quotes > 0 
+                        ? ($processor->successful_quotes / $processor->total_quotes) * 100 
                         : 0,
-                    'conversion_rate' => $marketer->total_quotes > 0 
-                        ? ($marketer->successful_quotes / $marketer->total_quotes) * 100 
+                    'conversion_rate' => $processor->total_quotes > 0 
+                        ? ($processor->successful_quotes / $processor->total_quotes) * 100 
                         : 0
                 ];
             })

@@ -51,7 +51,7 @@
                                 <i class="fas fa-eye text-info me-2" aria-hidden="true"></i>View
                             </a>
                             
-                            @if($quote->status === 'pending_finance' && auth()->user()->isFinance())
+                            @if($quote->status === 'pending_finance' && auth()->user()->isLpoAdmin())
                             <a href="{{ route('quotes.edit', $quote) }}" class="btn btn-link text-dark px-3 mb-0">
                                 <i class="fas fa-pencil-alt text-dark me-2" aria-hidden="true"></i>Edit
                             </a>

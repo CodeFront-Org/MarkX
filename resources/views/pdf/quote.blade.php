@@ -4,19 +4,38 @@
     <meta charset="utf-8">
     <title>Quote #{{ $quote->id }}</title>
     <style>
+        @page {
+            margin: 0;
+            padding: 0;
+        }
         body {
             font-family: 'Helvetica', 'Arial', sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 0;
             color: #2c3e50;
             line-height: 1.4;
-            background-image: url('{{ public_path('assets/img/letterhead.pdf') }}');
-            background-repeat: no-repeat;
-            background-position: top center;
-            background-size: 100% auto;
+            position: relative;
+        }
+        .background-letterhead {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1000;
+        }
+        .background-letterhead img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .content {
+            position: relative;
+            z-index: 100;
+            padding: 20px;
+            margin-top: 150px; /* Space for the letterhead header */
         }
         .header {
-            margin-top: 150px; /* Space for the letterhead */
             margin-bottom: 20px;
         }
         .header h1 {
@@ -46,6 +65,7 @@
             border-collapse: collapse;
             margin: 12px 0;
             font-size: 12px;
+            background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent background */
         }
         th {
             background-color: #f8f9fa;
@@ -92,7 +112,7 @@
         .item-approved { background-color: #2ecc71; color: white; }
         .item-pending { background-color: #f1c40f; color: black; }
         .validity-notice {
-            background-color: #e8f6f3;
+            background-color: rgba(232, 246, 243, 0.9);
             border: 1px solid #2ecc71;
             padding: 8px;
             border-radius: 4px;
@@ -106,93 +126,105 @@
             text-align: center;
             font-size: 11px;
             color: #7f8c8d;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 4px;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="quote-info">
-            <h2>QUOTATION</h2>
-            <h3>#{{ $quote->id }}</h3>
-        </div>
-        <div class="clear"></div>
+    <!-- Full-page background letterhead -->
+    @if(isset($letterheadData) && isset($letterheadType))
+    <div class="background-letterhead">
+        <img src="data:{{ $letterheadType }};base64,{{ $letterheadData }}" alt="Company Letterhead">
     </div>
-
-    <div class="section">
-        <div style="float: left; width: 50%;">
-            <strong>Date Created:</strong> {{ $quote->created_at->format('F d, Y') }}<br>
-            <strong>Valid Until:</strong> {{ $quote->valid_until->format('F d, Y') }}<br>
-            {{-- <strong>Status:</strong> <span class="status-badge status-{{ strtolower($quote->status) }}">{{ ucfirst($quote->status) }}</span> --}}
+    @endif
+    <br />
+    <div class="content">
+        <div class="header">
+            <div class="quote-info">
+                <h2>QUOTATION</h2>
+                <h3>#{{ $quote->reference ?? $quote->id }}</h3>
+            </div>
+            <div class="clear"></div>
         </div>
-        <div class="clear"></div>
-    </div>
 
-    <div class="section">
-        <div class="quote-title">{{ $quote->title }}</div>
-        <p>{{ $quote->description }}</p>
-        <p>Attn:{{ $quote->contact_person }}</p>
-        
-        <table>
-            <thead>
-                <tr>
-                    <th width="40%">Item Description</th>
-                    <th width="15%">Quantity</th>
-                    <th width="15%">Unit Price</th>
-                    <th width="15%">Subtotal</th>
-                    @if(!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails)
-                    <th width="15%">Status</th>
-                    @endif
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($items as $item)
-                <tr>
-                    <td>{{ $item->item }}</td>
-                    <td>{{ $item->quantity }}</td>
-                    <td>KES {{ number_format($item->price, 2) }}</td>
-                    <td>KES {{ number_format($item->quantity * $item->price, 2) }}</td>
-                    @if(!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails)
-                    <td>
-                        @if($item->approved)
-                        <span class="item-status item-approved">Approved</span>
-                        @else
-                        <span class="item-status item-pending">Pending</span>
+        <div class="section">
+            <div style="float: left; width: 50%;">
+                <strong>Date Created:</strong> {{ $quote->created_at->format('F d, Y') }}<br>
+                <strong>Valid Until:</strong> {{ $quote->valid_until->format('F d, Y') }}<br>
+                {{-- <strong>Status:</strong> <span class="status-badge status-{{ strtolower($quote->status) }}">{{ ucfirst($quote->status) }}</span> --}}
+            </div>
+            <div class="clear"></div>
+        </div>
+
+        <div class="section">
+            <div class="quote-title">{{ $quote->title }}</div>
+            <p>{{ $quote->description }}</p>
+            <p>Attn:{{ $quote->contact_person }}</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th width="40%">Item Description</th>
+                        <th width="15%">Quantity</th>
+                        <th width="15%">Unit Price</th>
+                        <th width="15%">Subtotal</th>
+                        @if(!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails)
+                        <th width="15%">Status</th>
                         @endif
-                    </td>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($items as $item)
+                    <tr>
+                        <td>{{ $item->item }}</td>
+                        <td>{{ $item->quantity }}</td>
+                        <td>KES {{ number_format($item->price, 2) }}</td>
+                        <td>KES {{ number_format($item->quantity * $item->price, 2) }}</td>
+                        @if(!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails)
+                        <td>
+                            @if($item->approved)
+                            <span class="item-status item-approved">Approved</span>
+                            @else
+                            <span class="item-status item-pending">Pending</span>
+                            @endif
+                        </td>
+                        @endif
+                    </tr>
+                    @endforeach
+                </tbody>
+                <tfoot>
+                    @if($showOnlyApproved)
+                    <tr>
+                        <td colspan="3" style="text-align: right;"><strong>Total Amount:</strong></td>
+                        <td><strong>KES {{ number_format($approvedTotal, 2) }}</strong></td>
+                    </tr>
+                    @else
+                    <tr>
+                        <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '4' : '3' }}" style="text-align: right;"><strong>Total Amount:</strong></td>
+                        <td><strong>KES {{ number_format($itemsTotal, 2) }}</strong></td>
+                    </tr>
+                    @if($hasUnapprovedItems && isset($showInternalDetails) && $showInternalDetails)
+                    <tr>
+                        <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '4' : '3' }}" style="text-align: right;"><strong>Approved Items Total:</strong></td>
+                        <td><strong>KES {{ number_format($approvedTotal, 2) }}</strong></td>
+                    </tr>
                     @endif
-                </tr>
-                @endforeach
-            </tbody>
-            <tfoot>
-                @if($showOnlyApproved)
-                <tr>
-                    <td colspan="3" style="text-align: right;"><strong>Total Amount:</strong></td>
-                    <td><strong>KES {{ number_format($approvedTotal, 2) }}</strong></td>
-                </tr>
-                @else
-                <tr>
-                    <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '4' : '3' }}" style="text-align: right;"><strong>Total Amount:</strong></td>
-                    <td><strong>KES {{ number_format($itemsTotal, 2) }}</strong></td>
-                </tr>
-                @if($hasUnapprovedItems && isset($showInternalDetails) && $showInternalDetails)
-                <tr>
-                    <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '4' : '3' }}" style="text-align: right;"><strong>Approved Items Total:</strong></td>
-                    <td><strong>KES {{ number_format($approvedTotal, 2) }}</strong></td>
-                </tr>
-                @endif
-                @endif
-            </tfoot>
-        </table>
-    </div>
+                    @endif
+                </tfoot>
+            </table>
+        </div>
 
-    <div class="validity-notice">
-        <strong>Validity Period:</strong> This quote is valid until {{ $quote->valid_until->format('F d, Y') }}. 
-        After this date, prices and availability may need to be reviewed.
-    </div>
+        <div class="validity-notice">
+            <strong>Validity Period:</strong> This quote is valid until {{ $quote->valid_until->format('F d, Y') }}. 
+            After this date, prices and availability may need to be reviewed.
+        </div>
 
-    <div class="footer">
-        <p>Thank you for considering our services!</p>
-        <p style="color: #95a5a6;">Generated on {{ now()->format('F d, Y H:i:s') }}</p>
+        <div class="footer">
+            <p>Thank you for considering our services!</p>
+            <p style="color: #95a5a6;">Generated on {{ now()->format('F d, Y H:i:s') }}</p>
+        </div>
     </div>
 </body>
 </html>

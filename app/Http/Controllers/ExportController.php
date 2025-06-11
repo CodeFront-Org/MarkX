@@ -19,7 +19,7 @@ class ExportController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['auth', 'role:manager']);
+        $this->middleware(['auth', 'role:rfq_approver']);
     }
 
     public function exportData(Request $request)
@@ -27,11 +27,11 @@ class ExportController extends Controller
         try {
             // Validate request
             $request->validate([
-                'type' => 'required|in:quotes,marketers,products,performance,analytics,items',
+                'type' => 'required|in:quotes,rfq_processors,products,performance,analytics,items',
                 'format' => 'required|in:excel,csv,pdf',
                 'dateFrom' => 'nullable|date',
                 'dateTo' => 'nullable|date|after_or_equal:dateFrom',
-                'marketer' => 'nullable|exists:users,id',
+                'rfq_processor' => 'nullable|exists:users,id',
                 'status' => 'nullable|string',
             ]);
 
@@ -67,20 +67,20 @@ class ExportController extends Controller
         switch ($request->type) {
             case 'quotes':
                 $query = Quote::query()
-                    ->with(['marketer', 'items'])
+                    ->with(['user', 'items'])
                     ->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
                     ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo))
-                    ->when($request->marketer, fn($q) => $q->where('marketer_id', $request->marketer))
+                    ->when($request->rfq_processor, fn($q) => $q->where('user_id', $request->rfq_processor))
                     ->when($request->status, fn($q) => $q->where('status', $request->status));
                 break;
 
-            case 'marketers':
-                $query = User::where('role', 'marketer')
-                    ->withCount(['marketedQuotes as quotes_count' => function($q) use ($dateFrom, $dateTo) {
+            case 'rfq_processors':
+                $query = User::where('role', 'rfq_processor')
+                    ->withCount(['quotes as quotes_count' => function($q) use ($dateFrom, $dateTo) {
                         $q->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
                           ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo));
                     }])
-                    ->withSum(['marketedQuotes as quotes_sum_total_amount' => function($q) use ($dateFrom, $dateTo) {
+                    ->withSum(['quotes as quotes_sum_total_amount' => function($q) use ($dateFrom, $dateTo) {
                         $q->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
                           ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo));
                     }], 'amount');
@@ -105,7 +105,7 @@ class ExportController extends Controller
                     ->join('quotes', 'quote_items.quote_id', '=', 'quotes.id')
                     ->when($dateFrom, fn($q) => $q->whereDate('quotes.created_at', '>=', $dateFrom))
                     ->when($dateTo, fn($q) => $q->whereDate('quotes.created_at', '<=', $dateTo))
-                    ->when($request->marketer, fn($q) => $q->where('quotes.marketer_id', $request->marketer))
+                    ->when($request->rfq_processor, fn($q) => $q->where('quotes.user_id', $request->rfq_processor))
                     ->when($request->status, fn($q) => $q->where('quotes.status', $request->status))
                     ->groupBy('quote_items.item')
                     ->orderByDesc('total_value');
@@ -113,10 +113,10 @@ class ExportController extends Controller
 
             case 'performance':
                 $query = DB::table('quotes')
-                    ->join('users', 'quotes.marketer_id', '=', 'users.id')
+                    ->join('users', 'quotes.user_id', '=', 'users.id')
                     ->leftJoin('quote_items', 'quotes.id', '=', 'quote_items.quote_id')
                     ->select(
-                        'users.name as marketer_name',
+                        'users.name as rfq_processor_name',
                         DB::raw('COUNT(DISTINCT quotes.id) as total_quotes'),
                         DB::raw('SUM(quotes.amount) as total_amount'),
                         DB::raw('AVG(quotes.amount) as average_quote_value'),
@@ -124,7 +124,7 @@ class ExportController extends Controller
                     )
                     ->when($dateFrom, fn($q) => $q->whereDate('quotes.created_at', '>=', $dateFrom))
                     ->when($dateTo, fn($q) => $q->whereDate('quotes.created_at', '<=', $dateTo))
-                    ->when($request->marketer, fn($q) => $q->where('quotes.marketer_id', $request->marketer))
+                    ->when($request->rfq_processor, fn($q) => $q->where('quotes.user_id', $request->rfq_processor))
                     ->groupBy('users.id', 'users.name');
                 break;
 
@@ -134,11 +134,11 @@ class ExportController extends Controller
                     COUNT(*) as total_quotes,
                     SUM(amount) as total_revenue,
                     AVG(amount) as average_quote_value,
-                    COUNT(DISTINCT marketer_id) as active_marketers
+                    COUNT(DISTINCT user_id) as active_rfq_processors
                 ')
                 ->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
                 ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo))
-                ->when($request->marketer, fn($q) => $q->where('marketer_id', $request->marketer))
+                ->when($request->rfq_processor, fn($q) => $q->where('user_id', $request->rfq_processor))
                 ->groupBy(DB::raw('DATE(created_at)'))
                 ->orderBy('date');
                 break;
@@ -161,14 +161,14 @@ class ExportController extends Controller
                     return [
                         'ID' => $quote->id,
                         'Date' => $quote->created_at->format('Y-m-d'),
-                        'Marketer' => $quote->marketer ? $quote->marketer->name : 'N/A',
+                        'RFQ Processor' => $quote->user ? $quote->user->name : 'N/A',
                         'Status' => $quote->status,
                         'Amount' => $quote->amount,
                         'Items Count' => $quote->items ? $quote->items->count() : 0,
                     ];
                 });
 
-            case 'marketers':
+            case 'rfq_processors':
                 return $data->map(function($user) {
                     return [
                         'ID' => $user->id,
@@ -245,7 +245,7 @@ class ExportController extends Controller
                         'filters' => array_filter([
                             'date range' => request('dateFrom') && request('dateTo') ? 
                                 request('dateFrom') . ' to ' . request('dateTo') : null,
-                            'marketer' => request('marketer') ? User::find(request('marketer'))->name : null,
+                            'rfq_processor' => request('rfq_processor') ? User::find(request('rfq_processor'))->name : null,
                             'status' => request('status'),
                         ])
                     ]);

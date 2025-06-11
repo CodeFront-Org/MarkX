@@ -35,9 +35,8 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
-        if ($user->isManager() && User::where('role', 'manager')->count() <= 1) {
-            return redirect()->route('user-management')
-                ->with('error', 'Cannot delete the last manager');
+        if ($user->isRfqApprover() && User::where('role', 'rfq_approver')->count() <= 1) {
+            return back()->with('error', 'Cannot delete the last RFQ Approver account');
         }
 
         $user->delete();

@@ -11,6 +11,6 @@ class ReportPolicy
 
     public function view(User $user): bool
     {
-        return $user->role === 'manager';
+        return $user->role === 'rfq_approver';
     }
 }

@@ -35,6 +35,11 @@ class PdfService
             'enable_php' => true,
             'enable_remote' => true,
             'enable_javascript' => true,
+            'chroot' => public_path(),
+            'image_cache_enabled' => true,
+            // Set paper size and orientation
+            'paper' => 'a4',
+            'orientation' => 'portrait',
         ]);
         
         return $pdf;
@@ -71,6 +76,33 @@ class PdfService
             return $item->quantity * $item->price;
         });
 
+        // Check for letterhead in different formats
+        $letterheadData = null;
+        $letterheadType = null;
+        
+        // Try different image formats
+        $possibleExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+        $letterheadBaseName = 'letterhead';
+        
+        foreach ($possibleExtensions as $ext) {
+            $path = public_path("assets/img/{$letterheadBaseName}.{$ext}");
+            
+            if (file_exists($path)) {
+                $letterheadData = base64_encode(file_get_contents($path));
+                $letterheadType = "image/{$ext}";
+                break;
+            }
+        }
+        
+        // If no letterhead found, use the logo as fallback
+        if (!$letterheadData) {
+            $logoPath = public_path('assets/img/logo-ct.png');
+            if (file_exists($logoPath)) {
+                $letterheadData = base64_encode(file_get_contents($logoPath));
+                $letterheadType = 'image/png';
+            }
+        }
+
         return [
             'quote' => $quote,
             'items' => $items,
@@ -78,7 +110,9 @@ class PdfService
             'approvedTotal' => $approvedTotal,
             'showOnlyApproved' => $quote->status === 'completed',
             'hasUnapprovedItems' => $quote->items->count() !== $approvedItems->count(),
-            'showInternalDetails' => $showInternalDetails
+            'showInternalDetails' => $showInternalDetails,
+            'letterheadData' => $letterheadData,
+            'letterheadType' => $letterheadType
         ];
     }
 
@@ -127,7 +161,13 @@ class PdfService
      */
     public function streamQuotePdf(Quote $quote, bool $showInternalDetails = false)
     {
-        return $this->generateQuotePdf($quote, $showInternalDetails)->stream("quote-{$quote->id}.pdf");
+        $pdf = $this->generateQuotePdf($quote, $showInternalDetails);
+        
+        // Set filename for download
+        $filename = "quote-{$quote->id}.pdf";
+        
+        // Return the PDF as a stream
+        return $pdf->stream($filename);
     }
 
     /**

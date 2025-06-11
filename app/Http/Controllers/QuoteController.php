@@ -29,7 +29,7 @@ class QuoteController extends Controller
 
     public function index(Request $request)
     {
-        $query = Auth::user()->role === 'manager' || Auth::user()->role === 'lpo_admin'
+        $query = Auth::user()->role === 'rfq_approver' || Auth::user()->role === 'lpo_admin'
             ? Quote::query()
             : Quote::where('user_id', Auth::id());
 
@@ -197,7 +197,7 @@ class QuoteController extends Controller
         $this->authorize('update', $quote);
         
         // Extra check to ensure only lpo_admin can access edit and quote is not completed
-        if (!auth()->user()->isFinance()) {
+        if (!auth()->user()->isLpoAdmin()) {
             return redirect()->route('quotes.index')
                 ->with('error', 'Only LPO Admin users can edit quotes.');
         }
@@ -242,6 +242,7 @@ class QuoteController extends Controller
             'files' => 'sometimes|array|min:1',
             'files.*' => 'sometimes|file|max:10240',
             'descriptions.*' => 'nullable|string|max:255',
+            'amount' => 'sometimes|required|numeric|min:0',
         ]);
 
         DB::transaction(function() use ($validated, $request, $quote) {
@@ -312,7 +313,7 @@ class QuoteController extends Controller
         $this->authorize('approve', $quote);
 
         DB::transaction(function() use ($quote) {
-            if (auth()->user()->isManager() && $quote->status === 'pending_manager') {
+            if (auth()->user()->isRfqApprover() && $quote->status === 'pending_manager') {
                 // RFQ approver approves the entire quote to move to customer review
                 $quote->update([
                     'status' => 'pending_customer',
@@ -323,7 +324,7 @@ class QuoteController extends Controller
                     ->with('success', 'Quote approved. RFQ Processor can now download PDF for customer review.');
             }
 
-            if (auth()->user()->isFinance() && $quote->status === 'pending_finance') {
+            if (auth()->user()->isLpoAdmin() && $quote->status === 'pending_finance') {
                 // LPO Admin closes the quote after reviewing and approving items
                 $quote->update([
                     'status' => 'completed',
@@ -421,7 +422,7 @@ class QuoteController extends Controller
         
         // Only show internal details (approval status, etc.) for LPO Admin users
         // For marketers and managers, hide these details as the PDF might be shared with clients
-        $showInternalDetails = auth()->user()->isFinance();
+        $showInternalDetails = auth()->user()->isLpoAdmin();
         
         return $this->pdfService->streamQuotePdf($quote, $showInternalDetails);
     }
@@ -648,7 +649,7 @@ class QuoteController extends Controller
         
         $this->authorize('update', $quote);
         
-        if ($quote->status !== 'pending_finance' || !auth()->user()->isFinance()) {
+        if ($quote->status !== 'pending_finance' || !auth()->user()->isLpoAdmin()) {
             return response()->json(['error' => 'Only LPO Admin users can approve items'], 403);
         }
         

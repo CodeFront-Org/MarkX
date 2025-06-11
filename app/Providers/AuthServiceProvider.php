@@ -33,7 +33,7 @@ class AuthServiceProvider extends ServiceProvider
         $this->registerPolicies();
 
         Gate::define('view-reports', function ($user) {
-            return $user->role === 'manager';
+            return $user->role === 'rfq_approver';
         });
     }
 }

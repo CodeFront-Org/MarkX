@@ -5,7 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InfoUserController;
-use App\Http\Controllers\MarketerController;
+use App\Http\Controllers\RfqProcessorController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\ResetController;
 use App\Http\Controllers\SessionsController;
@@ -101,11 +101,11 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
         // Export routes
         Route::get('exports/data', [ExportController::class, 'exportData'])->name('exports.data');
         
-        // Marketer management routes
-        Route::get('marketers/create', [MarketerController::class, 'create'])->name('marketers.create');
-        Route::post('marketers', [MarketerController::class, 'store'])->name('marketers.store');
+        // RFQ Processor management routes
+        Route::get('rfq-processors/create', [RfqProcessorController::class, 'create'])->name('rfq-processors.create');
+        Route::post('rfq-processors', [RfqProcessorController::class, 'store'])->name('rfq-processors.store');
 
-        // User registration routes (for marketers and managers)
+        // User registration routes (for rfq_processor and rfq_approver)
         Route::get('users/{role}/create', [UserRegistrationController::class, 'create'])
             ->where('role', 'rfq_processor|rfq_approver|lpo_admin')
             ->name('users.create');

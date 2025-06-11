@@ -7,11 +7,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
-class MarketerController extends Controller
+class RfqProcessorController extends Controller
 {
     public function create()
     {
-        return view('marketers.create');
+        return view('rfq-processors.create');
     }
 
     public function store(Request $request)
@@ -25,10 +25,10 @@ class MarketerController extends Controller
         ]);
 
         $attributes['password'] = Hash::make($attributes['password']);
-        $attributes['role'] = 'marketer';
+        $attributes['role'] = 'rfq_processor';
 
         $user = User::create($attributes);
 
-        return redirect()->route('user-management')->with('success', 'Marketer registered successfully');
+        return redirect()->route('user-management')->with('success', 'RFQ Processor registered successfully');
     }
 }

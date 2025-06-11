@@ -17,42 +17,102 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create admin user
-        User::create([
-            'name' => 'Admin User',
-            'email' => 'admin@example.com',
-            'password' => bcrypt('password'),
-            'role' => 'manager',
-        ]);
+        // Create admin user if it doesn't exist
+        if (!User::where('email', 'admin@example.com')->exists()) {
+            User::create([
+                'name' => 'Admin User',
+                'email' => 'admin@example.com',
+                'password' => bcrypt('password'),
+                'role' => 'rfq_approver',
+            ]);
+        }
 
-        // Create marketers
-        $marketers = [
+        // Create LPO Admin user if it doesn't exist
+        if (!User::where('email', 'lpo_admin@example.com')->exists()) {
+            User::create([
+                'name' => 'LPO Admin',
+                'email' => 'lpo_admin@example.com',
+                'password' => bcrypt('password'),
+                'role' => 'lpo_admin',
+            ]);
+        }
+
+        // Create RFQ Processors
+        $rfqProcessors = [
             [
-                'name' => 'Marketer One',
+                'name' => 'RFQ Processor One',
                 'email' => 'marketer1@example.com',
                 'password' => bcrypt('password'),
-                'role' => 'marketer',
+                'role' => 'rfq_processor',
             ],
             [
-                'name' => 'Marketer Two',
+                'name' => 'RFQ Processor Two',
                 'email' => 'marketer2@example.com',
                 'password' => bcrypt('password'),
-                'role' => 'marketer',
+                'role' => 'rfq_processor',
             ],
             [
-                'name' => 'Marketer Three',
+                'name' => 'RFQ Processor Three',
                 'email' => 'marketer3@example.com',
                 'password' => bcrypt('password'),
-                'role' => 'marketer',
+                'role' => 'rfq_processor',
             ],
         ];
 
-        foreach ($marketers as $marketer) {
-            User::create($marketer);
+        foreach ($rfqProcessors as $processor) {
+            if (!User::where('email', $processor['email'])->exists()) {
+                User::create($processor);
+            }
         }
 
-        // Get marketer IDs
-        $marketerIds = User::where('role', 'marketer')->pluck('id')->toArray();
+        // Create clients
+        $clientsData = [
+            [
+                'name' => 'Client One',
+                'email' => 'client1@example.com',
+                'password' => bcrypt('password'),
+                'role' => 'client',
+            ],
+            [
+                'name' => 'Client Two',
+                'email' => 'client2@example.com',
+                'password' => bcrypt('password'),
+                'role' => 'client',
+            ],
+            [
+                'name' => 'Client Three',
+                'email' => 'client3@example.com',
+                'password' => bcrypt('password'),
+                'role' => 'client',
+            ],
+        ];
+
+        $clients = [];
+        foreach ($clientsData as $clientData) {
+            if (!User::where('email', $clientData['email'])->exists()) {
+                $clients[] = User::create($clientData);
+            } else {
+                $clients[] = User::where('email', $clientData['email'])->first();
+            }
+        }
+
+        // Skip quote creation if we already have quotes
+        if (Quote::count() > 0) {
+            return;
+        }
+
+        // Get RFQ Processor IDs
+        $processorIds = User::where('role', 'rfq_processor')->pluck('id')->toArray();
+        
+        if (empty($processorIds)) {
+            // If no processors found, use the first user as fallback
+            $processorIds = [User::first()->id];
+        }
+        
+        if (empty($clients)) {
+            // If no clients found, skip quote creation
+            return;
+        }
         
         // Create quotes over the last 6 months
         $statuses = ['pending', 'approved', 'rejected', 'completed'];
@@ -69,7 +129,15 @@ class DatabaseSeeder extends Seeder
             'Video Production' => [5000, 15000],
         ];
 
+        // Sample company names for quote titles
+        $companies = [
+            'Acme Corp', 'Globex', 'Initech', 'Umbrella Corp', 'Stark Industries',
+            'Wayne Enterprises', 'Cyberdyne Systems', 'Soylent Corp', 'Massive Dynamic',
+            'Oscorp Industries', 'LexCorp', 'Weyland-Yutani', 'Tyrell Corporation'
+        ];
+
         // Create quotes for each month in the last 6 months
+        $refCounter = 1;
         for ($month = 5; $month >= 0; $month--) {
             $date = Carbon::now()->subMonths($month);
             $monthStart = Carbon::now()->subMonths($month)->startOfMonth();
@@ -93,12 +161,26 @@ class DatabaseSeeder extends Seeder
                 
                 $randomStatus = $this->getRandomWeighted($statusWeights);
                 
+                // Generate a random company and project type for the title
+                $company = $companies[array_rand($companies)];
+                $itemNames = array_keys($items);
+                $projectType = $itemNames[array_rand($itemNames)];
+                
+                // Create a unique reference using counter and microtime
+                $uniqueRef = 'REF-' . $quoteDate->format('Ym') . '-' . $refCounter . '-' . substr(md5(microtime()), 0, 5);
+                $refCounter++;
+                
                 // Create the quote
                 $quote = Quote::create([
                     'user_id' => $clients[array_rand($clients)]->id,
-                    'marketer_id' => $marketerIds[array_rand($marketerIds)],
+                    'marketer_id' => $processorIds[array_rand($processorIds)],
                     'amount' => 0, // Will be calculated from items
                     'status' => $randomStatus,
+                    'title' => $company . ' ' . $projectType,
+                    'description' => 'Quote for ' . $projectType . ' services for ' . $company,
+                    'contact_person' => 'Contact Person ' . ($i + 1),
+                    'reference' => $uniqueRef,
+                    'valid_until' => $quoteDate->copy()->addMonths(1),
                     'created_at' => $quoteDate,
                     'updated_at' => $randomStatus !== 'pending' 
                         ? $quoteDate->copy()->addDays(rand(1, 14)) 
@@ -109,13 +191,12 @@ class DatabaseSeeder extends Seeder
                 $itemsCount = rand(1, 5);
                 $quoteTotal = 0;
                 
-                $selectedItems = array_rand($items, min($itemsCount, count($items)));
-                if (!is_array($selectedItems)) {
-                    $selectedItems = [$selectedItems];
-                }
+                // Get random items without using array_rand
+                $itemNames = array_keys($items);
+                shuffle($itemNames);
+                $selectedItems = array_slice($itemNames, 0, min($itemsCount, count($itemNames)));
                 
-                foreach ($selectedItems as $itemKey) {
-                    $itemName = array_keys($items)[$itemKey];
+                foreach ($selectedItems as $itemName) {
                     $range = $items[$itemName];
                     
                     $price = rand($range[0], $range[1]);

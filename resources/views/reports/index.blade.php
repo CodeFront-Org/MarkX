@@ -116,7 +116,7 @@
     </div>
     @endif
 
-    <!-- Marketer Performance Card -->
+    <!-- RFQ Processor Performance Card -->
     <div class="row">
         <div class="col-12">
             <div class="card mb-4">
@@ -136,7 +136,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($marketerStats as $stat)
+                                @foreach($rfqProcessorStats as $stat)
                                     <tr class="
                                         @if($loop->first) gold-border
                                         @elseif($loop->iteration == 2) silver-border
@@ -611,7 +611,7 @@
         z-index: 1;
     }
 
-    /* Border styles for top 3 marketers */
+    /* Border styles for top 3 RFQ processors */
     .gold-border {
         border-left: 5px solid gold;
     }
@@ -627,7 +627,7 @@
 @endpush
 
 <!-- Export Modal -->
-@include('partials.modals.export-modal', ['marketers' => isset($marketers) ? $marketers : [], 'report_type' => 'reports'])
+@include('partials.modals.export-modal', ['rfq_processors' => isset($rfq_processors) ? $rfq_processors : [], 'report_type' => 'reports'])
 
 <!-- Correct script for export modal -->
 @push('scripts')

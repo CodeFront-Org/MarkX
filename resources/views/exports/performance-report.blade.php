@@ -175,7 +175,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>Marketer Performance Report</h1>
+        <h1>RFQ Processor Performance Report</h1>
         <p>Generated on: {{ now()->format('Y-m-d H:i:s') }}</p>
     </div>
 
@@ -220,12 +220,12 @@
         </div>
 
         <!-- Performance Table -->
-        <h3>Marketer Rankings</h3>
+        <h3>RFQ Processor Rankings</h3>
         <table>
             <thead>
                 <tr>
                     <th>Rank</th>
-                    <th>Marketer</th>
+                    <th>RFQ Processor</th>
                     <th class="numeric">Total Quotes</th>
                     <th class="numeric">Total Amount</th>
                     <th class="numeric">Avg. Quote Value</th>
@@ -246,7 +246,7 @@
                                 {{ $index + 1 }}
                             @endif
                         </td>
-                        <td>{{ $row['marketer_name'] }}</td>
+                        <td>{{ $row['rfq_processor_name'] }}</td>
                         <td class="numeric">{{ number_format($row['total_quotes']) }}</td>
                         <td class="numeric">KES {{ number_format($row['total_amount'], 2) }}</td>
                         <td class="numeric">KES {{ number_format($row['average_quote_value'], 2) }}</td>
@@ -263,7 +263,7 @@
                 $maxRevenue = max(array_column($data, 'total_amount'));
             @endphp
             @foreach(array_slice($data, 0, 5) as $row)
-                <div class="bar-name">{{ $row['marketer_name'] }}</div>
+                <div class="bar-name">{{ $row['rfq_processor_name'] }}</div>
                 <div class="bar-container">
                     <div class="bar" style="width: {{ ($row['total_amount'] / $maxRevenue) * 100 }}%"></div>
                     <div class="bar-label">KES {{ number_format($row['total_amount'], 0) }}</div>

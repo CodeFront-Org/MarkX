@@ -112,10 +112,10 @@
     <div class="col-lg-7">
       <div class="card z-index-2">
         <div class="card-header pb-0">
-          <h6>Marketers Performance</h6>
+          <h6>RFQ Processors Performance</h6>
           <p class="text-sm">
             <i class="fa fa-arrow-up text-success"></i>
-            <span class="font-weight-bold">Monthly Performance</span> by Marketer
+            <span class="font-weight-bold">Monthly Performance</span> by RFQ Processor
           </p>
         </div>
         <div class="card-body p-3">
@@ -400,9 +400,9 @@
         }
         ctx2 = ctx2.getContext("2d");
         
-        var marketerData = @json($marketerData);
+        var rfqProcessorData = @json($rfqProcessorData);
         // Sort months chronologically to ensure proper order
-        var monthsArray = Object.values(marketerData)[0] || [];
+        var monthsArray = Object.values(rfqProcessorData)[0] || [];
         var uniqueMonths = Array.from(new Set(monthsArray.map(function(d) { return d.month; }))).sort(function(a, b) {
           return new Date(a) - new Date(b);
         });
@@ -415,7 +415,7 @@
           { line: '#ea0606', fill: 'rgba(234,6,6,0.2)' }
         ];
 
-        var datasets = Object.entries(marketerData).map(([name, data], index) => {
+        var datasets = Object.entries(rfqProcessorData).map(([name, data], index) => {
           var color = colors[index % colors.length];
           var gradient = ctx2.createLinearGradient(0, 230, 0, 50);
           gradient.addColorStop(1, color.fill);

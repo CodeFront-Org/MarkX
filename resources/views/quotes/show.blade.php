@@ -63,7 +63,7 @@
                         </a>
                         @endif
 
-                        @if(auth()->user()->isFinance())
+                        @if(auth()->user()->isLpoAdmin())
                             @if($quote->status === 'pending_finance')
                                 <button type="button" class="btn bg-gradient-success mx-1" data-bs-toggle="modal" data-bs-target="#finalizeQuoteModal">
                                     Close Quote
@@ -142,7 +142,7 @@
                                             <th>Quantity</th>
                                             <th>Unit Price</th>
                                             <th>Subtotal</th>
-                                            @if($quote->status === 'pending_finance' && auth()->user()->isFinance())
+                                            @if($quote->status === 'pending_finance' && auth()->user()->isLpoAdmin())
                                             <th>Approve</th>
                                             @else
                                             <th>Status</th>
@@ -156,7 +156,7 @@
                                             <td>{{ $item->quantity }}</td>
                                             <td>KES {{ number_format($item->price, 2) }}</td>
                                             <td>KES {{ number_format($item->total, 2) }}</td>
-                                            @if($quote->status === 'pending_finance' && auth()->user()->isFinance())
+                                            @if($quote->status === 'pending_finance' && auth()->user()->isLpoAdmin())
                                             <td>
                                                 <div class="form-check">
                                                     <input type="checkbox" class="form-check-input item-approval"
@@ -278,7 +278,7 @@
     </div>
 </div>
 
-@if($quote->status === 'pending_finance' && auth()->user()->isFinance())
+@if($quote->status === 'pending_finance' && auth()->user()->isLpoAdmin())
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {

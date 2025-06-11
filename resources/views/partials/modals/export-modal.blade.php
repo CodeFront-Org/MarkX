@@ -23,7 +23,7 @@
                             <label class="form-control-label">Select Data to Export</label>
                             <select name="type" class="form-control" required>
                                 <option value="quotes">Quotes Data</option>
-                                <option value="performance">Marketer Performance</option>
+                                <option value="performance">RFQ Processor Performance</option>
                                 <option value="products">Product Data</option>
                                 <option value="items">Item Performance</option>
                                 <option value="analytics">Historical Data & Analytics</option>
@@ -50,14 +50,14 @@
                             <input type="date" name="dateTo" class="form-control">
                         </div>
 
-                        <!-- Marketer Selection -->
+                        <!-- RFQ Processor Selection -->
                         <div class="col-md-12 mb-3">
-                            <label class="form-control-label">Select Marketer</label>
-                            <select name="marketer" class="form-control">
-                                <option value="">All Marketers</option>
-                                @isset($marketers)
-                                    @foreach($marketers as $marketer)
-                                        <option value="{{ $marketer->id }}">{{ $marketer->name }}</option>
+                            <label class="form-control-label">Select RFQ Processor</label>
+                            <select name="rfq_processor" class="form-control">
+                                <option value="">All RFQ Processors</option>
+                                @isset($rfq_processors)
+                                    @foreach($rfq_processors as $processor)
+                                        <option value="{{ $processor->id }}">{{ $processor->name }}</option>
                                     @endforeach
                                 @endisset
                             </select>
@@ -93,57 +93,31 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize export form
+        // Export form loading state
         const exportForm = document.getElementById('exportForm');
+        const exportBtn = document.getElementById('exportBtn');
         
-        exportForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Show loading indicator
-            const submitBtn = document.getElementById('exportBtn');
-            submitBtn.disabled = true;
-            submitBtn.querySelector('.normal-text').classList.add('d-none');
-            submitBtn.querySelector('.loading-text').classList.remove('d-none');
-            
-            // Build the query string manually
-            const formData = new FormData(exportForm);
-            const queryParams = new URLSearchParams();
-            
-            for (const [key, value] of formData.entries()) {
-                if (value) { // Only add non-empty values
-                    queryParams.append(key, value);
-                }
-            }
-            
-            // Redirect to export endpoint
-            const url = exportForm.action + '?' + queryParams.toString();
-            
-            // Use a timeout to allow the browser to show the loading state
-            setTimeout(() => {
-                window.location.href = url;
-                
-                // Reset button after a delay (in case the download starts but the page doesn't reload)
-                setTimeout(() => {
-                    submitBtn.disabled = false;
-                    submitBtn.querySelector('.normal-text').classList.remove('d-none');
-                    submitBtn.querySelector('.loading-text').classList.add('d-none');
-                }, 3000);
-            }, 500);
-        });
-
+        if (exportForm && exportBtn) {
+            exportForm.addEventListener('submit', function() {
+                exportBtn.querySelector('.normal-text').classList.add('d-none');
+                exportBtn.querySelector('.loading-text').classList.remove('d-none');
+                exportBtn.disabled = true;
+            });
+        }
+        
         // Dynamic form updates based on type selection
         const typeSelect = document.querySelector('select[name="type"]');
         const statusSelect = document.querySelector('select[name="status"]');
-        const marketerSelect = document.querySelector('select[name="marketer"]');
+        const processorSelect = document.querySelector('select[name="rfq_processor"]');
         
         typeSelect.addEventListener('change', function() {
             // Show/hide status filter for relevant types
             const showStatus = ['quotes', 'items'].includes(this.value);
             statusSelect.closest('.mb-3').style.display = showStatus ? 'block' : 'none';
             
-            // Show/hide marketer selection for relevant types
-            const showMarketers = ['quotes', 'performance', 'items'].includes(this.value);
-            marketerSelect.closest('.mb-3').style.display = showMarketers ? 'block' : 'none';
+            // Show/hide processor selection for relevant types
+            const showProcessors = ['quotes', 'performance', 'items'].includes(this.value);
+            processorSelect.closest('.mb-3').style.display = showProcessors ? 'block' : 'none';
         });
     });
 </script>

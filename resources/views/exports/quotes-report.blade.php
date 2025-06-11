@@ -260,7 +260,7 @@
                 <tr>
                     <th>ID</th>
                     <th>Date</th>
-                    <th>Marketer</th>
+                    <th>RFQ Processor</th>
                     <th>Status</th>
                     <th class="numeric">Amount</th>
                     <th class="numeric">Items</th>
@@ -271,7 +271,7 @@
                     <tr>
                         <td>{{ $row['ID'] }}</td>
                         <td>{{ $row['Date'] }}</td>
-                        <td>{{ $row['Marketer'] }}</td>
+                        <td>{{ $row['RFQ Processor'] }}</td>
                         <td>
                             <span class="status status-{{ strtolower($row['Status']) }}">
                                 {{ $row['Status'] }}

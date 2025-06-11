@@ -104,8 +104,8 @@
                                                         <input type="checkbox" name="items[{{ $index }}][approved]"
                                                             class="form-check-input approval-checkbox" value="1"
                                                             {{ old("items.$index.approved", $item->approved) ? 'checked' : '' }}
-                                                            {{ auth()->user()->isFinance() ? '' : 'disabled' }}>
-                                                        @if(!auth()->user()->isFinance())
+                                                            {{ auth()->user()->isLpoAdmin() ? '' : 'disabled' }}>
+                                                        @if(!auth()->user()->isLpoAdmin())
                                                         <small class="text-muted d-block">Only finance can approve items</small>
                                                         @endif
                                                     </div>

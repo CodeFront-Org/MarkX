@@ -52,9 +52,25 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if user is an RFQ Approver (alias for isManager for consistency)
+     */
+    public function isRfqApprover()
+    {
+        return $this->role === 'rfq_approver';
+    }
+
+    /**
      * Check if user is a marketer
      */
     public function isMarketer()
+    {
+        return $this->role === 'rfq_processor';
+    }
+
+    /**
+     * Check if user is an RFQ Processor (alias for isMarketer for consistency)
+     */
+    public function isRfqProcessor()
     {
         return $this->role === 'rfq_processor';
     }
@@ -97,6 +113,14 @@ class User extends Authenticatable
      * Check if user is a finance user
      */
     public function isFinance(): bool
+    {
+        return $this->hasRole('lpo_admin');
+    }
+
+    /**
+     * Check if user is an LPO Admin (alias for isFinance for consistency)
+     */
+    public function isLpoAdmin(): bool
     {
         return $this->hasRole('lpo_admin');
     }

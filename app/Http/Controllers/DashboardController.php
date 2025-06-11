@@ -13,7 +13,7 @@ class DashboardController extends Controller
     public function index()
     {        
         // Base query for scoping data
-        $quotesQuery = Auth::user()->role === 'manager' 
+        $quotesQuery = Auth::user()->role === 'rfq_approver' || Auth::user()->role === 'lpo_admin' 
             ? Quote::query() 
             : Quote::where('user_id', Auth::id());
         
@@ -30,8 +30,8 @@ class DashboardController extends Controller
         $moneyGrowth = $yesterdayMoney > 0 ? 
             (($todaysMoney - $yesterdayMoney) / $yesterdayMoney) * 100 : 0;
 
-        // Today's Users - For non-managers, this will always be 1 or 0
-        if (Auth::user()->role === 'manager') {
+        // Today's Users - For RFQ approvers and LPO admins, show all users
+        if (Auth::user()->role === 'rfq_approver' || Auth::user()->role === 'lpo_admin') {
             $todaysUsers = User::whereHas('quotes', function($q) {
                 $q->whereDate('created_at', today());
             })->count();
@@ -133,20 +133,20 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Get marketers data for the line chart
-        if (Auth::user()->role === 'manager') {
-            $marketers = User::where('role', 'marketer')->get();
+        // Get RFQ processors data for the line chart
+        if (Auth::user()->role === 'rfq_approver' || Auth::user()->role === 'lpo_admin') {
+            $rfqProcessors = User::where('role', 'rfq_processor')->get();
         } else {
-            $marketers = User::where('id', Auth::id())->get();
+            $rfqProcessors = User::where('id', Auth::id())->get();
         }
         
-        $marketerData = [];
-        foreach ($marketers as $marketer) {
+        $rfqProcessorData = [];
+        foreach ($rfqProcessors as $processor) {
             $monthlyPerformance = [];
             $date = now()->startOfYear(); // Start from January of current year
             
             while ($date <= now()) {
-                $amount = Quote::where('user_id', $marketer->id)
+                $amount = Quote::where('user_id', $processor->id)
                     ->whereIn('status', ['approved', 'completed'])
                     ->whereYear('created_at', $date->year)
                     ->whereMonth('created_at', $date->month)
@@ -159,7 +159,7 @@ class DashboardController extends Controller
                 
                 $date->addMonth();
             }
-            $marketerData[$marketer->name] = $monthlyPerformance;
+            $rfqProcessorData[$processor->name] = $monthlyPerformance;
         }
 
         // Quote items per person per day
@@ -177,7 +177,7 @@ class DashboardController extends Controller
             'monthlyData',
             'recentProjects',
             'recentActivity',
-            'marketerData',
+            'rfqProcessorData',
             'quoteItemsByPerson'
         ));
     }    private function getQuoteItemsByPersonPerDay()
@@ -191,8 +191,8 @@ class DashboardController extends Controller
         ->join('users', 'users.id', '=', 'quotes.user_id')
         ->where('quotes.created_at', '>=', now()->subDays(30));
 
-        // If user is not a manager, only show their own data
-        if (Auth::user()->role !== 'manager') {
+        // If user is not an RFQ approver or LPO admin, only show their own data
+        if (Auth::user()->role !== 'rfq_approver' && Auth::user()->role !== 'lpo_admin') {
             $query->where('quotes.user_id', Auth::id());
         }
 
