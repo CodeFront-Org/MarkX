@@ -1,0 +1,18 @@
+on: push
+name: 🚀 Deploy to Invintro Cpanel
+
+jobs:
+  web-deploy:
+    name: 🎉 Deploy to invit-quotes.co.ke
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚚 Get latest code
+        uses: actions/checkout@v2.3.2
+
+      - name: 📂 Sync files to Test Environment
+        uses: SamKirkland/FTP-Deploy-Action@4.0.0
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: /
