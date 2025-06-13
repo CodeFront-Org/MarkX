@@ -58,14 +58,17 @@
                                     <table class="table" id="items-table">
                                         <thead>
                                             <tr>
-                                                <th width="30%">Item Description</th>
-                                                <th width="10%">Quantity</th>
-                                                <th width="10%">Unit Price</th>
-                                                <th width="10%">Total</th>
-                                                <th width="15%">Comment</th>
-                                                <th width="5%">Approved</th>
-                                                <th width="20%">Rejection Reason</th>
-                                            </tr>
+                                            <th width="25%">Item Description</th>
+                                            <th width="10%">Unit Pack</th>
+                                            <th width="10%">Quantity</th>
+                                            <th width="10%">Unit Price</th>
+                                            <th width="10%">Total</th>
+                                            <th width="10%">VAT Rate (%)</th>
+                                            <th width="10%">Lead Time</th>
+                                            <th width="10%">Comment</th>
+                                            <th width="5%">Approved</th>
+                                            <th>Rejection Reason</th>
+                                        </tr>
                                         </thead>
                                         <tbody>
                                             @foreach($quote->items as $index => $item)
@@ -80,6 +83,12 @@
                                                     </select>
                                                 </td>
                                                 <td>
+                                                    <input type="text" name="items[{{ $index }}][unit_pack]"
+                                                        class="form-control item-unit-pack"
+                                                        value="{{ old("items.$index.unit_pack", $item->unit_pack) }}"
+                                                        placeholder="e.g. 50's">
+                                                </td>
+                                                <td>
                                                     <input type="number" name="items[{{ $index }}][quantity]"
                                                         class="form-control item-quantity" min="1"
                                                         value="{{ old("items.$index.quantity", $item->quantity) }}" required>
@@ -90,7 +99,18 @@
                                                         value="{{ old("items.$index.price", $item->price) }}" required>
                                                 </td>
                                                 <td>
-                                                    <span class="line-total">{{ number_format($item->total, 2) }}</span>
+                                                    <span class="line-total">{{ number_format($item->quantity * $item->price, 2) }}</span>
+                                                </td>
+                                                <td>
+                                                    <input type="number" name="items[{{ $index }}][vat_rate]"
+                                                        class="form-control item-vat" step="0.01" min="0" max="100"
+                                                        value="{{ old("items.$index.vat_rate", $item->vat_rate ?? 16.00) }}">
+                                                </td>
+                                                <td>
+                                                    <input type="text" name="items[{{ $index }}][lead_time]"
+                                                        class="form-control lead-time"
+                                                        value="{{ old("items.$index.lead_time", $item->lead_time) }}"
+                                                        placeholder="e.g. Ex stock">
                                                 </td>
                                                 <td>
                                                     <textarea name="items[{{ $index }}][comment]"
@@ -125,19 +145,32 @@
                                         </tbody>
                                         <tfoot>
                                             <tr>
-                                                <td colspan="7">
+                                                <td colspan="4" class="text-end">
                                                     <button type="button" class="btn btn-success btn-sm" id="add-item">
-                                                        <i class="fas fa-plus"></i> Add Item
+                                                        <i class="fas fa-plus me-2"></i>Add Item
                                                     </button>
                                                 </td>
+                                                <td colspan="2" class="text-end">
+                                                    <strong>Subtotal (Excl. VAT):</strong>
+                                                    <span id="subtotal-amount" class="ms-2">{{ number_format($quote->subtotal, 2) }}</span>
+                                                </td>
+                                                <td colspan="4"></td>
                                             </tr>
                                             <tr>
-                                                <td colspan="3" class="text-end">
-                                                    <strong>Total:</strong>
+                                                <td colspan="4"></td>
+                                                <td colspan="2" class="text-end">
+                                                    <strong>VAT Amount:</strong>
+                                                    <span id="vat-amount" class="ms-2">{{ number_format($quote->vat_amount, 2) }}</span>
                                                 </td>
-                                                <td colspan="2">
-                                                    <span id="total-amount">{{ number_format($quote->amount, 2) }}</span>
+                                                <td colspan="4"></td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="4"></td>
+                                                <td colspan="2" class="text-end">
+                                                    <strong>Total (Inc. VAT):</strong>
+                                                    <span id="total-amount" class="ms-2">{{ number_format($quote->amount, 2) }}</span>
                                                 </td>
+                                                <td colspan="4"></td>
                                             </tr>
                                         </tfoot>
                                     </table>
@@ -482,10 +515,42 @@
             return total;
         }
 
+        // Calculate line total with VAT
+        function updateLineTotalWithVat(row) {
+            const quantity = parseFloat(row.querySelector('.item-quantity').value) || 0;
+            const price = parseFloat(row.querySelector('.item-price').value) || 0;
+            const vatRate = parseFloat(row.querySelector('.item-vat').value) || 0;
+
+            const subtotal = quantity * price;
+            const vatAmount = (subtotal * vatRate) / 100;
+            const totalWithVat = subtotal + vatAmount;
+
+            row.querySelector('.total-with-vat').textContent = totalWithVat.toFixed(2);
+            updateTotal();
+        }
+
+        // Update total amount for all items
         function updateTotal() {
-            const totals = [...document.querySelectorAll('.line-total')]
-                .map(span => parseFloat(span.textContent) || 0);
-            const total = totals.reduce((sum, val) => sum + val, 0);
+            let subtotal = 0;
+            let vatAmount = 0;
+            let total = 0;
+
+            document.querySelectorAll('.item-row').forEach(row => {
+                const quantity = parseFloat(row.querySelector('.item-quantity').value) || 0;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                const vatRate = parseFloat(row.querySelector('.item-vat').value) || 0;
+
+                const lineSubtotal = quantity * price;
+                const lineVat = (lineSubtotal * vatRate) / 100;
+                const lineTotal = lineSubtotal + lineVat;
+
+                subtotal += lineSubtotal;
+                vatAmount += lineVat;
+                total += lineTotal;
+            });
+
+            document.getElementById('subtotal-amount').textContent = subtotal.toFixed(2);
+            document.getElementById('vat-amount').textContent = vatAmount.toFixed(2);
             document.getElementById('total-amount').textContent = total.toFixed(2);
         }
 
@@ -571,9 +636,19 @@
             setupSelect2(input);
         });
 
-        // Initialize line totals
+        // Initialize line totals and add event listeners to existing rows
         document.querySelectorAll('.item-row').forEach(row => {
             updateLineTotal(row);
+
+            // Add event listeners to quantity, price, and vat inputs
+            const inputs = row.querySelectorAll('input');
+            inputs.forEach(input => {
+                if (input.classList.contains('item-quantity') || input.classList.contains('item-price') || input.classList.contains('item-vat')) {
+                    input.addEventListener('input', function() {
+                        updateLineTotal(row);
+                    });
+                }
+            });
         });
 
         // Handle adding new items
@@ -583,37 +658,52 @@
                 newRow.className = 'item-row';
                 newRow.innerHTML = `
                     <td>
-                        <select name="items[${currentItemCount}][item]" 
-                            class="form-control item-description product-search" 
+                        <select name="items[${currentItemCount}][item]"
+                            class="form-control item-description product-search"
                             required>
                         </select>
                     </td>
                     <td>
-                        <input type="number" name="items[${currentItemCount}][quantity]" 
+                        <input type="text" name="items[${currentItemCount}][unit_pack]"
+                            class="form-control item-unit-pack"
+                            placeholder="e.g. 50's">
+                    </td>
+                    <td>
+                        <input type="number" name="items[${currentItemCount}][quantity]"
                             class="form-control item-quantity" min="1" value="1" required>
                     </td>
                     <td>
-                        <input type="number" name="items[${currentItemCount}][price]" 
+                        <input type="number" name="items[${currentItemCount}][price]"
                             class="form-control item-price" step="0.01" min="0" required>
                     </td>
-                    <td>
+                    <td class="text-end">
                         <span class="line-total">0.00</span>
                     </td>
                     <td>
-                        <textarea name="items[${currentItemCount}][comment]" 
-                            class="form-control item-comment" 
-                            rows="1" 
+                        <input type="number" name="items[${currentItemCount}][vat_rate]"
+                            class="form-control item-vat" step="0.01" min="0" max="100"
+                            value="16.00">
+                    </td>
+                    <td>
+                        <input type="text" name="items[${currentItemCount}][lead_time]"
+                            class="form-control lead-time"
+                            placeholder="e.g. Ex stock">
+                    </td>
+                    <td>
+                        <textarea name="items[${currentItemCount}][comment]"
+                            class="form-control item-comment"
+                            rows="1"
                             placeholder="Add notes..."></textarea>
                     </td>
                     <td>
                         <div class="form-check">
                             <input type="hidden" name="items[${currentItemCount}][approved]" value="0">
-                            <input type="checkbox" name="items[${currentItemCount}][approved]" 
+                            <input type="checkbox" name="items[${currentItemCount}][approved]"
                                 class="form-check-input approval-checkbox" value="1" checked>
                         </div>
                     </td>
                     <td class="rejection-reason" style="display: none;">
-                        <input type="text" name="items[${currentItemCount}][reason]" 
+                        <input type="text" name="items[${currentItemCount}][reason]"
                             class="form-control"
                             placeholder="Enter rejection reason">
                     </td>
@@ -624,7 +714,7 @@
                 // Add event listeners to new inputs
                 const newInputs = newRow.querySelectorAll('input');
                 newInputs.forEach(input => {
-                    if (input.classList.contains('item-quantity') || input.classList.contains('item-price')) {
+                    if (input.classList.contains('item-quantity') || input.classList.contains('item-price') || input.classList.contains('item-vat')) {
                         input.addEventListener('input', function() {
                             updateLineTotal(newRow);
                         });
@@ -638,6 +728,7 @@
                             } else {
                                 reasonInput.removeAttribute('required');
                             }
+                            updateUnquotedItemsTable();
                         });
                     }
                 });
@@ -650,14 +741,14 @@
         function updateUnquotedItemsTable() {
             const tbody = unquotedItemsTable.querySelector('tbody');
             tbody.innerHTML = '';
-            
+
             document.querySelectorAll('.item-row').forEach((row, index) => {
                 const checkbox = row.querySelector('.approval-checkbox');
                 if (!checkbox.checked) {
                     const itemDescription = row.querySelector('.product-search').value;
                     const quantity = row.querySelector('.item-quantity').value;
                     const reason = row.querySelector('.rejection-reason input[type="text"]').value;
-                    
+
                 const newRow = document.createElement('tr');
                 newRow.className = 'unquoted-item-row';
                 newRow.innerHTML = `
@@ -698,7 +789,7 @@
                             reasonInput.removeAttribute('required');
                     reasonInput.value = '';
                 }
-                
+
                 updateUnquotedItemsTable();
             });
         }

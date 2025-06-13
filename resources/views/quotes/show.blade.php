@@ -98,15 +98,15 @@
                     <div class="row mt-4">
                         <div class="col-md-6">
                             <p class="text-sm mb-0 text-uppercase font-weight-bold">Status</p>
-                            <span class="badge badge-sm bg-gradient-{{ 
-                                $quote->status === 'completed' ? 'success' : 
-                                ($quote->status === 'pending_manager' ? 'info' : 
-                                ($quote->status === 'pending_customer' ? 'warning' : 
-                                ($quote->status === 'pending_finance' ? 'primary' : 'danger'))) 
+                            <span class="badge badge-sm bg-gradient-{{
+                                $quote->status === 'completed' ? 'success' :
+                                ($quote->status === 'pending_manager' ? 'info' :
+                                ($quote->status === 'pending_customer' ? 'warning' :
+                                ($quote->status === 'pending_finance' ? 'primary' : 'danger')))
                             }}">
-                                {{ $quote->status === 'pending_manager' ? 'Pending RFQ Approver' : 
-                                   ($quote->status === 'pending_customer' ? 'Pending Customer Review' : 
-                                   ($quote->status === 'pending_finance' ? 'Pending LPO Admin' : 
+                                {{ $quote->status === 'pending_manager' ? 'Pending RFQ Approver' :
+                                   ($quote->status === 'pending_customer' ? 'Pending Customer Review' :
+                                   ($quote->status === 'pending_finance' ? 'Pending LPO Admin' :
                                    ucwords(str_replace('_', ' ', $quote->status)))) }}
                             </span>
                         </div>
@@ -136,12 +136,14 @@
                             <p class="text-sm mb-0 text-uppercase font-weight-bold">Quote Items</p>
                             <div class="table-responsive">
                                 <table class="table">
-                                    <thead>
-                                        <tr>
+                                    <thead>                                        <tr>
                                             <th>Item Description</th>
+                                            <th>Unit Pack</th>
                                             <th>Quantity</th>
                                             <th>Unit Price</th>
-                                            <th>Subtotal</th>
+                                            <th>Total</th>
+                                            <th>VAT Amount</th>
+                                            <th>Lead Time</th>
                                             @if($quote->status === 'pending_finance' && auth()->user()->isLpoAdmin())
                                             <th>Approve</th>
                                             @else
@@ -150,12 +152,14 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach($quote->items as $item)
-                                        <tr>
+                                        @foreach($quote->items as $item)                                        <tr>
                                             <td>{{ $item->item }}</td>
+                                            <td>{{ $item->unit_pack }}</td>
                                             <td>{{ $item->quantity }}</td>
                                             <td>KES {{ number_format($item->price, 2) }}</td>
-                                            <td>KES {{ number_format($item->total, 2) }}</td>
+                                            <td>KES {{ number_format($item->quantity * $item->price, 2) }}</td>
+                                            <td>KES {{ number_format(($item->quantity * $item->price) * ($item->vat_rate / 100), 2) }}</td>
+                                            <td>{{ $item->lead_time }}</td>
                                             @if($quote->status === 'pending_finance' && auth()->user()->isLpoAdmin())
                                             <td>
                                                 <div class="form-check">
@@ -176,8 +180,16 @@
                                     </tbody>
                                     <tfoot>
                                         <tr>
-                                            <td colspan="3" class="text-end"><strong>Total Amount:</strong></td>
-                                            <td colspan="2"><strong>KES {{ number_format($quote->amount, 2) }}</strong></td>
+                                            <td colspan="3" class="text-end"><strong>Subtotal (Excl. VAT):</strong></td>
+                                            <td colspan="4"><strong>KES {{ number_format($quote->subtotal ?? ($quote->amount / (1 + ($quote->items->first()->vat_rate ?? 16) / 100)), 2) }}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="3" class="text-end"><strong>VAT Amount:</strong></td>
+                                            <td colspan="4"><strong>KES {{ number_format($quote->vat_amount ?? ($quote->amount - ($quote->amount / (1 + ($quote->items->first()->vat_rate ?? 16) / 100))), 2) }}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="3" class="text-end"><strong>Total Amount (Inc. VAT):</strong></td>
+                                            <td colspan="4"><strong>KES {{ number_format($quote->amount, 2) }}</strong></td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -216,7 +228,7 @@
                                 </table>
                             </div>
                         </div>
-                    </div> 
+                    </div>
                     @endif
 
                     <div class="row mt-4">
@@ -394,7 +406,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="mt-3">
                         <h6 class="text-sm font-weight-bold mb-2">Quote Summary:</h6>
                         <ul class="list-group">

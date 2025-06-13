@@ -162,26 +162,30 @@
             <div class="quote-title">{{ $quote->title }}</div>
             <p>{{ $quote->description }}</p>
             <p>Attn:{{ $quote->contact_person }}</p>
-            
-            <table>
-                <thead>
+
+            <table>                <thead>
                     <tr>
-                        <th width="40%">Item Description</th>
-                        <th width="15%">Quantity</th>
-                        <th width="15%">Unit Price</th>
-                        <th width="15%">Subtotal</th>
+                        <th width="25%">Item Description</th>
+                        <th width="10%">Unit Pack</th>
+                        <th width="10%">Quantity</th>
+                        <th width="10%">Unit Price</th>
+                        <th width="15%">Total</th>
+                        <th width="10%">VAT Amount</th>
+                        <th width="10%">Lead Time</th>
                         @if(!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails)
-                        <th width="15%">Status</th>
+                        <th width="10%">Status</th>
                         @endif
                     </tr>
                 </thead>
-                <tbody>
-                    @foreach($items as $item)
+                <tbody>                    @foreach($items as $item)
                     <tr>
                         <td>{{ $item->item }}</td>
+                        <td>{{ $item->unit_pack }}</td>
                         <td>{{ $item->quantity }}</td>
                         <td>KES {{ number_format($item->price, 2) }}</td>
                         <td>KES {{ number_format($item->quantity * $item->price, 2) }}</td>
+                        <td>KES {{ number_format(($item->quantity * $item->price) * (($item->vat_rate ?? 16) / 100), 2) }}</td>
+                        <td>{{ $item->lead_time }}</td>
                         @if(!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails)
                         <td>
                             @if($item->approved)
@@ -193,22 +197,54 @@
                         @endif
                     </tr>
                     @endforeach
-                </tbody>
-                <tfoot>
+                </tbody>                <tfoot>
                     @if($showOnlyApproved)
                     <tr>
-                        <td colspan="3" style="text-align: right;"><strong>Total Amount:</strong></td>
-                        <td><strong>KES {{ number_format($approvedTotal, 2) }}</strong></td>
+                        <td colspan="5" style="text-align: right;"><strong>Subtotal (Excl. VAT):</strong></td>
+                        <td><strong>KES {{ number_format($approvedSubtotal ?? 0, 2) }}</strong></td>
+                        <td colspan="2"></td>
+                    </tr>
+                    <tr>
+                        <td colspan="5" style="text-align: right;"><strong>VAT Amount:</strong></td>
+                        <td><strong>KES {{ number_format($approvedVatAmount ?? 0, 2) }}</strong></td>
+                        <td colspan="2"></td>
+                    </tr>
+                    <tr class="total">
+                        <td colspan="5" style="text-align: right;"><strong>Total Amount (Inc. VAT):</strong></td>
+                        <td><strong>KES {{ number_format($approvedTotal ?? 0, 2) }}</strong></td>
+                        <td colspan="2"></td>
                     </tr>
                     @else
                     <tr>
-                        <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '4' : '3' }}" style="text-align: right;"><strong>Total Amount:</strong></td>
-                        <td><strong>KES {{ number_format($itemsTotal, 2) }}</strong></td>
+                        <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '5' : '5' }}" style="text-align: right;"><strong>Subtotal (Excl. VAT):</strong></td>
+                        <td><strong>KES {{ number_format($itemsSubtotal ?? 0, 2) }}</strong></td>
+                        <td colspan="2"></td>
+                    </tr>
+                    <tr>
+                        <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '5' : '5' }}" style="text-align: right;"><strong>VAT Amount:</strong></td>
+                        <td><strong>KES {{ number_format($itemsVatAmount ?? 0, 2) }}</strong></td>
+                        <td colspan="2"></td>
+                    </tr>
+                    <tr class="total">
+                        <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '5' : '5' }}" style="text-align: right;"><strong>Total Amount (Inc. VAT):</strong></td>
+                        <td><strong>KES {{ number_format($itemsTotal ?? 0, 2) }}</strong></td>
+                        <td colspan="2"></td>
                     </tr>
                     @if($hasUnapprovedItems && isset($showInternalDetails) && $showInternalDetails)
                     <tr>
-                        <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '4' : '3' }}" style="text-align: right;"><strong>Approved Items Total:</strong></td>
-                        <td><strong>KES {{ number_format($approvedTotal, 2) }}</strong></td>
+                        <td colspan="5" style="text-align: right;"><strong>Approved Items Subtotal (Excl. VAT):</strong></td>
+                        <td><strong>KES {{ number_format($approvedSubtotal ?? 0, 2) }}</strong></td>
+                        <td colspan="2"></td>
+                    </tr>
+                    <tr>
+                        <td colspan="5" style="text-align: right;"><strong>Approved Items VAT:</strong></td>
+                        <td><strong>KES {{ number_format($approvedVatAmount ?? 0, 2) }}</strong></td>
+                        <td colspan="2"></td>
+                    </tr>
+                    <tr class="total">
+                        <td colspan="5" style="text-align: right;"><strong>Approved Items Total (Inc. VAT):</strong></td>
+                        <td><strong>KES {{ number_format($approvedTotal ?? 0, 2) }}</strong></td>
+                        <td colspan="2"></td>
                     </tr>
                     @endif
                     @endif
@@ -217,7 +253,7 @@
         </div>
 
         <div class="validity-notice">
-            <strong>Validity Period:</strong> This quote is valid until {{ $quote->valid_until->format('F d, Y') }}. 
+            <strong>Validity Period:</strong> This quote is valid until {{ $quote->valid_until->format('F d, Y') }}.
             After this date, prices and availability may need to be reviewed.
         </div>
 

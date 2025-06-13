@@ -18,8 +18,12 @@ class QuoteItem extends Model
     protected $fillable = [
         'quote_id',
         'item',
+        'unit_pack',
         'quantity',
         'price',
+        'vat_rate',
+        'vat_amount',
+        'lead_time',
         'approved',
         'comment',
         'reason',
@@ -29,14 +33,24 @@ class QuoteItem extends Model
     protected $casts = [
         'price' => 'decimal:2',
         'quantity' => 'integer',
-        'approved' => 'boolean'
+        'approved' => 'boolean',
+        'vat_rate' => 'decimal:2',
+        'vat_amount' => 'decimal:2'
     ];
 
-    protected $appends = ['total'];
+    protected $appends = ['total', 'total_with_vat'];
 
     public function getTotalAttribute()
     {
         return $this->quantity * $this->price;
+    }
+
+    public function getTotalWithVatAttribute()
+    {
+        $total = $this->total;
+        $vatAmount = ($total * $this->vat_rate) / 100;
+        $this->vat_amount = $vatAmount; // Store the VAT amount
+        return $total + $vatAmount;
     }
 
     /**

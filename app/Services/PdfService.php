@@ -25,7 +25,7 @@ class PdfService
     {
         $quoteData = $this->prepareQuoteData($quote, $showInternalDetails);
         $pdf = Pdf::loadView('pdf.quote', $quoteData);
-        
+
         // Configure PDF to properly handle the letterhead
         $pdf->setOptions([
             'isHtml5ParserEnabled' => true,
@@ -41,7 +41,7 @@ class PdfService
             'paper' => 'a4',
             'orientation' => 'portrait',
         ]);
-        
+
         return $pdf;
     }
 
@@ -58,42 +58,58 @@ class PdfService
     {
         // For completed quotes, show only approved items
         // For non-completed quotes, show all items
-        $items = $quote->status === 'completed' 
+        $items = $quote->status === 'completed'
             ? $quote->items->filter(function ($item) {
                 return $item->approved;
-              }) 
+              })
             : $quote->items;
 
-        $itemsTotal = $items->sum(function ($item) {
+        // Calculate subtotal, VAT amount, and total for all items
+        $itemsSubtotal = $items->sum(function ($item) {
             return $item->quantity * $item->price;
         });
 
+        $itemsVatAmount = $items->sum(function ($item) {
+            $subtotal = $item->quantity * $item->price;
+            return $subtotal * ($item->vat_rate / 100);
+        });
+
+        $itemsTotal = $itemsSubtotal + $itemsVatAmount;
+
+        // Calculate subtotal, VAT amount, and total for approved items only
         $approvedItems = $quote->items->filter(function ($item) {
             return $item->approved;
         });
 
-        $approvedTotal = $approvedItems->sum(function ($item) {
+        $approvedSubtotal = $approvedItems->sum(function ($item) {
             return $item->quantity * $item->price;
         });
+
+        $approvedVatAmount = $approvedItems->sum(function ($item) {
+            $subtotal = $item->quantity * $item->price;
+            return $subtotal * ($item->vat_rate / 100);
+        });
+
+        $approvedTotal = $approvedSubtotal + $approvedVatAmount;
 
         // Check for letterhead in different formats
         $letterheadData = null;
         $letterheadType = null;
-        
+
         // Try different image formats
         $possibleExtensions = ['jpg', 'jpeg', 'png', 'gif'];
         $letterheadBaseName = 'letterhead';
-        
+
         foreach ($possibleExtensions as $ext) {
             $path = public_path("assets/img/{$letterheadBaseName}.{$ext}");
-            
+
             if (file_exists($path)) {
                 $letterheadData = base64_encode(file_get_contents($path));
                 $letterheadType = "image/{$ext}";
                 break;
             }
         }
-        
+
         // If no letterhead found, use the logo as fallback
         if (!$letterheadData) {
             $logoPath = public_path('assets/img/logo-ct.png');
@@ -106,7 +122,11 @@ class PdfService
         return [
             'quote' => $quote,
             'items' => $items,
+            'itemsSubtotal' => $itemsSubtotal,
+            'itemsVatAmount' => $itemsVatAmount,
             'itemsTotal' => $itemsTotal,
+            'approvedSubtotal' => $approvedSubtotal,
+            'approvedVatAmount' => $approvedVatAmount,
             'approvedTotal' => $approvedTotal,
             'showOnlyApproved' => $quote->status === 'completed',
             'hasUnapprovedItems' => $quote->items->count() !== $approvedItems->count(),
@@ -135,12 +155,12 @@ class PdfService
     {
         $pdf = $this->generateQuotePdf($quote, $showInternalDetails);
         $path = storage_path('app/public/quotes/' . $quote->id . '.pdf');
-        
+
         // Ensure the directory exists
         if (!file_exists(dirname($path))) {
             mkdir(dirname($path), 0777, true);
         }
-        
+
         $pdf->save($path);
         return $path;
     }
@@ -162,10 +182,10 @@ class PdfService
     public function streamQuotePdf(Quote $quote, bool $showInternalDetails = false)
     {
         $pdf = $this->generateQuotePdf($quote, $showInternalDetails);
-        
+
         // Set filename for download
         $filename = "quote-{$quote->id}.pdf";
-        
+
         // Return the PDF as a stream
         return $pdf->stream($filename);
     }

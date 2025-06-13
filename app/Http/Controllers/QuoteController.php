@@ -22,7 +22,7 @@ class QuoteController extends Controller
     {
         $this->middleware('auth');
         $this->pdfService = $pdfService;
-        
+
         // Prevent lpo_admin users from creating quotes
         $this->middleware('role:rfq_processor')->only(['create', 'store']);
     }
@@ -107,83 +107,126 @@ class QuoteController extends Controller
         $latestQuoteId = Quote::max('id') ?? 0;
         $nextQuoteId = $latestQuoteId + 1;
         $reference = 'Q' . str_pad($nextQuoteId, 6, '0', STR_PAD_LEFT);
-        
+
         return view('quotes.create', compact('reference'));
     }
 
     public function store(Request $request)
     {
-        $this->authorize('create', Quote::class);
+        try {
+            Log::info('Quote creation started', ['user_id' => Auth::id()]);
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'valid_until' => 'required|date|after:today',
-            'contact_person' => 'nullable|string|max:255',
-            'items' => 'required|array|min:1',
-            'items.*.item' => 'required|string',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.price' => 'required|numeric|min:0',
-            'items.*.comment' => 'nullable|string',
-            'total_rfq_items' => 'required|integer|min:0',
-            'files' => 'required|array|min:1',
-            'files.*' => 'required|file|max:10240',
-            'descriptions.*' => 'nullable|string|max:255',
-        ]);
+            $this->authorize('create', Quote::class);
 
-        $quote = DB::transaction(function() use ($validated, $request) {
-            $totalAmount = collect($request->items)->sum(function($item) {
-                return $item['quantity'] * $item['price'];
-            });
-            
-            $latestQuoteId = Quote::max('id') ?? 0;
-            $nextQuoteId = $latestQuoteId + 1;
-            
-            // Get the current authenticated user
-            $currentUser = Auth::user();
-            
-            $quote = Quote::create([
-                ...$validated,
-                'amount' => $totalAmount,
-                'status' => 'pending_manager',  // New initial status
-                'user_id' => Auth::id(),
-                'marketer_id' => $currentUser->id, // Set the current user (marketer) as marketer_id
-                'reference' => 'Q' . str_pad($nextQuoteId, 6, '0', STR_PAD_LEFT),
-                'has_rfq' => true,
-                'rfq_files_count' => count($request->file('files'))
+            Log::info('Validating quote data');
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'description' => 'required|string',
+                'valid_until' => 'required|date|after:today',
+                'contact_person' => 'nullable|string|max:255',
+                'items' => 'required|array|min:1',
+                'items.*.item' => 'required|string',
+                'items.*.unit_pack' => 'nullable|string',
+                'items.*.quantity' => 'required|integer|min:1',
+                'items.*.price' => 'required|numeric|min:0',
+                'items.*.vat_rate' => 'nullable|numeric|min:0|max:100',
+                'items.*.lead_time' => 'nullable|string',
+                'items.*.approved' => 'required|in:0,1',
+                'items.*.comment' => 'nullable|string',
+                'total_rfq_items' => 'required|integer|min:0',
+                'files' => 'required|array|min:1',
+                'files.*' => 'required|file|max:10240',
+                'descriptions.*' => 'nullable|string|max:255',
             ]);
 
-            foreach ($request->items as $item) {
-                $quote->items()->create([
-                    'item' => $item['item'],
-                    'quantity' => $item['quantity'],
-                    'price' => $item['price'],
-                    'approved' => false,
-                    'comment' => $item['comment'] ?? null
-                ]);
-            }
+            Log::info('Validation passed, starting DB transaction');
 
-            if ($request->hasFile('files')) {
-                foreach ($request->file('files') as $index => $file) {
-                    $originalName = $file->getClientOriginalName();
-                    $fileName = Str::random(40) . '.' . $file->getClientOriginalExtension();
-                    $path = $file->storeAs("quote-files/{$quote->id}", $fileName, 'public');
-                    
-                    $quote->files()->create([
-                        'original_name' => $originalName,
-                        'file_name' => $fileName,
-                        'file_type' => $file->getClientMimeType(),
-                        'path' => $path,
-                        'description' => $request->descriptions[$index] ?? null
+            try {
+                $quote = DB::transaction(function() use ($validated, $request) {
+                    Log::info('Calculating total amount');
+                    $totalAmount = collect($request->items)->sum(function($item) {
+                        return $item['quantity'] * $item['price'];
+                    });
+
+                    Log::info('Generating quote reference');
+                    $latestQuoteId = Quote::max('id') ?? 0;
+                    $nextQuoteId = $latestQuoteId + 1;
+
+                    // Get the current authenticated user
+                    $currentUser = Auth::user();
+
+                    Log::info('Creating quote record');
+                    $quote = Quote::create([
+                        ...$validated,
+                        'amount' => $totalAmount,
+                        'status' => 'pending_manager',  // New initial status
+                        'user_id' => Auth::id(),
+                        'marketer_id' => $currentUser->id, // Set the current user (marketer) as marketer_id
+                        'reference' => 'Q' . str_pad($nextQuoteId, 6, '0', STR_PAD_LEFT),
+                        'has_rfq' => true,
+                        'rfq_files_count' => count($request->file('files'))
                     ]);
-                }
+
+                    Log::info('Quote record created', ['quote_id' => $quote->id]);
+
+                    Log::info('Creating quote items');
+                    foreach ($request->items as $index => $item) {
+                        Log::info('Creating item', ['index' => $index, 'item' => $item['item']]);
+                        $quote->items()->create([
+                            'item' => $item['item'],
+                            'unit_pack' => $item['unit_pack'] ?? null,
+                            'quantity' => $item['quantity'],
+                            'price' => $item['price'],
+                            'vat_rate' => $item['vat_rate'] ?? 16.00, // Default VAT rate of 16%
+                            'lead_time' => $item['lead_time'] ?? null,
+                            'approved' => (bool)($item['approved'] ?? false),
+                            'comment' => $item['comment'] ?? null
+                        ]);
+                    }
+
+                    Log::info('Processing file uploads');
+                    if ($request->hasFile('files')) {
+                        foreach ($request->file('files') as $index => $file) {
+                            Log::info('Processing file', ['index' => $index, 'original_name' => $file->getClientOriginalName()]);
+                            $originalName = $file->getClientOriginalName();
+                            $fileName = Str::random(40) . '.' . $file->getClientOriginalExtension();
+                            $path = $file->storeAs("quote-files/{$quote->id}", $fileName, 'public');
+
+                            $quote->files()->create([
+                                'original_name' => $originalName,
+                                'file_name' => $fileName,
+                                'file_type' => $file->getClientMimeType(),
+                                'path' => $path,
+                                'description' => $request->descriptions[$index] ?? null
+                            ]);
+                        }
+                    }
+
+                    Log::info('Quote creation completed successfully', ['quote_id' => $quote->id]);
+                    return $quote;
+                });
+            } catch (\Exception $e) {
+                Log::error('Error in DB transaction during quote creation', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                throw $e; // Re-throw to be caught by the outer try-catch
             }
 
-            return $quote;
-        });
+            Log::info('Redirecting to quotes index with success message');
+            return redirect()->route('quotes.index')
+                ->with('success', 'Quote created successfully and sent for RFQ Approver.');
 
-        return redirect()->route('quotes.index')
-            ->with('success', 'Quote created successfully and sent for RFQ Approver.');
+        } catch (\Exception $e) {
+            Log::error('Failed to create quote', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Failed to create quote: ' . $e->getMessage());
+        }
     }
 
     public function show(Quote $quote)
@@ -195,18 +238,18 @@ class QuoteController extends Controller
     public function edit(Quote $quote)
     {
         $this->authorize('update', $quote);
-        
+
         // Extra check to ensure only lpo_admin can access edit and quote is not completed
         if (!auth()->user()->isLpoAdmin()) {
             return redirect()->route('quotes.index')
                 ->with('error', 'Only LPO Admin users can edit quotes.');
         }
-        
+
         if ($quote->status === 'completed') {
             return redirect()->route('quotes.show', $quote)
                 ->with('error', 'Completed quotes cannot be edited.');
         }
-        
+
         return view('quotes.edit', compact('quote'));
     }
 
@@ -224,8 +267,11 @@ class QuoteController extends Controller
             'contact_person' => 'nullable|string|max:255',
             'items' => 'required|array|min:1',
             'items.*.item' => 'required|string',
+            'items.*.unit_pack' => 'nullable|string',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.price' => 'required|numeric|min:0',
+            'items.*.vat_rate' => 'nullable|numeric|min:0|max:100',
+            'items.*.lead_time' => 'nullable|string',
             'items.*.approved' => 'required|in:0,1',
             'items.*.reason' => [
                 'required_if:items.*.approved,0',
@@ -249,7 +295,7 @@ class QuoteController extends Controller
             $totalAmount = collect($request->items)->sum(function($item) {
                 return $item['quantity'] * $item['price'];
             });
-            
+
             $quote->update([
                 ...$validated,
                 'amount' => $totalAmount,
@@ -262,11 +308,14 @@ class QuoteController extends Controller
             // Create the quote items
             foreach ($request->items as $item) {
                 $isApproved = isset($item['approved']) && $item['approved'] == '1';
-                
+
                 $quote->items()->create([
                     'item' => $item['item'],
+                    'unit_pack' => $item['unit_pack'] ?? null,
                     'quantity' => $item['quantity'],
                     'price' => $item['price'],
+                    'vat_rate' => $item['vat_rate'] ?? 16.00, // Default VAT rate of 16%
+                    'lead_time' => $item['lead_time'] ?? null,
                     'approved' => $isApproved,
                     'reason' => !$isApproved ? ($item['reason'] ?? null) : null,
                     'comment' => $item['comment'] ?? null
@@ -288,7 +337,7 @@ class QuoteController extends Controller
                         'description' => $request->descriptions[$index] ?? null
                     ]);
                 }
-                
+
                 // Update RFQ file count
                 $quote->updateRfqFileCount();
             }
@@ -301,7 +350,7 @@ class QuoteController extends Controller
     public function destroy(Quote $quote)
     {
         $this->authorize('delete', $quote);
-        
+
         $quote->delete();
 
         return redirect()->route('quotes.index')
@@ -337,7 +386,7 @@ class QuoteController extends Controller
 
             throw new \Exception('Invalid approval action for current quote status.');
         });
-        
+
         return redirect()->route('quotes.show', $quote)
             ->with('success', 'Quote status updated successfully.');
     }
@@ -419,11 +468,11 @@ class QuoteController extends Controller
     public function download(Quote $quote)
     {
         $this->authorize('view', $quote);
-        
+
         // Only show internal details (approval status, etc.) for LPO Admin users
         // For marketers and managers, hide these details as the PDF might be shared with clients
         $showInternalDetails = auth()->user()->isLpoAdmin();
-        
+
         return $this->pdfService->streamQuotePdf($quote, $showInternalDetails);
     }
 
@@ -455,7 +504,7 @@ class QuoteController extends Controller
         }
 
         $total = $baseQuery->get()->count();
-        
+
         $items = $baseQuery
             ->orderByRaw('COUNT(*) DESC, MAX(created_at) DESC')
             ->offset(($page - 1) * $pageSize)
@@ -464,7 +513,7 @@ class QuoteController extends Controller
             ->map(function($item) {
                 $usedTimes = $item->usage_count;
                 $timePhrase = $usedTimes === 1 ? 'Quoted once' : "Quoted {$usedTimes} times";
-                
+
                 return [
                     'id' => $item->item,
                     'text' => $item->item,
@@ -473,7 +522,7 @@ class QuoteController extends Controller
                     'lastUsed' => $item->last_used
                 ];
             });
-        
+
         return response()->json([
             'results' => $items,
             'pagination' => [
@@ -510,7 +559,7 @@ class QuoteController extends Controller
         }
 
         $total = $baseQuery->get()->count();
-        
+
         $customers = $baseQuery
             ->orderByRaw('COUNT(*) DESC, MAX(created_at) DESC')
             ->offset(($page - 1) * $pageSize)
@@ -519,7 +568,7 @@ class QuoteController extends Controller
             ->map(function($customer) {
                 $quotedTimes = $customer->quote_count;
                 $timePhrase = $quotedTimes === 1 ? 'Quoted once' : "Quoted {$quotedTimes} times";
-                
+
                 return [
                     'id' => $customer->title,
                     'text' => $customer->title,
@@ -529,7 +578,7 @@ class QuoteController extends Controller
                     'lastQuoted' => $customer->last_quoted
                 ];
             });
-        
+
         return response()->json([
             'results' => $customers,
             'pagination' => [
@@ -550,10 +599,10 @@ class QuoteController extends Controller
         $file = $request->file('file');
         $originalName = $file->getClientOriginalName();
         $fileName = Str::random(40) . '.' . $file->getClientOriginalExtension();
-        
+
         // Store file in the quote files folder
         $path = $file->storeAs("quote-files/{$quote->id}", $fileName, 'public');
-        
+
         try {
             $quoteFile = $quote->files()->create([
                 'original_name' => $originalName,
@@ -570,7 +619,7 @@ class QuoteController extends Controller
 
             // Update the quote's RFQ file count
             $quote->updateRfqFileCount();
-            
+
             return back()->with('success', 'File attached successfully.');
         } catch (\Exception $e) {
             Storage::disk('public')->delete($path);
@@ -582,7 +631,7 @@ class QuoteController extends Controller
     public function downloadFile(Quote $quote, QuoteFile $file)
     {
         $this->authorize('view', $quote);
-        
+
         $path = Storage::disk('public')->path($file->path);
         return response()->download($path, $file->original_name);
     }
@@ -590,15 +639,15 @@ class QuoteController extends Controller
     public function viewFile(Quote $quote, QuoteFile $file)
     {
         $this->authorize('view', $quote);
-        
+
         $path = Storage::disk('public')->path($file->path);
         $contentType = $file->file_type;
-        
+
         // For PDFs and images, display in browser
         if (in_array($contentType, ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'])) {
             return response()->file($path, ['Content-Type' => $contentType]);
         }
-        
+
         // For other file types that can be displayed in browser
         if (in_array($contentType, [
             'text/plain',
@@ -612,7 +661,7 @@ class QuoteController extends Controller
             $content = file_get_contents($path);
             return response($content)->header('Content-Type', $contentType);
         }
-        
+
         // If file type is not supported for browser viewing, fall back to download
         return response()->download($path, $file->original_name);
     }
@@ -620,7 +669,7 @@ class QuoteController extends Controller
     public function deleteFile(Quote $quote, QuoteFile $file)
     {
         $this->authorize('update', $quote);
-        
+
         if ($file->quote_id !== $quote->id) {
             abort(404);
         }
@@ -629,16 +678,16 @@ class QuoteController extends Controller
         if (!$quote->canDeleteFile()) {
             return back()->with('error', 'Cannot delete the last RFQ file. At least one file must remain.');
         }
-        
+
         if (Storage::disk('public')->exists($file->path)) {
             Storage::disk('public')->delete($file->path);
         }
-        
+
         $file->delete();
-        
+
         // Update the quote's RFQ file count
         $quote->updateRfqFileCount();
-        
+
         return back()->with('success', 'File deleted successfully.');
     }
 
@@ -646,18 +695,18 @@ class QuoteController extends Controller
     {
         $item = QuoteItem::findOrFail($itemId);
         $quote = $item->quote;
-        
+
         $this->authorize('update', $quote);
-        
+
         if ($quote->status !== 'pending_finance' || !auth()->user()->isLpoAdmin()) {
             return response()->json(['error' => 'Only LPO Admin users can approve items'], 403);
         }
-        
+
         $item->update([
             'approved' => !$item->approved,
             'reason' => !$item->approved ? null : ($item->reason ?? 'Not approved by LPO Admin')
         ]);
-        
+
         return response()->json(['success' => true, 'approved' => $item->approved]);
     }
 }
