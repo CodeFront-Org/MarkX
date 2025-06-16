@@ -151,17 +151,11 @@
             <div class="clear"></div>
         </div>
 
-        <div class="section">
-            <div style="float: left; width: 50%;">
-                <strong>Date:</strong> {{ $quote->created_at->format('F d, Y') }}<br>
-                {{-- <strong>Valid Until:</strong> {{ $quote->valid_until->format('F d, Y') }}<br> --}}
-                {{-- <strong>Status:</strong> <span class="status-badge status-{{ strtolower($quote->status) }}">{{ ucfirst($quote->status) }}</span> --}}
-            </div>
-            <div class="clear"></div>
-        </div>
+   
 
         <div class="section">
-            <div class="quote-title">{{ $quote->title }}</div>
+            <div class="quote-date">{{ $quote->created_at->format('F d, Y') }}</div>
+            <h3><strong>{{ $quote->title }}</strong></h3>
             <p>{{ $quote->description }}</p>
             <p>Attn:{{ $quote->contact_person }}</p>
 
