@@ -261,9 +261,14 @@
             After this date, prices and availability may need to be reviewed.
         </div> --}}
 
-        <div class="footer">
-            <p>Thank you for considering our services!</p>
-            <p style="color: #95a5a6;">Generated on {{ now()->format('F d, Y H:i:s') }}</p>
+        <div class="footerx" style="font-family: calibri, sans-serif; font-size: 10px;">
+            <b>
+            NB: Quotation valid for 30 days<br></b>
+            We look forward to your order confirmation<br>
+            Kind regards,<br>
+            {{ $quote->user->name }}<br>
+            <strong>Date:</strong> {{ $quote->created_at->format('F d, Y') }}
+            
         </div>
     </div>
 </body>
