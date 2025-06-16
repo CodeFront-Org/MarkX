@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Quote #{{ $quote->id }}</title>
+    <title>Quote #IVD{{ $quote->id }}</title>
     <style>
         @page {
             margin: 0;
@@ -134,25 +134,27 @@
 </head>
 <body>
     <!-- Full-page background letterhead -->
-    @if(isset($letterheadData) && isset($letterheadType))
+    {{-- @if(isset($letterheadData) && isset($letterheadType))
     <div class="background-letterhead">
         <img src="data:{{ $letterheadType }};base64,{{ $letterheadData }}" alt="Company Letterhead">
     </div>
-    @endif
+    @endif --}}
+
+
     <br />
-    <div class="content">
+    <div class="content" style="font-family: calibri, sans-serif; font-size: 10px; line-height: 1.5;">
         <div class="header">
             <div class="quote-info">
                 <h2>QUOTATION</h2>
-                <h3>#{{ $quote->reference ?? $quote->id }}</h3>
+                <h3>#IVD{{ $quote->reference ?? $quote->id }}</h3>
             </div>
             <div class="clear"></div>
         </div>
 
         <div class="section">
             <div style="float: left; width: 50%;">
-                <strong>Date Created:</strong> {{ $quote->created_at->format('F d, Y') }}<br>
-                <strong>Valid Until:</strong> {{ $quote->valid_until->format('F d, Y') }}<br>
+                <strong>Date:</strong> {{ $quote->created_at->format('F d, Y') }}<br>
+                {{-- <strong>Valid Until:</strong> {{ $quote->valid_until->format('F d, Y') }}<br> --}}
                 {{-- <strong>Status:</strong> <span class="status-badge status-{{ strtolower($quote->status) }}">{{ ucfirst($quote->status) }}</span> --}}
             </div>
             <div class="clear"></div>
@@ -163,9 +165,10 @@
             <p>{{ $quote->description }}</p>
             <p>Attn:{{ $quote->contact_person }}</p>
 
-            <table>                <thead>
+            <table >                <thead>
                     <tr>
-                        <th width="25%">Item Description</th>
+                        <th width="5%">No.</th>
+                        <th width="20%">Item Description</th>
                         <th width="10%">Unit Pack</th>
                         <th width="10%">Quantity</th>
                         <th width="10%">Unit Price</th>
@@ -177,8 +180,9 @@
                         @endif
                     </tr>
                 </thead>
-                <tbody>                    @foreach($items as $item)
+                <tbody style="font-family: calibri, sans-serif; font-size: 10px; line-height: 1.5;">                    @foreach($items as $item)
                     <tr>
+                        <td>{{ $loop->index + 1 }}</td>
                         <td>{{ $item->item }}</td>
                         <td>{{ $item->unit_pack }}</td>
                         <td>{{ $item->quantity }}</td>
@@ -252,10 +256,10 @@
             </table>
         </div>
 
-        <div class="validity-notice">
+        {{-- <div class="validity-notice">
             <strong>Validity Period:</strong> This quote is valid until {{ $quote->valid_until->format('F d, Y') }}.
             After this date, prices and availability may need to be reviewed.
-        </div>
+        </div> --}}
 
         <div class="footer">
             <p>Thank you for considering our services!</p>
