@@ -142,7 +142,7 @@
 
 
     <br />
-    <div class="content" style="font-family: calibri, sans-serif; font-size: 10px; line-height: 1.5;">
+    <div class="content" style="font-family: calibri, sans-serif; font-size: 20px; line-height: 1.5; width:85%; text-align: justify; margin: 0 auto;">
         <div class="header">
             <div class="quote-info">
                 <h2>QUOTATION</h2>
@@ -152,14 +152,18 @@
         </div>
 
    
-
+        
         <div class="section">
-            <div class="quote-date">{{ $quote->created_at->format('F d, Y') }}</div>
-            <h3><strong>{{ $quote->title }}</strong></h3>
-            <p>{{ $quote->description }}</p>
-            <p>Attn:{{ $quote->contact_person }}</p>
+            <div class="quote-date">{{ $quote->created_at->format('F d, Y') }}</div><br>
+            <div style="font-family: calibri, sans-serif; font-size: 30px; font-weight: bold;"> {{ $quote->title }} </div>
+            {{ $quote->description }}<br><br>
+            <b>Attn:{{ $quote->contact_person }}</b>
+           
 
-            <table >                <thead>
+            <br>
+            <br>
+
+            <table style="font-family: calibri, sans-serif; font-size: 20px; line-height: 1.5;">                <thead>
                     <tr>
                         <th width="5%">No.</th>
                         <th width="20%">Item Description</th>
@@ -174,7 +178,8 @@
                         @endif
                     </tr>
                 </thead>
-                <tbody style="font-family: calibri, sans-serif; font-size: 10px; line-height: 1.5;">                    @foreach($items as $item)
+                <tbody >
+                     @foreach($items as $item)
                     <tr>
                         <td>{{ $loop->index + 1 }}</td>
                         <td>{{ $item->item }}</td>
@@ -195,7 +200,8 @@
                         @endif
                     </tr>
                     @endforeach
-                </tbody>                <tfoot>
+                </tbody>  
+                <tfoot>
                     @if($showOnlyApproved)
                     <tr>
                         <td colspan="5" style="text-align: right;"><strong>Subtotal (Excl. VAT):</strong></td>
@@ -254,15 +260,18 @@
             <strong>Validity Period:</strong> This quote is valid until {{ $quote->valid_until->format('F d, Y') }}.
             After this date, prices and availability may need to be reviewed.
         </div> --}}
+            <br>
+            <br>
+            <br>
 
-        <div class="footerx" style="font-family: calibri, sans-serif; font-size: 10px;">
+        <div class="footerx" style="font-family: calibri, sans-serif; font-size: 20px;">
             <b>
             NB: Quotation valid for 30 days<br></b>
             We look forward to your order confirmation<br>
             Kind regards,<br>
             {{ $quote->user->name }}<br>
-            <strong>Date:</strong> {{ $quote->created_at->format('F d, Y') }}
-            
+            {{-- <strong>Date:</strong> {{ $quote->created_at->format('F d, Y') }} --}}
+            </b>
         </div>
     </div>
 </body>
