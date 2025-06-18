@@ -169,9 +169,9 @@
                         <th width="20%">Item Description</th>
                         <th width="10%">Unit Pack</th>
                         <th width="10%">Quantity</th>
-                        <th width="10%">Unit Price</th>
-                        <th width="15%">Total</th>
-                        <th width="10%">VAT Amount</th>
+                        <th width="10%">Unit Price (KES)</th>
+                        <th width="15%">Total (KES)</th>
+                        <th width="10%">VAT Amount (KES)</th>
                         <th width="10%">Lead Time</th>
                         @if(!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails)
                         <th width="10%">Status</th>
@@ -185,9 +185,9 @@
                         <td>{{ $item->item }}</td>
                         <td>{{ $item->unit_pack }}</td>
                         <td>{{ $item->quantity }}</td>
-                        <td>KES {{ number_format($item->price, 2) }}</td>
-                        <td>KES {{ number_format($item->quantity * $item->price, 2) }}</td>
-                        <td>KES {{ number_format(($item->quantity * $item->price) * (($item->vat_rate ?? 16) / 100), 2) }}</td>
+                        <td>{{ number_format($item->price, 2) }}</td>
+                        <td>{{ number_format($item->quantity * $item->price, 2) }}</td>
+                        <td>{{ number_format(($item->quantity * $item->price) * (($item->vat_rate ?? 16) / 100), 2) }}</td>
                         <td>{{ $item->lead_time }}</td>
                         @if(!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails)
                         <td>
