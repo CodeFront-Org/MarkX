@@ -121,7 +121,8 @@ class QuoteController extends Controller
             Log::info('Validating quote data');
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
-                'description' => 'required|string',
+                'description' => 'required|string',                
+                 'footertext' => 'nullable|string|max:255',
                 'valid_until' => 'required|date|after:today',
                 'contact_person' => 'nullable|string|max:255',
                 'items' => 'required|array|min:1',
@@ -160,6 +161,7 @@ class QuoteController extends Controller
                         ...$validated,
                         'amount' => $totalAmount,
                         'status' => 'pending_manager',  // New initial status
+                        'footertext' => $request->footertext,
                         'user_id' => Auth::id(),
                         'marketer_id' => $currentUser->id, // Set the current user (marketer) as marketer_id
                         'reference' => 'Q' . str_pad($nextQuoteId, 6, '0', STR_PAD_LEFT),

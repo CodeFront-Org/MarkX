@@ -142,7 +142,11 @@
 
 
     <br />
-    <div class="content" style="font-family: calibri, sans-serif; font-size: 20px; line-height: 1.5; width:90%; text-align: justify; margin: 0 auto;">
+    <br />
+    <br />
+    <br />
+    <br />
+    <div class="content" style="font-family: calibri, sans-serif; font-size: 18px; line-height: 1.5; width:90%; text-align: justify; margin: 0 auto;">
         <div class="header">
             <div class="quote-info">
                 <h2>QUOTATION</h2>
@@ -156,7 +160,7 @@
         <div class="section">
             <div class="quote-date">{{ $quote->created_at->format('F d, Y') }}</div><br>
             <div style="font-family: calibri, sans-serif; font-size: 30px; font-weight: bold;"> {{ $quote->title }} </div>
-            {{ $quote->description }}<br><br>
+            {!! nl2br(e($quote->description)) !!}<br><br>
             <b>Attn:{{ $quote->contact_person }}</b>
            
 
@@ -265,11 +269,14 @@
             <br>
 
         <div class="footerx" style="font-family: calibri, sans-serif; font-size: 20px;">
-            <b>
-            NB: Quotation valid for 30 days<br></b>
-            We look forward to your order confirmation<br>
-            Kind regards,<br>
+                
+             {!! nl2br(e($quote->footertext)) !!}
+            
+            <br>
+            <br>
+            Kind regards,<br><br>
             {{ $quote->user->name }}<br>
+            <b><u>{{ $quote->user->about_me }}</u><b><br>
             {{-- <strong>Date:</strong> {{ $quote->created_at->format('F d, Y') }} --}}
             </b>
         </div>
