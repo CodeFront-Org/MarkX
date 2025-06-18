@@ -146,6 +146,8 @@
     <br />
     <br />
     <br />
+    <br />
+    <br />
     <div class="content" style="font-family: calibri, sans-serif; font-size: 18px; line-height: 1.5; width:90%; text-align: justify; margin: 0 auto;">
         <div class="header">
             <div class="quote-info">
@@ -272,6 +274,8 @@
                 
              {!! nl2br(e($quote->footertext)) !!}
             
+            <br>
+            <br>
             <br>
             <br>
             Kind regards,<br><br>
