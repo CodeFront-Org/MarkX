@@ -161,7 +161,7 @@
         
         <div class="section">
             <div class="quote-date">{{ $quote->created_at->format('F d, Y') }}</div><br>
-            <div style="font-family: calibri, sans-serif; font-size: 30px; font-weight: bold;"> {{ $quote->title }} </div>
+            <div style="font-weight: bold;"> {{ $quote->title }} </div>
             {!! nl2br(e($quote->description)) !!}<br><br>
             <b>Attn:{{ $quote->contact_person }}</b>
            
@@ -211,49 +211,49 @@
                     @if($showOnlyApproved)
                     <tr>
                         <td colspan="5" style="text-align: right;"><strong>Subtotal (Excl. VAT):</strong></td>
-                        <td><strong>KES {{ number_format($approvedSubtotal ?? 0, 2) }}</strong></td>
+                        <td  colspan="2"><strong>KES {{ number_format($approvedSubtotal ?? 0, 2) }}</strong></td>
                         <td colspan="2"></td>
                     </tr>
                     <tr>
                         <td colspan="5" style="text-align: right;"><strong>VAT Amount:</strong></td>
-                        <td><strong>KES {{ number_format($approvedVatAmount ?? 0, 2) }}</strong></td>
+                        <td  colspan="2"><strong>KES {{ number_format($approvedVatAmount ?? 0, 2) }}</strong></td>
                         <td colspan="2"></td>
                     </tr>
                     <tr class="total">
                         <td colspan="5" style="text-align: right;"><strong>Total Amount (Inc. VAT):</strong></td>
-                        <td><strong>KES {{ number_format($approvedTotal ?? 0, 2) }}</strong></td>
+                        <td  colspan="2"><strong>KES {{ number_format($approvedTotal ?? 0, 2) }}</strong></td>
                         <td colspan="2"></td>
                     </tr>
                     @else
                     <tr>
                         <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '5' : '5' }}" style="text-align: right;"><strong>Subtotal (Excl. VAT):</strong></td>
-                        <td><strong>KES {{ number_format($itemsSubtotal ?? 0, 2) }}</strong></td>
+                        <td  colspan="2"><strong>KES {{ number_format($itemsSubtotal ?? 0, 2) }}</strong></td>
                         <td colspan="2"></td>
                     </tr>
                     <tr>
                         <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '5' : '5' }}" style="text-align: right;"><strong>VAT Amount:</strong></td>
-                        <td><strong>KES {{ number_format($itemsVatAmount ?? 0, 2) }}</strong></td>
+                        <td  colspan="2"><strong>KES {{ number_format($itemsVatAmount ?? 0, 2) }}</strong></td>
                         <td colspan="2"></td>
                     </tr>
                     <tr class="total">
                         <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '5' : '5' }}" style="text-align: right;"><strong>Total Amount (Inc. VAT):</strong></td>
-                        <td><strong>KES {{ number_format($itemsTotal ?? 0, 2) }}</strong></td>
+                        <td  colspan="2"><strong>KES {{ number_format($itemsTotal ?? 0, 2) }}</strong></td>
                         <td colspan="2"></td>
                     </tr>
                     @if($hasUnapprovedItems && isset($showInternalDetails) && $showInternalDetails)
                     <tr>
                         <td colspan="5" style="text-align: right;"><strong>Approved Items Subtotal (Excl. VAT):</strong></td>
-                        <td><strong>KES {{ number_format($approvedSubtotal ?? 0, 2) }}</strong></td>
+                        <td  colspan="2"><strong>KES {{ number_format($approvedSubtotal ?? 0, 2) }}</strong></td>
                         <td colspan="2"></td>
                     </tr>
                     <tr>
                         <td colspan="5" style="text-align: right;"><strong>Approved Items VAT:</strong></td>
-                        <td><strong>KES {{ number_format($approvedVatAmount ?? 0, 2) }}</strong></td>
+                        <td  colspan="2"><strong>KES {{ number_format($approvedVatAmount ?? 0, 2) }}</strong></td>
                         <td colspan="2"></td>
                     </tr>
                     <tr class="total">
                         <td colspan="5" style="text-align: right;"><strong>Approved Items Total (Inc. VAT):</strong></td>
-                        <td><strong>KES {{ number_format($approvedTotal ?? 0, 2) }}</strong></td>
+                        <td  colspan="2"><strong>KES {{ number_format($approvedTotal ?? 0, 2) }}</strong></td>
                         <td colspan="2"></td>
                     </tr>
                     @endif
@@ -273,12 +273,12 @@
         <div class="footerx" style="font-family: calibri, sans-serif; font-size: 20px;">
                 
              {!! nl2br(e($quote->footertext)) !!}
-            
+            <br>
+            <br>
+            Kind regards,
             <br>
             <br>
             <br>
-            <br>
-            Kind regards,<br><br>
             {{ $quote->user->name }}<br>
             <b><u>{{ $quote->user->about_me }}</u><b><br>
             {{-- <strong>Date:</strong> {{ $quote->created_at->format('F d, Y') }} --}}
