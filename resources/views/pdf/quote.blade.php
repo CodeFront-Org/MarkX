@@ -142,7 +142,7 @@
 
 
     <br />
-    <div class="content" style="font-family: calibri, sans-serif; font-size: 20px; line-height: 1.5; width:85%; text-align: justify; margin: 0 auto;">
+    <div class="content" style="font-family: calibri, sans-serif; font-size: 20px; line-height: 1.5; width:90%; text-align: justify; margin: 0 auto;">
         <div class="header">
             <div class="quote-info">
                 <h2>QUOTATION</h2>
@@ -165,13 +165,13 @@
 
             <table style="font-family: calibri, sans-serif; font-size: 20px; line-height: 1.5;">                <thead>
                     <tr>
-                        <th width="5%">No.</th>
-                        <th width="20%">Item Description</th>
-                        <th width="10%">Unit Pack</th>
+                        <th width="2%">No.</th>
+                        <th width="28%">Item Description</th>
+                        <th width="5%">Unit Pack</th>
                         <th width="10%">Quantity</th>
-                        <th width="10%">Unit Price (KES)</th>
-                        <th width="15%">Total (KES)</th>
-                        <th width="10%">VAT Amount (KES)</th>
+                        <th width="10%">Unit Price <br>(KES)</th>
+                        <th width="15%">Total<br>(KES)</th>
+                        <th width="10%">VAT Amount <br>(KES)</th>
                         <th width="10%">Lead Time</th>
                         @if(!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails)
                         <th width="10%">Status</th>
