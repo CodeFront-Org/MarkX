@@ -189,8 +189,8 @@ table, th, td {
                             {{ $quote->title }}<br>
                             {!! nl2br(e($quote->description)) !!}<br>
                         </div>
-                        <div style="margin-bottom: 0px;">
-                            <b>Attn: {{ $quote->contact_person }}</b>                            
+                        <div>
+                            <b>Attn: {{ $quote->contact_person }}</b>
                         </div>
                     </td>
                     <td style="border: none; vertical-align: top; text-align: right; width: 40%;">
