@@ -245,47 +245,47 @@ table, th, td {
                     @if($showOnlyApproved)
                     <tr>
                         <td colspan="5" style="text-align: right;"><strong>Subtotal (Excl. VAT):</strong></td>
-                        <td  colspan="3"><strong>Ksh {{ number_format($approvedSubtotal ?? 0, 2) }}</strong></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($approvedSubtotal ?? 0, 0) }}</strong></td>
                       
                      
                     </tr>
                     <tr>
                         <td colspan="5" style="text-align: right;"><strong>VAT Amount:</strong></td>
-                        <td  colspan="3"><strong>Ksh {{ number_format($approvedVatAmount ?? 0, 2) }}</strong></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($approvedVatAmount ?? 0, 0) }}</strong></td>
 
                     </tr>
                     <tr class="total">
                         <td colspan="5" style="text-align: right;"><strong>Total Amount (Inc. VAT):</strong></td>
-                        <td  colspan="3"><strong>Ksh {{ number_format($approvedTotal ?? 0, 2) }}</strong></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($approvedTotal ?? 0, 0) }}</strong></td>
                     </tr>
                     @else
                     <tr>
                         <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '5' : '5' }}" style="text-align: right;"><strong>Subtotal (Excl. VAT):</strong></td>
-                        <td  colspan="3"><strong>Ksh {{ number_format($itemsSubtotal ?? 0, 2) }}</strong></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($itemsSubtotal ?? 0, 0) }}</strong></td>
 
 
                     </tr>
                     <tr>
                         <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '5' : '5' }}" style="text-align: right;"><strong>VAT Amount:</strong></td>
-                        <td  colspan="3"><strong>Ksh {{ number_format($itemsVatAmount ?? 0, 2) }}</strong></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($itemsVatAmount ?? 0, 0) }}</strong></td>
 
 
                     </tr>
                     <tr class="total">
                         <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '5' : '5' }}" style="text-align: right;"><strong>Total Amount (Inc. VAT):</strong></td>
-                        <td  colspan="3"><strong>Ksh {{ number_format($itemsTotal ?? 0, 2) }}</strong></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($itemsTotal ?? 0, 0) }}</strong></td>
 
                     </tr>
                     @if($hasUnapprovedItems && isset($showInternalDetails) && $showInternalDetails)
                     <tr>
                         <td colspan="5" style="text-align: right;"><strong>Approved Items Subtotal (Excl. VAT):</strong></td>
-                        <td  colspan="3"><strong>Ksh {{ number_format($approvedSubtotal ?? 0, 2) }}</strong></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($approvedSubtotal ?? 0, 0) }}</strong></td>
                         <td></td>
                         
                     </tr>
                     <tr>
                         <td colspan="5" style="text-align: right;"><strong>Approved Items VAT:</strong></td>
-                        <td  colspan="3"><strong>Ksh {{ number_format($approvedVatAmount ?? 0, 2) }}</strong></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($approvedVatAmount ?? 0, 0) }}</strong></td>
                          <td></td>
 
                     </tr>
