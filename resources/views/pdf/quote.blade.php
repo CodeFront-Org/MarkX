@@ -185,9 +185,9 @@ table, th, td {
                 <tr>
                     <td style="border: none; vertical-align: top; width: 60%;">
                       
-                        <div style="font-weight: bold; margin-bottom: 8px;">
+                        <div style="font-weight: bold;">
                             {{ $quote->title }}<br>
-                            {!! nl2br(e($quote->description)) !!}<br>
+                            {!! nl2br(e($quote->description)) !!}<br><br>
                         </div>
                         <div>
                             <b>Attn: {{ $quote->contact_person }}</b>
