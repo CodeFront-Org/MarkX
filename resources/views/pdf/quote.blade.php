@@ -162,7 +162,7 @@
         
         <div class="section">
             <div class="quote-date" style="font-weight: bold;">{{ $quote->created_at->format('F d, Y') }}</div><br>
-            <div style="font-weight: bold;"> {{ $quote->title }} 
+            <div style="font-weight: bold;"> {{ $quote->title }} <br>
             {!! nl2br(e($quote->description)) !!}<br><br></div>
             <b>Attn:{{ $quote->contact_person }}</b>
            
