@@ -158,6 +158,8 @@ table, th, td {
     <br />
     <br />
     <br />
+    <br />
+    <br />
 
     <div class="content" style="font-family: calibri, sans-serif; font-size: 18px; line-height: 1.5; color: black; width:90%; text-align: left; margin: 0 auto;">
         <div class="header">
@@ -189,8 +191,7 @@ table, th, td {
                             {!! nl2br(e($quote->description)) !!}
                         </div>
                         <div style="margin-bottom: 8px;">
-                            <b>Attn: {{ $quote->contact_person }}</b><br><br>
-                            <b><u>RE: QUOTATION</u></b>
+                            <b>Attn: {{ $quote->contact_person }}</b>                            
                         </div>
                     </td>
                     <td style="border: none; vertical-align: top; text-align: right; width: 40%;">
@@ -198,8 +199,8 @@ table, th, td {
                     </td>
                 </tr>
             </table>
-
-          <div class="clear"></div>
+            <b><u>RE: QUOTATION</u></b><br><br>
+                            We have the pleasure to submit our quotation for the following as per your request.<br><br>
         </div>
 
    
