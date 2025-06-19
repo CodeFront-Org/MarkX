@@ -225,7 +225,11 @@ table, th, td {
                      @foreach($items as $item)
                     <tr>
                         <td>{{ $loop->index + 1 }}</td>
-                        <td style='text-align:left'>{{ $item->item }}</td>
+                        <td style='text-align:left'>{!! preg_replace_callback(
+    '/\*(\w+)/',
+    fn($matches) => '<b>' . $matches[1] . '</b>',
+    str_replace(';', '<br>', $item->item)
+) !!}</td>
                         <td>{{ $item->unit_pack }}</td>
                         <td>{{ $item->quantity }}</td>
                         <td>{{ number_format($item->price, 2) }}</td>
