@@ -8,13 +8,20 @@
             margin: 0;
             padding: 0;
         }
+
+     
         body {
-            font-family: 'Helvetica', 'Arial', sans-serif;
+             font-family: 'calibri', sans-serif; 
             margin: 0;
             padding: 0;
-            color: #2c3e50;
+            color: #000000;
             line-height: 1.4;
             position: relative;
+            width:100%;
+            text-align: justify; 
+            /*margin: 0 auto;*/
+            font-size: 18px; 
+            
         }
         .background-letterhead {
             position: absolute;
@@ -62,18 +69,12 @@
         }
         table {
             width: 100%;
-            border-collapse: collapse;
-            margin: 12px 0;
-            font-size: 12px;
-            background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent background */
         }
         th {
-            background-color: #f8f9fa;
+            background-color: #eef0f3;
             color: #2c3e50;
             font-weight: bold;
-            padding: 6px;
-            border-bottom: 2px solid #ddd;
-            text-align: left;
+            
         }
         td {
             padding: 6px;
@@ -168,8 +169,14 @@
 
             <br>
             <br>
+            <style>
+table, th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+</style>
 
-            <table style="font-family: calibri, sans-serif; font-size: 20px;  line-height: 1.5;" border="2">
+            <table >
                 <thead>
                     <tr>
                         <th width="2%">No.</th>
@@ -280,8 +287,9 @@
             <br>
 
         <div class="footerx" style="font-family: calibri, sans-serif; font-size: 20px;">
-                
-             {!! nl2br(e($quote->footertext)) !!}
+             <b>{!! nl2br(e($quote->footertext)) !!}</b>
+             <br>
+             We look forward to your order confirmation.
             <br>
             <br>
             Kind regards,
@@ -289,7 +297,7 @@
             <br>
             <br>
             {{ $quote->user->name }}<br>
-            <b><u>{{ $quote->user->about_me }}</u><b><br>
+            <b><u>{{ $quote->user->about_me }}</u></b><br>
             {{-- <strong>Date:</strong> {{ $quote->created_at->format('F d, Y') }} --}}
             </b>
         </div>
