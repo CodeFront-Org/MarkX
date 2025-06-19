@@ -189,7 +189,7 @@ table, th, td {
                             {{ $quote->title }}<br>
                             {!! nl2br(e($quote->description)) !!}
                         </div>
-                        <div style="margin-bottom: 8px;">
+                        <div style="margin-bottom: 0px;">
                             <b>Attn: {{ $quote->contact_person }}</b>                            
                         </div>
                     </td>
