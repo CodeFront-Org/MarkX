@@ -1,8 +1,11 @@
 <!DOCTYPE html>
+
 <html>
 <head>
     <meta charset="utf-8">
     <title>Quote #IVD{{ $quote->id }}</title>
+
+
     <style>
         @page {
             margin: 0;
@@ -70,9 +73,7 @@
         table {
             width: 100%;
         }
-        th {
-            background-color: #eef0f3;
-            color: #2c3e50;
+        th {            
             font-weight: bold;
             
         }
@@ -132,6 +133,12 @@
             border-radius: 4px;
         }
     </style>
+                <style>
+table, th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+</style>
 </head>
 <body>
     <!-- Full-page background letterhead -->
@@ -149,54 +156,72 @@
     <br />
     <br />
     <br />
-    <div class="content" style="font-family: calibri, sans-serif; font-size: 18px; line-height: 1.5; color: black; width:90%; text-align: justify; margin: 0 auto;">
+    <div class="content" style="font-family: calibri, sans-serif; font-size: 18px; line-height: 1.5; color: black; width:90%; text-align: left; margin: 0 auto;">
         <div class="header">
-            <div class="quote-info">
-                <h2>QUOTATION</h2>
-                <h3>#IVD{{ $quote->reference ?? $quote->id }}</h3>
-            </div>
-            <div class="clear"></div>
+            <table style="width: 100%; border: none; border-collapse: collapse; margin-bottom: 20px;">
+                <tr>
+                    <td style="border: none; vertical-align: top; text-align: left; width: 40%;">
+                        
+                    </td>
+                    <td style="border: none; vertical-align: top; text-align: right; width: 40%;">
+                     <h2 style="margin: 0 0 10px 0; color: #2c3e50;">QUOTATION</h2>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="border: none; vertical-align: top; text-align: left; width: 40%;">
+                          <div class="quote-date" style="font-weight: bold; margin-bottom: 6px;">
+                            {{ $quote->created_at->isoFormat('Do MMMM, YYYY') }}
+                        </div>
+                    </td>
+                    <td style="border: none; vertical-align: top; text-align: right; width: 40%;">
+                         <h3 style="margin: 0; color: #2c3e50;">#IVD{{ $quote->reference ?? $quote->id }}</h3>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="border: none; vertical-align: top; width: 60%;">
+                      
+                        <div style="font-weight: bold; margin-bottom: 8px;">
+                            {{ $quote->title }}<br>
+                            {!! nl2br(e($quote->description)) !!}
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <b><u>Attn: {{ $quote->contact_person }}</u></b>
+                        </div>
+                    </td>
+                    <td style="border: none; vertical-align: top; text-align: right; width: 40%;">
+                        
+                    </td>
+                </tr>
+            </table>
+
+          <div class="clear"></div>
         </div>
 
    
         
         <div class="section">
-            <div class="quote-date" style="font-weight: bold;">{{ $quote->created_at->format('F d, Y') }}</div><br>
-            <div style="font-weight: bold;"> {{ $quote->title }} <br>
-            {!! nl2br(e($quote->description)) !!}<br><br></div>
-            <b>Attn:{{ $quote->contact_person }}</b>
-           
-
-            <br>
-            <br>
-            <style>
-table, th, td {
-  border: 1px solid black;
-  border-collapse: collapse;
-}
-</style>
-
-            <table >
+                <table >
                 <thead>
-                    <tr>
+                    <tr >
                         <th width="2%">No.</th>
-                        <th width="28%">Item Description</th>
-                        <th width="5%">Unit Pack</th>
-                        <th width="10%">Quantity</th>
-                        <th width="10%">Unit Price <br>(KES)</th>
-                        <th width="15%">Total<br>(KES)</th>
-                        <th width="10%">VAT Amount <br>(KES)</th>
-                        <th width="10%">Lead Time</th>
+                        <th width="28%" style='text-align:left'>&nbsp;Item Description</th>
+                        <th width="10%">&nbsp;Unit Pack</th>
+                        <th width="10%">&nbsp;Qty</th>
+                        <th width="12%">Unit Price (Ksh)</th>
+                        <th width="12%">&nbsp;Total (Ksh)</th>
+                        <th width="12%">&nbsp;VAT Amt (Ksh)</th>
+                        <th width="10%">&nbsp;Lead Time</th>
                          @if(!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails)
                         <th width="10%">Status</th>
                         @endif 
                     </tr>
                 </thead>
-                <tbody >
+                <tbody style='text-align:center'>
                      @foreach($items as $item)
                     <tr>
                         <td>{{ $loop->index + 1 }}</td>
-                        <td>{{ $item->item }}</td>
+                        <td style='text-align:left'>{{ $item->item }}</td>
                         <td>{{ $item->unit_pack }}</td>
                         <td>{{ $item->quantity }}</td>
                         <td>{{ number_format($item->price, 2) }}</td>
@@ -219,56 +244,53 @@ table, th, td {
                     @if($showOnlyApproved)
                     <tr>
                         <td colspan="5" style="text-align: right;"><strong>Subtotal (Excl. VAT):</strong></td>
-                        <td  colspan="3"><strong>KES {{ number_format($approvedSubtotal ?? 0, 2) }}</strong></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($approvedSubtotal ?? 0, 2) }}</strong></td>
                       
                      
                     </tr>
                     <tr>
                         <td colspan="5" style="text-align: right;"><strong>VAT Amount:</strong></td>
-                        <td  colspan="3"><strong>KES {{ number_format($approvedVatAmount ?? 0, 2) }}</strong></td>
-                      
-                        
+                        <td  colspan="3"><strong>Ksh {{ number_format($approvedVatAmount ?? 0, 2) }}</strong></td>
+
                     </tr>
                     <tr class="total">
                         <td colspan="5" style="text-align: right;"><strong>Total Amount (Inc. VAT):</strong></td>
-                        <td  colspan="3"><strong>KES {{ number_format($approvedTotal ?? 0, 2) }}</strong></td>
-                       
+                        <td  colspan="3"><strong>Ksh {{ number_format($approvedTotal ?? 0, 2) }}</strong></td>
                     </tr>
                     @else
                     <tr>
                         <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '5' : '5' }}" style="text-align: right;"><strong>Subtotal (Excl. VAT):</strong></td>
-                        <td  colspan="3"><strong>KES {{ number_format($itemsSubtotal ?? 0, 2) }}</strong></td>
-                        
-                      
+                        <td  colspan="3"><strong>Ksh {{ number_format($itemsSubtotal ?? 0, 2) }}</strong></td>
+
+
                     </tr>
                     <tr>
                         <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '5' : '5' }}" style="text-align: right;"><strong>VAT Amount:</strong></td>
-                        <td  colspan="3"><strong>KES {{ number_format($itemsVatAmount ?? 0, 2) }}</strong></td>
-                        
-                      
+                        <td  colspan="3"><strong>Ksh {{ number_format($itemsVatAmount ?? 0, 2) }}</strong></td>
+
+
                     </tr>
                     <tr class="total">
                         <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '5' : '5' }}" style="text-align: right;"><strong>Total Amount (Inc. VAT):</strong></td>
-                        <td  colspan="3"><strong>KES {{ number_format($itemsTotal ?? 0, 2) }}</strong></td>
-                         
-                       
+                        <td  colspan="3"><strong>Ksh {{ number_format($itemsTotal ?? 0, 2) }}</strong></td>
+
                     </tr>
                     @if($hasUnapprovedItems && isset($showInternalDetails) && $showInternalDetails)
                     <tr>
                         <td colspan="5" style="text-align: right;"><strong>Approved Items Subtotal (Excl. VAT):</strong></td>
-                        <td  colspan="3"><strong>KES {{ number_format($approvedSubtotal ?? 0, 2) }}</strong></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($approvedSubtotal ?? 0, 2) }}</strong></td>
                         <td></td>
                         
                     </tr>
                     <tr>
                         <td colspan="5" style="text-align: right;"><strong>Approved Items VAT:</strong></td>
-                        <td  colspan="3"><strong>KES {{ number_format($approvedVatAmount ?? 0, 2) }}</strong></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($approvedVatAmount ?? 0, 2) }}</strong></td>
                          <td></td>
 
                     </tr>
                     <tr class="total">
                         <td colspan="5" style="text-align: right;"><strong>Approved Items Total (Inc. VAT):</strong></td>
-                        <td  colspan="3"><strong>KES {{ number_format($approvedTotal ?? 0, 2) }}</strong></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($approvedTotal ?? 0, 2) }}</strong></td>
                         <td></td>
 
                     </tr>
@@ -277,17 +299,11 @@ table, th, td {
                 </tfoot>
             </table>
         </div>
-
-        {{-- <div class="validity-notice">
-            <strong>Validity Period:</strong> This quote is valid until {{ $quote->valid_until->format('F d, Y') }}.
-            After this date, prices and availability may need to be reviewed.
-        </div> --}}
             <br>
             <br>
-            <br>
-
-        <div class="footerx" style="font-family: calibri, sans-serif; font-size: 20px;">
+          <div class="footerx" style="font-family: calibri, sans-serif; font-size: 20px;">
              <b>{!! nl2br(e($quote->footertext)) !!}</b>
+             <br>
              <br>
              We look forward to your order confirmation.
             <br>
