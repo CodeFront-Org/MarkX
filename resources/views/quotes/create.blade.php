@@ -175,7 +175,8 @@
                                    <div class="col-md-8">
                                                 <div class="form-group">
                                                     <label for="footertext">Footer text</label>
-                                                    <textarea class="form-control"  name="footertext" >NB: Quotation is valid for 30 days</textarea>
+                                                    <textarea class="form-control"  name="footertext" >NB:
+Quotation is valid for 30 days</textarea>
                                                 </div>
                                             </div>
                             </div>

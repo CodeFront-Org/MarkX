@@ -164,7 +164,7 @@ table, th, td {
                         
                     </td>
                     <td style="border: none; vertical-align: top; text-align: right; width: 40%;">
-                     <h2 style="margin: 0 0 10px 0; color: #2c3e50;">QUOTATION</h2>
+                     <h2 style="margin: 0 0 10px 0; color: #2c3e50;"></h2>
                     </td>
                 </tr>
                 <tr>
@@ -186,7 +186,8 @@ table, th, td {
                             {!! nl2br(e($quote->description)) !!}
                         </div>
                         <div style="margin-bottom: 8px;">
-                            <b><u>Attn: {{ $quote->contact_person }}</u></b>
+                            <b>Attn: {{ $quote->contact_person }}</b><br><br>
+                            <b><u>RE: QUOTATION</u></b>
                         </div>
                     </td>
                     <td style="border: none; vertical-align: top; text-align: right; width: 40%;">
@@ -205,11 +206,11 @@ table, th, td {
                 <thead>
                     <tr >
                         <th width="2%">No.</th>
-                        <th width="28%" style='text-align:left'>&nbsp;Item Description</th>
+                        <th width="26%" style='text-align:left'>&nbsp;Item Description</th>
                         <th width="10%">&nbsp;Unit Pack</th>
                         <th width="10%">&nbsp;Qty</th>
                         <th width="12%">Unit Price (Ksh)</th>
-                        <th width="12%">&nbsp;Total (Ksh)</th>
+                        <th width="13%">&nbsp;Total Price (Ksh)</th>
                         <th width="12%">&nbsp;VAT Amt (Ksh)</th>
                         <th width="10%">&nbsp;Lead Time</th>
                          @if(!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails)
@@ -298,8 +299,7 @@ table, th, td {
                     @endif
                 </tfoot>
             </table>
-        </div>
-            <br>
+        </div>            
             <br>
           <div class="footerx" style="font-family: calibri, sans-serif; font-size: 20px;">
              <b>{!! nl2br(e($quote->footertext)) !!}</b>
