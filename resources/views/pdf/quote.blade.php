@@ -227,7 +227,7 @@ table, th, td {
                         <td>{{ $loop->index + 1 }}</td>
 
                         <td style='text-align:left'>
-                            {!! preg_replace_callback('/\b(\w+):/', fn($matches) => '<b>' . $matches[1] . ':</b>', str_replace(',', '<br>', $item->item)) !!}
+                            {!! preg_replace_callback('/\b(\w+):/', fn($matches) => '<b>' . $matches[1] . '</b>', str_replace(',', '<br>', $item->item)) !!}
                         </td>
                         <td>{{ $item->unit_pack }}</td>
                         <td>{{ $item->quantity }}</td>
