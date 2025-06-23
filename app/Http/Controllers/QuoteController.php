@@ -24,7 +24,7 @@ class QuoteController extends Controller
         $this->pdfService = $pdfService;
 
         // Prevent lpo_admin users from creating quotes
-        $this->middleware('role:rfq_processor')->only(['create', 'store']);
+      //  $this->middleware('role:rfq_processor')->only(['create', 'store']);
     }
 
     public function index(Request $request)
@@ -239,13 +239,13 @@ class QuoteController extends Controller
 
     public function edit(Quote $quote)
     {
-        $this->authorize('update', $quote);
+        // $this->authorize('update', $quote);
 
-        // Extra check to ensure only lpo_admin can access edit and quote is not completed
-        if (!auth()->user()->isLpoAdmin()) {
-            return redirect()->route('quotes.index')
-                ->with('error', 'Only LPO Admin users can edit quotes.');
-        }
+        // // Extra check to ensure only lpo_admin can access edit and quote is not completed
+        // if (!auth()->user()->isLpoAdmin()) {
+        //     return redirect()->route('quotes.index')
+        //         ->with('error', 'Only LPO Admin users can edit quotes.');
+        // }
 
         if ($quote->status === 'completed') {
             return redirect()->route('quotes.show', $quote)
@@ -257,7 +257,7 @@ class QuoteController extends Controller
 
     public function update(Request $request, Quote $quote)
     {
-        $this->authorize('update', $quote);
+       // $this->authorize('update', $quote);
 
         // Count total items being processed
         $totalProcessedItems = count($request->items ?? []) + count($request->unquoted_items ?? []);
@@ -275,12 +275,7 @@ class QuoteController extends Controller
             'items.*.vat_rate' => 'nullable|numeric|min:0|max:100',
             'items.*.lead_time' => 'nullable|string',
             'items.*.approved' => 'required|in:0,1',
-            'items.*.reason' => [
-                'required_if:items.*.approved,0',
-                'nullable',
-                'string',
-                'max:1000'
-            ],
+           
             'items.*.comment' => 'nullable|string',
             'total_rfq_items' => [
                 'required',

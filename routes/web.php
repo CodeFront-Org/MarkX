@@ -73,6 +73,7 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
     Route::get('/quotes/fetch-customers', [QuoteController::class, 'fetchCustomers'])->name('quotes.fetch-customers');
     Route::get('/quotes/fetch-products', [QuoteController::class, 'fetchProductItems'])->name('quotes.fetch-products');
     Route::resource('quotes', QuoteController::class);
+    //Route::post('quotes/{quote}/edit', [QuoteController::class, 'edit'])->name('quotes.edit');
     Route::post('quotes/{quote}/approve', [QuoteController::class, 'approve'])->name('quotes.approve');
     Route::post('quotes/{quote}/reject', [QuoteController::class, 'reject'])->name('quotes.reject');
     Route::post('quotes/{quote}/submit-to-finance', [QuoteController::class, 'submitToFinance'])->name('quotes.submit-to-finance');
