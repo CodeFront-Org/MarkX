@@ -320,14 +320,18 @@ table, th, td {
                use App\Models\User;
                  $creator=   User::find($quote->user_id);
                  //Check if the creator has a signature
-                 if(!$creator || !$creator->signature) {
-                    $sigPath = public_path('storage/signatures/signature_error.png');
-                 } else {
-                     $sigPath = public_path('storage/signatures/' . $creator->signature);
-                 }
-                
-                $signature = base64_encode(file_get_contents($sigPath));
-                $signatureType = "image/png";
+              use Illuminate\Support\Facades\Storage;
+
+                if ($creator->signature && Storage::disk('public')->exists('signatures/' . $creator->signature)) {
+                    $fileContent = Storage::disk('public')->get('signatures/' . $creator->signature);
+                    $extension = pathinfo($creator->signature, PATHINFO_EXTENSION);
+                    $signatureDataUri = 'data:image/' . $extension . ';base64,' . base64_encode($fileContent);
+                } else {
+                    $signatureDataUri = null;
+                }
+
+                //$signature = base64_encode(file_get_contents($sigPath));
+               // $signatureType = "image/png";
 
 
                 //Get the quote close_by signature
@@ -340,15 +344,19 @@ table, th, td {
                 //if(!$finalApprover || !$finalApprover->signature) {
                    // $finalApprover = auth()->user(); // Fallback to the current user if no signature exists
                    // = public_path('storage/signatures/' . $finalApprover->signature);
-                  if(!$finalApprover || !$finalApprover->signature) {
-                    $sigPatsignature2 = public_path('storage/signatures/signature_error.png');
-                 } else {
-                     $sigPatsignature2 = public_path('storage/signatures/' . $finalApprover->signature);
-                 }
-
-                    $signature2 = base64_encode(file_get_contents($sigPatsignature2));
-                    $signatureType2 = "image/png";
               
+
+                      if ($finalApprover->signature && Storage::disk('public')->exists('signatures/' . $finalApprover->signature)) {
+                    $fileContent = Storage::disk('public')->get('signatures/' . $finalApprover->signature);
+                    $extension = pathinfo($finalApprover->signature, PATHINFO_EXTENSION);
+                    $sigPatsignature2 = 'data:image/' . $extension . ';base64,' . base64_encode($fileContent);
+                } else {
+                    $sigPatsignature2 = null;
+                }
+
+                   // $signature2 = base64_encode(file_get_contents($sigPatsignature2));
+                   // $signatureType2 = "image/png";
+
                 //}
                     
                   
@@ -361,15 +369,15 @@ table, th, td {
                 <tr>
                     <td style="border: none; border-collapse: collapse;">
                         Kind regards,<br>
-                        <img src="data:{{ $signatureType }};base64,{{ $signature }}" alt="Signature" style="width: 100px; height: auto; margin-top: 10px;"><br>
-                   
+                        <img src="{{ $signatureDataUri }}" alt="Signature" style="width: 100px; height: auto; margin-top: 10px;"><br>
+
                         {{ $quote->user->name }}<br>
                         <b><u>{{ $quote->user->about_me }}</u></b><br>
                 </td>
                <td style="border: none; border-collapse: collapse;">
                    Approved by,<br>
-                <img src="data:image/png;base64,{{ $signature2 }}" alt="Signature" style="width: 100px; height: auto; margin-top: 10px;"><br>
-          
+                <img src="{{ $sigPatsignature2 }}" alt="Signature" style="width: 100px; height: auto; margin-top: 10px;"><br>
+
                     {{ $finalApprover->name }}<br>
                    <b><u>{{ $finalApprover->about_me }}</u></b><br>
                 </td>
