@@ -142,11 +142,11 @@ table, th, td {
 </head>
 <body>
     <!-- Full-page background letterhead -->
-    {{-- @if(isset($letterheadData) && isset($letterheadType))
+    @if(isset($letterheadData) && isset($letterheadType))
     <div class="background-letterhead">
         <img src="data:{{ $letterheadType }};base64,{{ $letterheadData }}" alt="Company Letterhead">
     </div>
-    @endif --}}
+    @endif 
 
 
     <br />
@@ -314,12 +314,71 @@ table, th, td {
              We look forward to your order confirmation.
             <br>
             <br>
-            Kind regards,
+            
             <br>
+            @php
+               use App\Models\User;
+                 $creator=   User::find($quote->user_id);
+                 //Check if the creator has a signature
+                 if(!$creator || !$creator->signature) {
+                    $sigPath = public_path('storage/signatures/signature_error.png');
+                 } else {
+                     $sigPath = public_path('storage/signatures/' . $creator->signature);
+                 }
+                
+                $signature = base64_encode(file_get_contents($sigPath));
+                $signatureType = "image/png";
+
+
+                //Get the quote close_by signature
+                //$finalApprover= user::find($quote->approved_by)->first();
+                $finalApprover=   User::find($quote->approved_by);
+                $x= $quote->approved_by;
+                //Check if the final approver has a signature
+                 $sig_img2 = "<h2 style='color:red;'> Signature Missing</h2> <br>";
+
+                //if(!$finalApprover || !$finalApprover->signature) {
+                   // $finalApprover = auth()->user(); // Fallback to the current user if no signature exists
+                   // = public_path('storage/signatures/' . $finalApprover->signature);
+                  if(!$finalApprover || !$finalApprover->signature) {
+                    $sigPatsignature2 = public_path('storage/signatures/signature_error.png');
+                 } else {
+                     $sigPatsignature2 = public_path('storage/signatures/' . $finalApprover->signature);
+                 }
+
+                    $signature2 = base64_encode(file_get_contents($sigPatsignature2));
+                    $signatureType2 = "image/png";
+              
+                //}
+                    
+                  
+               
+            @endphp
+            
+            @if ($quote->status=='completed')
+
+            <table style="width: 100%; border: none; border-collapse: collapse; margin-top: 20px;">
+                <tr>
+                    <td style="border: none; border-collapse: collapse;">
+                        Kind regards,<br>
+                        <img src="data:{{ $signatureType }};base64,{{ $signature }}" alt="Signature" style="width: 100px; height: auto; margin-top: 10px;"><br>
+                   
+                        {{ $quote->user->name }}<br>
+                        <b><u>{{ $quote->user->about_me }}</u></b><br>
+                </td>
+               <td style="border: none; border-collapse: collapse;">
+                   Approved by,<br>
+                <img src="data:image/png;base64,{{ $signature2 }}" alt="Signature" style="width: 100px; height: auto; margin-top: 10px;"><br>
+          
+                    {{ $finalApprover->name }}<br>
+                   <b><u>{{ $finalApprover->about_me }}</u></b><br>
+                </td>
+            </tr>
+            </table>
+            @endif
+
             <br>
-            <br>
-            {{ $quote->user->name }}<br>
-            <b><u>{{ $quote->user->about_me }}</u></b><br>
+           
             {{-- <strong>Date:</strong> {{ $quote->created_at->format('F d, Y') }} --}}
             </b>
         </div>
