@@ -192,7 +192,7 @@ class QuoteController extends Controller
                             Log::info('Processing file', ['index' => $index, 'original_name' => $file->getClientOriginalName()]);
                             $originalName = $file->getClientOriginalName();
                             $fileName = Str::random(40) . '.' . $file->getClientOriginalExtension();
-                            $path = $file->storeAs("quote-files/{$quote->id}", $fileName, 'public');
+                            $path = $file->storeAs("quote-files/", $quote->id. '_' . $fileName, 'public');
 
                             $quote->files()->create([
                                 'original_name' => $originalName,
@@ -324,7 +324,7 @@ class QuoteController extends Controller
                 foreach ($request->file('files') as $index => $file) {
                     $originalName = $file->getClientOriginalName();
                     $fileName = Str::random(40) . '.' . $file->getClientOriginalExtension();
-                    $path = $file->storeAs("quote-files/{$quote->id}", $fileName, 'public');
+                    $path = $file->storeAs("quote-files/", $quote->id. '_' . $fileName, 'public');
 
                     $quote->files()->create([
                         'original_name' => $originalName,
@@ -598,7 +598,7 @@ class QuoteController extends Controller
         $fileName = Str::random(40) . '.' . $file->getClientOriginalExtension();
 
         // Store file in the quote files folder
-        $path = $file->storeAs("quote-files/{$quote->id}", $fileName, 'public');
+        $path = $file->storeAs("quote-files/",$quote->id. '_' . $fileName, 'public');
 
         try {
             $quoteFile = $quote->files()->create([
