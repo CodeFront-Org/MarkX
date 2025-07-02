@@ -311,15 +311,12 @@ table, th, td {
              <b>{!! nl2br(e($quote->footertext)) !!}</b>
              <br>
              <br>
-             We look forward to your order confirmation.
+             We look forward to your order confirmation.            
             <br>
-            <br>
-            
-            <br>
-            @php
+                        @php
                use App\Models\User;
                  
-           if($quote->status=='completed') {
+           if($quote->status=='completed' || $quote->status=='pending_customer') {
                 $creator=   User::find($quote->user_id);
                 if ($creator->signature && Storage::disk('public')->exists('signatures/' . $creator->signature)) {
                     $fileContent = Storage::disk('public')->get('signatures/' . $creator->signature);
@@ -344,7 +341,7 @@ table, th, td {
             }
             @endphp
             
-            @if ($quote->status=='completed')
+            @if ($quote->status=='completed' || $quote->status=='pending_customer' )
 
             <table style="width: 100%; border: none; border-collapse: collapse; margin-top: 20px;">
                 <tr>
