@@ -36,7 +36,8 @@
                 <h6 class="mb-0">{{ __('Profile Information') }}</h6>
             </div>
             <div class="card-body pt-4 p-3">
-                <form action="/user-profile" method="POST" role="form text-left">
+               <form action="/user-profile" method="POST" enctype="multipart/form-data" role="form text-left">
+
                     @csrf
                     @if($errors->any())
                         <div class="mt-3  alert alert-primary alert-dismissible fade show" role="alert">
@@ -107,6 +108,26 @@
                             <textarea class="form-control" id="about" rows="3" placeholder="Say something about yourself" name="about_me">{{ auth()->user()->about_me }}</textarea>
                         </div>
                     </div>
+
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="signature" class="form-control-label">{{ __('Upload Signature') }}</label>
+                                <input type="file" name="signature" class="form-control @error('signature') is-invalid @enderror" accept="image/*">
+                                @error('signature')
+                                    <p class="text-danger text-xs mt-2">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            @if(auth()->user()->signature)
+                                <p class="mt-2">Current Signature:</p>
+                                <img src="{{ asset('storage/signatures/' . auth()->user()->signature) }}" alt="Signature" style="max-height: 100px;">
+                            @endif
+                        </div>
+                    </div>
+
+
+
+
                     <div class="row mt-4">
                         <div class="col-12">
                             <div class="card">

@@ -97,18 +97,17 @@ class PdfService
         $letterheadType = null;
 
         // Try different image formats
-        $possibleExtensions = ['jpg', 'jpeg', 'png', 'gif'];
-        $letterheadBaseName = 'letterhead';
+        $possibleExtensions = ['jpg'];
+        $letterheadBaseName = 'letterhead.jpg';
 
-        foreach ($possibleExtensions as $ext) {
-            $path = public_path("assets/img/{$letterheadBaseName}.{$ext}");
+            $path = public_path("assets/img/$letterheadBaseName");
 
             if (file_exists($path)) {
                 $letterheadData = base64_encode(file_get_contents($path));
-                $letterheadType = "image/{$ext}";
-                break;
+                $letterheadType = "image/jpg";
+            
             }
-        }
+        
 
         // If no letterhead found, use the logo as fallback
         if (!$letterheadData) {
@@ -118,6 +117,10 @@ class PdfService
                 $letterheadType = 'image/png';
             }
         }
+
+      // $signaturePath = asset('storage/signatures/' . auth()->user()->signature);
+       // dd($signaturePath);
+       
 
         return [
             'quote' => $quote,

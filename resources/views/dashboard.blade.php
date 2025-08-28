@@ -104,7 +104,7 @@
               <canvas id="chart-bars" class="chart-canvas" height="350"></canvas>
             </div>
           </div>
-          <h6 class="ms-2 mt-4 mb-0">Monthly Activity</h6>
+          <h6 class="ms-2 mt-4 mb-0">Monthly Activity - 100</h6>
           <p class="text-sm ms-2">Quotes vs Success Rate</p>
         </div>
       </div>

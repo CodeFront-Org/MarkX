@@ -135,7 +135,7 @@
                                                         class="form-control @error(" items.$index.reason") is-invalid @enderror"
                                                         value="{{ old("items.$index.reason", $item->reason) }}"
                                                         placeholder="Enter rejection reason"
-                                                        required>
+                                                        >
                                                     @error("items.$index.reason")
                                                     <div class="invalid-feedback">{{ $message }}</div>
                                                     @enderror
@@ -860,7 +860,7 @@
                         reasonInput.classList.remove('is-invalid');
 
                         // If not approved, require a rejection reason
-                        if (!checkbox.checked && !reasonInput.value.trim()) {
+                       /* if (!checkbox.checked && !reasonInput.value.trim()) {
                             hasValidationErrors = true;
                             reasonInput.classList.add('is-invalid');
                             if (!reasonCell.querySelector('.invalid-feedback')) {
@@ -869,7 +869,7 @@
                                 feedback.textContent = 'Please provide a reason for rejection.';
                                 reasonCell.appendChild(feedback);
                             }
-                        }
+                        }*/
                     });
 
                     if (hasValidationErrors) {

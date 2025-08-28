@@ -43,7 +43,15 @@ class InfoUserController extends Controller
 
             $attributes['password'] = Hash::make($request->password);
         }
-        
+              $user = Auth::user();
+                if ($request->hasFile('signature')) {
+            $signature = $request->file('signature')->store('signatures', 'public');
+            $user->signature = basename($signature);
+            
+            $user->save();
+        }
+
+
         User::where('id', Auth::user()->id)
         ->update(array_merge([
             'name' => $attributes['name'],

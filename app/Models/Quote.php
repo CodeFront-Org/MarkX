@@ -24,6 +24,7 @@ class Quote extends Model
         'updated_at',
         'title',
         'description',
+        'footertext',
         'valid_until',
         'rejection_reason',
         'rejection_details',

@@ -170,6 +170,19 @@
                                 </div>
                             </div>
 
+                            <!-- add footertext -->
+                            <div class="row mt-4">
+                                   <div class="col-md-8">
+                                                <div class="form-group">
+                                                    <label for="footertext">Footer text</label>
+                                                    <textarea class="form-control"  name="footertext" >NB:
+Quotation is valid for 30 days</textarea>
+                                                </div>
+                                            </div>
+                            </div>
+
+
+
                             <div class="row mt-4">
                                 <div class="col-12">
                                     <h6 class="mb-3">Attach RFQ</h6>

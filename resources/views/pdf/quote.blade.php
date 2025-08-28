@@ -1,20 +1,30 @@
 <!DOCTYPE html>
+
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Quote #{{ $quote->id }}</title>
+    <title>Quote #IVD{{ $quote->id }}</title>
+
+
     <style>
         @page {
             margin: 0;
             padding: 0;
         }
+
+     
         body {
-            font-family: 'Helvetica', 'Arial', sans-serif;
+             font-family: 'calibri', sans-serif; 
             margin: 0;
             padding: 0;
-            color: #2c3e50;
+            color: #000000;
             line-height: 1.4;
             position: relative;
+            width:100%;
+            text-align: justify; 
+            /*margin: 0 auto;*/
+            font-size: 18px; 
+            
         }
         .background-letterhead {
             position: absolute;
@@ -62,18 +72,10 @@
         }
         table {
             width: 100%;
-            border-collapse: collapse;
-            margin: 12px 0;
-            font-size: 12px;
-            background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent background */
         }
-        th {
-            background-color: #f8f9fa;
-            color: #2c3e50;
+        th {            
             font-weight: bold;
-            padding: 6px;
-            border-bottom: 2px solid #ddd;
-            text-align: left;
+            
         }
         td {
             padding: 6px;
@@ -131,6 +133,12 @@
             border-radius: 4px;
         }
     </style>
+                <style>
+table, th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+</style>
 </head>
 <body>
     <!-- Full-page background letterhead -->
@@ -138,53 +146,94 @@
     <div class="background-letterhead">
         <img src="data:{{ $letterheadType }};base64,{{ $letterheadData }}" alt="Company Letterhead">
     </div>
-    @endif
+    @endif 
+
+
     <br />
-    <div class="content">
+    <br />
+    <br />
+    <br />
+    <br />
+    <br />
+    <br />
+    <br />
+    <br />
+   
+
+    <div class="content" style="font-family: calibri, sans-serif; font-size: 18px; line-height: 1.5; color: black; width:90%; text-align: left; margin: 0 auto;">
         <div class="header">
-            <div class="quote-info">
-                <h2>QUOTATION</h2>
-                <h3>#{{ $quote->reference ?? $quote->id }}</h3>
-            </div>
-            <div class="clear"></div>
+            <table style="width: 100%; border: none; border-collapse: collapse; margin-bottom: 20px;">
+                <tr>
+                    <td style="border: none; vertical-align: top; text-align: left; width: 40%;">
+                        
+                    </td>
+                    <td style="border: none; vertical-align: top; text-align: right; width: 40%;">
+                     <h2 style="margin: 0 0 10px 0; color: #2c3e50;"></h2>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="border: none; vertical-align: top; text-align: left; width: 40%;">
+                          <div class="quote-date" style="font-weight: bold; margin-bottom: 6px;">
+                            {{ $quote->created_at->isoFormat('Do MMMM, YYYY') }}
+                        </div>
+                    </td>
+                    <td style="border: none; vertical-align: top; text-align: right; width: 40%;">
+                         <h3 style="margin: 0; color: #000000;">#IVD{{ $quote->reference ?? $quote->id }}</h3>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="border: none; vertical-align: top; width: 60%;">
+                      
+                        <div style="font-weight: bold;">
+                            {{ $quote->title }}<br>
+                            {!! nl2br(e($quote->description)) !!}<br><br>
+                        </div>
+                        <div>
+                            <b>Attn: {{ $quote->contact_person }}</b>
+                        </div>
+                    </td>
+                    <td style="border: none; vertical-align: top; text-align: right; width: 40%;">
+                        
+                    </td>
+                </tr>
+            </table>
+            <b><u>RE: QUOTATION</u></b><br><br>
+                            We have the pleasure to submit our quotation for the following as per your request.<br><br>
         </div>
 
+   
+        
         <div class="section">
-            <div style="float: left; width: 50%;">
-                <strong>Date Created:</strong> {{ $quote->created_at->format('F d, Y') }}<br>
-                <strong>Valid Until:</strong> {{ $quote->valid_until->format('F d, Y') }}<br>
-                {{-- <strong>Status:</strong> <span class="status-badge status-{{ strtolower($quote->status) }}">{{ ucfirst($quote->status) }}</span> --}}
-            </div>
-            <div class="clear"></div>
-        </div>
-
-        <div class="section">
-            <div class="quote-title">{{ $quote->title }}</div>
-            <p>{{ $quote->description }}</p>
-            <p>Attn:{{ $quote->contact_person }}</p>
-
-            <table>                <thead>
-                    <tr>
-                        <th width="25%">Item Description</th>
-                        <th width="10%">Unit Pack</th>
-                        <th width="10%">Quantity</th>
-                        <th width="10%">Unit Price</th>
-                        <th width="15%">Total</th>
-                        <th width="10%">VAT Amount</th>
-                        <th width="10%">Lead Time</th>
-                        @if(!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails)
+                <table >
+                <thead>
+                    <tr >
+                        <th width="2%">No.</th>
+                        <th width="26%" style='text-align:left'>&nbsp;Item Description</th>
+                        <th width="10%">&nbsp;Unit Pack</th>
+                        <th width="10%">&nbsp;Qty</th>
+                        <th width="12%">Unit Price (Ksh)</th>
+                        <th width="13%">&nbsp;Total Price (Ksh)</th>
+                        <th width="12%">&nbsp;VAT Amt (Ksh)</th>
+                        <th width="10%">&nbsp;Lead Time</th>
+                         @if(!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails)
                         <th width="10%">Status</th>
-                        @endif
+                        @endif 
                     </tr>
                 </thead>
-                <tbody>                    @foreach($items as $item)
+                <tbody style='text-align:center'>
+                     @foreach($items as $item)
                     <tr>
-                        <td>{{ $item->item }}</td>
+                        <td>{{ $loop->index + 1 }}</td>
+
+                        <td style='text-align:left'>
+                            {!! preg_replace_callback('/\b(\w+):/', fn($matches) => '<b>' . $matches[1] . '</b>', str_replace(',', '<br>', $item->item)) !!}
+                        </td>
                         <td>{{ $item->unit_pack }}</td>
                         <td>{{ $item->quantity }}</td>
-                        <td>KES {{ number_format($item->price, 2) }}</td>
-                        <td>KES {{ number_format($item->quantity * $item->price, 2) }}</td>
-                        <td>KES {{ number_format(($item->quantity * $item->price) * (($item->vat_rate ?? 16) / 100), 2) }}</td>
+                        <td>{{ number_format($item->price, 2) }}</td>
+                        <td>{{ number_format($item->quantity * $item->price, 2) }}</td>
+                        <td>{{ number_format(($item->quantity * $item->price) * (($item->vat_rate ?? 16) / 100), 2) }}</td>
                         <td>{{ $item->lead_time }}</td>
                         @if(!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails)
                         <td>
@@ -197,69 +246,127 @@
                         @endif
                     </tr>
                     @endforeach
-                </tbody>                <tfoot>
+                </tbody>  
+                <tfoot >
                     @if($showOnlyApproved)
                     <tr>
                         <td colspan="5" style="text-align: right;"><strong>Subtotal (Excl. VAT):</strong></td>
-                        <td><strong>KES {{ number_format($approvedSubtotal ?? 0, 2) }}</strong></td>
-                        <td colspan="2"></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($approvedSubtotal ?? 0, 2) }}</strong></td>
+                      
+                     
                     </tr>
                     <tr>
                         <td colspan="5" style="text-align: right;"><strong>VAT Amount:</strong></td>
-                        <td><strong>KES {{ number_format($approvedVatAmount ?? 0, 2) }}</strong></td>
-                        <td colspan="2"></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($approvedVatAmount ?? 0, 2) }}</strong></td>
+
                     </tr>
                     <tr class="total">
                         <td colspan="5" style="text-align: right;"><strong>Total Amount (Inc. VAT):</strong></td>
-                        <td><strong>KES {{ number_format($approvedTotal ?? 0, 2) }}</strong></td>
-                        <td colspan="2"></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($approvedTotal ?? 0, 2) }}</strong></td>
                     </tr>
                     @else
                     <tr>
                         <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '5' : '5' }}" style="text-align: right;"><strong>Subtotal (Excl. VAT):</strong></td>
-                        <td><strong>KES {{ number_format($itemsSubtotal ?? 0, 2) }}</strong></td>
-                        <td colspan="2"></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($itemsSubtotal ?? 0, 2) }}</strong></td>
+
+
                     </tr>
                     <tr>
                         <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '5' : '5' }}" style="text-align: right;"><strong>VAT Amount:</strong></td>
-                        <td><strong>KES {{ number_format($itemsVatAmount ?? 0, 2) }}</strong></td>
-                        <td colspan="2"></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($itemsVatAmount ?? 0, 2) }}</strong></td>
+
+
                     </tr>
                     <tr class="total">
                         <td colspan="{{ (!$showOnlyApproved && isset($showInternalDetails) && $showInternalDetails) ? '5' : '5' }}" style="text-align: right;"><strong>Total Amount (Inc. VAT):</strong></td>
-                        <td><strong>KES {{ number_format($itemsTotal ?? 0, 2) }}</strong></td>
-                        <td colspan="2"></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($itemsTotal ?? 0, 2) }}</strong></td>
+
                     </tr>
                     @if($hasUnapprovedItems && isset($showInternalDetails) && $showInternalDetails)
                     <tr>
                         <td colspan="5" style="text-align: right;"><strong>Approved Items Subtotal (Excl. VAT):</strong></td>
-                        <td><strong>KES {{ number_format($approvedSubtotal ?? 0, 2) }}</strong></td>
-                        <td colspan="2"></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($approvedSubtotal ?? 0, 2) }}</strong></td>
+                        <td></td>
+                        
                     </tr>
                     <tr>
                         <td colspan="5" style="text-align: right;"><strong>Approved Items VAT:</strong></td>
-                        <td><strong>KES {{ number_format($approvedVatAmount ?? 0, 2) }}</strong></td>
-                        <td colspan="2"></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($approvedVatAmount ?? 0, 2) }}</strong></td>
+                         <td></td>
+
                     </tr>
                     <tr class="total">
                         <td colspan="5" style="text-align: right;"><strong>Approved Items Total (Inc. VAT):</strong></td>
-                        <td><strong>KES {{ number_format($approvedTotal ?? 0, 2) }}</strong></td>
-                        <td colspan="2"></td>
+                        <td  colspan="3"><strong>Ksh {{ number_format($approvedTotal ?? 0, 2) }}</strong></td>
+                        <td></td>
+
                     </tr>
                     @endif
                     @endif
                 </tfoot>
             </table>
-        </div>
+        </div>            
+            <br>
+          <div class="footerx" style="font-family: calibri, sans-serif; font-size: 20px;">
+             <b>{!! nl2br(e($quote->footertext)) !!}</b>
+             <br>
+             <br>
+             We look forward to your order confirmation.            
+            <br>
+                        @php
+               use App\Models\User;
+                 
+           if($quote->status=='completed' || $quote->status=='pending_customer') {
+                $creator=   User::find($quote->user_id);
+                if ($creator->signature && Storage::disk('public')->exists('signatures/' . $creator->signature)) {
+                    $fileContent = Storage::disk('public')->get('signatures/' . $creator->signature);
+                    $extension = pathinfo($creator->signature, PATHINFO_EXTENSION);
+                    $signatureDataUri = 'data:image/' . $extension . ';base64,' . base64_encode($fileContent);
+                } else {
+                    $signatureDataUri = null;
+                }
 
-        <div class="validity-notice">
-            <strong>Validity Period:</strong> This quote is valid until {{ $quote->valid_until->format('F d, Y') }}.
-            After this date, prices and availability may need to be reviewed.
-        </div>
+     
+                $finalApprover=   User::find($quote->approved_by);
+                if($finalApprover) {
+                    if ($finalApprover->signature && Storage::disk('public')->exists('signatures/' . $finalApprover->signature)) {
+                        $fileContent = Storage::disk('public')->get('signatures/' . $finalApprover->signature);
+                        $extension = pathinfo($finalApprover->signature, PATHINFO_EXTENSION);
+                        $sigPatsignature2 = 'data:image/' . $extension . ';base64,' . base64_encode($fileContent);
+                    } else {
+                        $sigPatsignature2 = null;
+                    }
+                }
 
-        <div class="footer">
-            <p>Thank you for considering our services!</p>
-            <p style="color: #95a5a6;">Generated on {{ now()->format('F d, Y H:i:s') }}</p>
+            }
+            @endphp
+            
+            @if ($quote->status=='completed' || $quote->status=='pending_customer' )
+
+            <table style="width: 100%; border: none; border-collapse: collapse; margin-top: 20px;">
+                <tr>
+                    <td style="border: none; border-collapse: collapse;">
+                        Kind regards,<br>
+                        <img src="{{ $signatureDataUri }}" alt="Signature" style="width: 100px; height: auto; margin-top: 10px;"><br>
+
+                        {{ $quote->user->name }}<br>
+                        <b><u>{{ $quote->user->about_me }}</u></b><br>
+                </td>
+               <td style="border: none; border-collapse: collapse;">
+                   Approved by,<br>
+                <img src="{{ $sigPatsignature2 }}" alt="Signature" style="width: 100px; height: auto; margin-top: 10px;"><br>
+
+                    {{ $finalApprover->name }}<br>
+                   <b><u>{{ $finalApprover->about_me }}</u></b><br>
+                </td>
+            </tr>
+            </table>
+            @endif
+
+            <br>
+           
+            {{-- <strong>Date:</strong> {{ $quote->created_at->format('F d, Y') }} --}}
+            </b>
         </div>
     </div>
 </body>
