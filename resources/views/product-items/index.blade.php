@@ -23,6 +23,10 @@
                             <input type="text" name="marketer" class="form-control search-input" value="{{ request('marketer') }}" placeholder="Search by marketer...">
                         </div>
                         <div class="col-md-2">
+                            <label class="form-label">Quote</label>
+                            <input type="text" name="quote_title" class="form-control search-input" value="{{ request('quote_title') }}" placeholder="Search by quote title...">
+                        </div>
+                        <div class="col-md-2">
                             <label class="form-label">Status</label>
                             <select name="approved" class="form-select search-input">
                                 <option value="">All Status</option>

@@ -89,7 +89,7 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
     Route::post('quotes/items/{item}/toggle-approval', [QuoteController::class, 'toggleItemApproval'])->name('quotes.toggle-item-approval');
 
     // Reports route
-    Route::get('reports', [ReportsController::class, 'index'])->middleware('role:rfq_approver')->name('reports');
+    Route::get('reports', [ReportsController::class, 'index'])->middleware('role:rfq_approver')->name('reports.index');
 
     // Company Files routes
     Route::get('company-files', [CompanyFileController::class, 'index'])->name('company-files.index');
@@ -116,7 +116,8 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
     });
 
     // Product Items routes
-    Route::resource('product-items', ProductItemController::class);
+    Route::get('product-items/{itemName}/details', [ProductItemController::class, 'show'])->name('product-items.details')->where('itemName', '.*');
+    Route::resource('product-items', ProductItemController::class)->except(['show']);
     
     // Supplier routes
     Route::resource('suppliers', SupplierController::class);

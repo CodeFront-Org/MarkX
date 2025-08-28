@@ -15,10 +15,10 @@ class ReportsController extends Controller
         $this->middleware(['auth', 'role:rfq_approver']);
     }
 
-    public function index()
+    public function index(\Illuminate\Http\Request $request)
     {
         // Get RFQ processor performance stats
-        $rfqProcessorStats = $this->getRfqProcessorStats();
+        $rfqProcessorStats = $this->getRfqProcessorStats($request);
         
         // Get product performance
         [$topProducts, $lowProducts] = $this->getProductPerformance();
@@ -52,38 +52,76 @@ class ReportsController extends Controller
             'quoteAging',
             'topClients',
             'financialHealth',
-            'rfq_processors'
+            'rfq_processors',
+            'request'
         ));
     }
 
-    private function getRfqProcessorStats()
+    private function getRfqProcessorStats($request = null)
     {
         return User::where('role', 'rfq_processor')
-            ->withCount(['quotes as total_quotes'])
-            ->withCount(['quotes as successful_quotes' => function($query) {
-                $query->whereIn('status', ['approved', 'completed']);
+            ->with(['quotes' => function($query) use ($request) {
+                if ($request && $request->filled('date_from')) {
+                    $query->whereDate('created_at', '>=', $request->date_from);
+                }
+                if ($request && $request->filled('date_to')) {
+                    $query->whereDate('created_at', '<=', $request->date_to);
+                }
             }])
-            ->withSum(['quotes as quote_value' => function($query) {
-                $query->whereIn('status', ['approved', 'completed']);
-            }], 'amount')
             ->get()
             ->map(function($processor) {
+                $quotes = $processor->quotes;
+                $total_quotes = $quotes->count();
+                $total_amount = $quotes->sum('amount');
+                
+                // Status breakdown
+                $pending = $quotes->where('status', 'pending_manager');
+                $approved = $quotes->where('status', 'approved');
+                $completed = $quotes->where('status', 'completed');
+                $rejected = $quotes->where('status', 'rejected');
+                $awarded = $quotes->where('status', 'completed');
+                
                 return (object)[
                     'name' => $processor->name,
-                    'total_revenue' => $processor->quote_value ?? 0,
-                    'success_rate' => $processor->total_quotes > 0 
-                        ? ($processor->successful_quotes / $processor->total_quotes) * 100 
-                        : 0,
-                    'total_quotes' => $processor->total_quotes,
-                    'approval_rate' => $processor->total_quotes > 0 
-                        ? ($processor->successful_quotes / $processor->total_quotes) * 100 
-                        : 0,
-                    'conversion_rate' => $processor->total_quotes > 0 
-                        ? ($processor->successful_quotes / $processor->total_quotes) * 100 
-                        : 0
+                    'total_quotes' => $total_quotes,
+                    'total_amount' => $total_amount,
+                    'quoted_vs_awarded' => [
+                        'quoted' => [
+                            'count' => $total_quotes,
+                            'amount' => $total_amount,
+                            'percentage' => 100
+                        ],
+                        'awarded' => [
+                            'count' => $awarded->count(),
+                            'amount' => $awarded->sum('amount'),
+                            'percentage' => $total_quotes > 0 ? round(($awarded->count() / $total_quotes) * 100, 1) : 0
+                        ]
+                    ],
+                    'status_breakdown' => [
+                        'pending' => [
+                            'count' => $pending->count(),
+                            'amount' => $pending->sum('amount'),
+                            'percentage' => $total_quotes > 0 ? round(($pending->count() / $total_quotes) * 100, 1) : 0
+                        ],
+                        'approved' => [
+                            'count' => $approved->count(),
+                            'amount' => $approved->sum('amount'),
+                            'percentage' => $total_quotes > 0 ? round(($approved->count() / $total_quotes) * 100, 1) : 0
+                        ],
+                        'completed' => [
+                            'count' => $completed->count(),
+                            'amount' => $completed->sum('amount'),
+                            'percentage' => $total_quotes > 0 ? round(($completed->count() / $total_quotes) * 100, 1) : 0
+                        ],
+                        'rejected' => [
+                            'count' => $rejected->count(),
+                            'amount' => $rejected->sum('amount'),
+                            'percentage' => $total_quotes > 0 ? round(($rejected->count() / $total_quotes) * 100, 1) : 0
+                        ]
+                    ]
                 ];
             })
-            ->sortByDesc('total_revenue')
+            ->sortByDesc('total_amount')
             ->values();
     }
 

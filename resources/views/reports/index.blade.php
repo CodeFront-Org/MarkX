@@ -121,7 +121,15 @@
         <div class="col-12">
             <div class="card mb-4">
                 <div class="card-header pb-0">
-                    <h6>RFQ Processor Performance Overview</h6>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6>RFQ Processor Performance Overview</h6>
+                        <form method="GET" class="d-flex gap-2">
+                            <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}" placeholder="From">
+                            <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}" placeholder="To">
+                            <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                            <a href="{{ route('reports.index') }}" class="btn btn-secondary btn-sm">Reset</a>
+                        </form>
+                    </div>
                 </div>
                 <div class="card-body px-0 pt-0 pb-2">
                     <div class="table-responsive p-0">
@@ -129,10 +137,8 @@
                             <thead>
                                 <tr>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">RFQ Processor</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Total Revenue</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Success Rate</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Total Quotes</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Conversion Rate</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Quoted vs Awarded</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Status Breakdown</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -160,16 +166,34 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <p class="text-sm font-weight-bold mb-0">KES {{ number_format($stat->total_revenue, 2) }}</p>
+                                            <div class="mb-2">
+                                                <strong>Quoted:</strong> {{ $stat->quoted_vs_awarded['quoted']['count'] }} quotes (KES {{ number_format($stat->quoted_vs_awarded['quoted']['amount'], 0) }})
+                                            </div>
+                                            <div>
+                                                <strong>Awarded:</strong> {{ $stat->quoted_vs_awarded['awarded']['count'] }} quotes ({{ $stat->quoted_vs_awarded['awarded']['percentage'] }}%) - KES {{ number_format($stat->quoted_vs_awarded['awarded']['amount'], 0) }}
+                                            </div>
                                         </td>
                                         <td>
-                                            <p class="text-sm font-weight-bold mb-0">{{ number_format($stat->success_rate, 1) }}%</p>
-                                        </td>
-                                        <td>
-                                            <p class="text-sm font-weight-bold mb-0">{{ $stat->total_quotes }}</p>
-                                        </td>
-                                        <td>
-                                            <p class="text-sm font-weight-bold mb-0">{{ number_format($stat->conversion_rate, 1) }}%</p>
+                                            <div class="row">
+                                                <div class="col-6">
+                                                    <small><strong>Pending:</strong> {{ $stat->status_breakdown['pending']['count'] }} ({{ $stat->status_breakdown['pending']['percentage'] }}%)<br>
+                                                    KES {{ number_format($stat->status_breakdown['pending']['amount'], 0) }}</small>
+                                                </div>
+                                                <div class="col-6">
+                                                    <small><strong>Approved:</strong> {{ $stat->status_breakdown['approved']['count'] }} ({{ $stat->status_breakdown['approved']['percentage'] }}%)<br>
+                                                    KES {{ number_format($stat->status_breakdown['approved']['amount'], 0) }}</small>
+                                                </div>
+                                            </div>
+                                            <div class="row mt-2">
+                                                <div class="col-6">
+                                                    <small><strong>Completed:</strong> {{ $stat->status_breakdown['completed']['count'] }} ({{ $stat->status_breakdown['completed']['percentage'] }}%)<br>
+                                                    KES {{ number_format($stat->status_breakdown['completed']['amount'], 0) }}</small>
+                                                </div>
+                                                <div class="col-6">
+                                                    <small><strong>Rejected:</strong> {{ $stat->status_breakdown['rejected']['count'] }} ({{ $stat->status_breakdown['rejected']['percentage'] }}%)<br>
+                                                    KES {{ number_format($stat->status_breakdown['rejected']['amount'], 0) }}</small>
+                                                </div>
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforeach

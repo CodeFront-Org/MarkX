@@ -17,51 +17,29 @@ class ProductItemController extends Controller
 
     public function index(Request $request)
     {
-        $isUsingMysql = DB::connection()->getDriverName() === 'mysql';
-        $groupConcatFunction = $isUsingMysql ? 'GROUP_CONCAT' : 'GROUP_CONCAT';
-
         $query = QuoteItem::query()
             ->select([
                 'quote_items.item',
-                'quote_items.id',
                 DB::raw('COUNT(DISTINCT quote_items.quote_id) as quote_count'),
-                DB::raw($groupConcatFunction . '(DISTINCT COALESCE(quotes.reference, quotes.title)) as quote_titles'),
                 DB::raw('SUM(quote_items.quantity) as total_quantity'),
                 DB::raw('AVG(quote_items.price) as avg_price'),
                 DB::raw('SUM(quote_items.quantity * quote_items.price) as total_value'),
                 DB::raw('SUM(CASE WHEN quote_items.approved = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as success_rate'),
-                DB::raw($groupConcatFunction . '(DISTINCT users.name) as marketers'),
+                DB::raw('GROUP_CONCAT(DISTINCT users.name) as marketers'),
                 DB::raw('MIN(CASE WHEN quote_items.approved = 0 THEN 1 ELSE 0 END) as has_pending'),
                 DB::raw('MIN(quote_items.comment) as latest_comment')
             ])
-            ->with(['quote'])  // Eager load quote relationship
             ->leftJoin('quotes', 'quotes.id', '=', 'quote_items.quote_id')
-            ->leftJoin('users', 'users.id', '=', 'quotes.user_id')
-            ->groupBy('quote_items.item', 'quote_items.id');
+            ->leftJoin('users', 'users.id', '=', 'quotes.marketer_id')
+            ->groupBy('quote_items.item');
 
         if (Auth::user()->role !== 'rfq_approver' && Auth::user()->role !== 'lpo_admin') {
-            $query->where('quotes.user_id', Auth::id());
+            $query->where('quotes.marketer_id', Auth::id());
         }
 
         // Apply search filters
         if ($request->filled('item')) {
             $query->having('item', 'like', '%' . $request->item . '%');
-        }
-
-        if ($request->filled('min_quantity')) {
-            $query->having('total_quantity', '>=', $request->min_quantity);
-        }
-
-        if ($request->filled('max_quantity')) {
-            $query->having('total_quantity', '<=', $request->max_quantity);
-        }
-
-        if ($request->filled('min_price')) {
-            $query->having('avg_price', '>=', $request->min_price);
-        }
-
-        if ($request->filled('max_price')) {
-            $query->having('avg_price', '<=', $request->max_price);
         }
 
         if ($request->filled('marketer')) {
@@ -76,28 +54,13 @@ class ProductItemController extends Controller
             }
         }
 
-        $items = $query->latest('total_value')
+        if ($request->filled('quote_title')) {
+            $query->where('quotes.title', 'like', '%' . $request->quote_title . '%');
+        }
+
+        $items = $query->orderBy('total_value', 'desc')
             ->paginate(10)
             ->withQueryString();
-
-        // Add quote history for each item
-        foreach ($items as $item) {
-            $item->quote_history = DB::table('quotes as q')
-                ->select(
-                    'q.id as quote_id',
-                    'q.reference',
-                    'q.title',
-                    'q.created_at',
-                    'qi.quantity',
-                    'qi.price',
-                    'qi.approved',
-                    DB::raw('qi.quantity * qi.price as amount')
-                )
-                ->join('quote_items as qi', 'q.id', '=', 'qi.quote_id')
-                ->where('qi.item', $item->item)
-                ->orderBy('q.created_at', 'desc')
-                ->get();
-        }
 
         if ($request->ajax()) {
             return response()->json([
@@ -154,6 +117,59 @@ class ProductItemController extends Controller
 
         return redirect()->route('product-items.index')
             ->with('success', 'Product item updated successfully.');
+    }
+
+    public function show($itemName)
+    {
+        $isUsingMysql = DB::connection()->getDriverName() === 'mysql';
+        $groupConcatFunction = $isUsingMysql ? 'GROUP_CONCAT' : 'GROUP_CONCAT';
+
+        $item = QuoteItem::query()
+            ->select([
+                'quote_items.item',
+                DB::raw('COUNT(DISTINCT quote_items.quote_id) as quote_count'),
+                DB::raw('SUM(quote_items.quantity) as total_quantity'),
+                DB::raw('AVG(quote_items.price) as avg_price'),
+                DB::raw('SUM(quote_items.quantity * quote_items.price) as total_value'),
+                DB::raw('SUM(CASE WHEN quote_items.approved = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as success_rate'),
+                DB::raw($groupConcatFunction . '(DISTINCT users.name) as marketers'),
+                DB::raw('MIN(CASE WHEN quote_items.approved = 0 THEN 1 ELSE 0 END) as has_pending'),
+                DB::raw('MAX(quote_items.created_at) as latest_created_at'),
+                DB::raw('MAX(quote_items.updated_at) as latest_updated_at')
+            ])
+            ->leftJoin('quotes', 'quotes.id', '=', 'quote_items.quote_id')
+            ->leftJoin('users', 'users.id', '=', 'quotes.user_id')
+            ->where('quote_items.item', $itemName)
+            ->groupBy('quote_items.item')
+            ->first();
+
+        if (!$item) {
+            abort(404, 'Product item not found');
+        }
+
+        // Get quote history
+        $quoteHistory = DB::table('quotes as q')
+            ->select(
+                'q.id as quote_id',
+                'q.reference',
+                'q.title',
+                'q.created_at',
+                'qi.quantity',
+                'qi.price',
+                'qi.approved',
+                'qi.comment',
+                DB::raw('qi.quantity * qi.price as amount')
+            )
+            ->join('quote_items as qi', 'q.id', '=', 'qi.quote_id')
+            ->where('qi.item', $itemName)
+            ->orderBy('q.created_at', 'desc')
+            ->get();
+
+        // Calculate approval counts
+        $approvedCount = $quoteHistory->where('approved', 1)->count();
+        $pendingCount = $quoteHistory->where('approved', 0)->count();
+
+        return view('product-items.show', compact('item', 'quoteHistory', 'approvedCount', 'pendingCount'));
     }
 
     public function destroy(QuoteItem $item)
