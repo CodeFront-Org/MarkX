@@ -305,17 +305,27 @@ class ReportsController extends Controller
             ? (($monthlyTrend - $lastMonthTrend) / $lastMonthTrend) * 100 
             : 0;
 
+        // Calculate amounts by status
+        $totalQuotedAmount = Quote::sum('amount') ?? 0;
+        $awardedAmount = Quote::whereIn('status', ['approved', 'completed'])->sum('amount') ?? 0;
+        $rejectedAmount = Quote::where('status', 'rejected')->sum('amount') ?? 0;
+        $pendingAmount = Quote::whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance', 'pending'])->sum('amount') ?? 0;
+
         return (object)[
-            'success_rate' => $totalQuotes > 0 ? ($successfulQuotes / $totalQuotes) * 100 : 0,
+            'success_rate' => $totalQuotes > 0 ? round(($successfulQuotes / $totalQuotes) * 100, 1) : 0,
             'avg_value' => Quote::whereIn('status', ['approved', 'completed'])->avg('amount') ?? 0,
-            'total_value' => Quote::whereIn('status', ['approved', 'completed'])->sum('amount') ?? 0,
+            'total_value' => $awardedAmount,
+            'total_quoted_amount' => $totalQuotedAmount,
+            'awarded_amount' => $awardedAmount,
+            'rejected_amount' => $rejectedAmount,
+            'pending_amount' => $pendingAmount,
             'conversion_time' => round($avgTimeToApprove),
             'trend_percentage' => round($trendPercentage, 1),
             'month_to_date' => $monthlyTrend,
             'last_month' => $lastMonthTrend,
             'total_quotes' => $totalQuotes,
             'successful_quotes' => $successfulQuotes,
-            'pending_quotes' => Quote::where('status', 'pending')->count(),
+            'pending_quotes' => Quote::whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance', 'pending'])->count(),
             'rejected_quotes' => Quote::where('status', 'rejected')->count(),
             'average_quotes_per_day' => round($totalQuotes / 365, 1),
             'highest_value' => Quote::whereIn('status', ['approved', 'completed'])->max('amount') ?? 0,

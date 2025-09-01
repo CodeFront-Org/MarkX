@@ -13,7 +13,7 @@
                         @csrf
                         @method('PUT')
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="form-group">
                                     <label for="title" class="form-control-label">Title</label>
                                     <input class="form-control @error('title') is-invalid @enderror" type="text"
@@ -24,7 +24,18 @@
                                     @enderror
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="contact_person" class="form-control-label">Attn to</label>
+                                    <input class="form-control @error('contact_person') is-invalid @enderror" type="text"
+                                        id="contact_person" name="contact_person" value="{{ old('contact_person', $quote->contact_person) }}"
+                                        placeholder="Contact person name">
+                                    @error('contact_person')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-4">
                                 <div class="form-group">
                                     <label for="valid_until" class="form-control-label">Validity</label>
                                     <input class="form-control @error('valid_until') is-invalid @enderror" type="date"

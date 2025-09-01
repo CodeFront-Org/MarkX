@@ -25,6 +25,26 @@
         </div>
     </div>
     @endif
+
+    @if($quote->rejection_reason === 'returned_for_editing' && $quote->status === 'pending_manager')
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-warning" role="alert">
+                <div class="d-flex">
+                    <div class="text-white">
+                        <i class="fas fa-edit me-2"></i>
+                    </div>
+                    <div class="ps-2">
+                        <h6 class="text-sm text-white mb-1">Quote Returned for Editing</h6>
+                        <p class="text-sm mb-0 text-white">
+                            LPO Admin has requested changes: {{ $quote->rejection_details }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
     <div class="row">
         <div class="col-12">
             <div class="card mb-4">
@@ -67,6 +87,9 @@
                             @if($quote->status === 'pending_finance')
                                 <button type="button" class="btn bg-gradient-success mx-1" data-bs-toggle="modal" data-bs-target="#finalizeQuoteModal">
                                     Close Quote
+                                </button>
+                                <button type="button" class="btn bg-gradient-warning mx-1" data-bs-toggle="modal" data-bs-target="#returnForEditingModal">
+                                    Return for Editing
                                 </button>
                                 <a href="{{ route('quotes.download', $quote) }}" class="btn bg-gradient-info mx-1" target="_blank">
                                     <i class="fas fa-file-pdf me-2"></i> Download Working PDF
@@ -381,6 +404,36 @@
     });
 </script>
 @endpush
+
+<!-- Return for Editing Modal -->
+<div class="modal fade" id="returnForEditingModal" tabindex="-1" role="dialog" aria-labelledby="returnForEditingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <form action="{{ route('quotes.return-for-editing', $quote) }}" method="POST">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title" id="returnForEditingModalLabel">Return Quote for Editing</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="return_reason" class="form-control-label">Reason for Return</label>
+                        <textarea name="return_reason" id="return_reason" rows="4"
+                            class="form-control @error('return_reason') is-invalid @enderror"
+                            placeholder="Please specify what needs to be edited or corrected..." required></textarea>
+                        @error('return_reason')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn bg-gradient-warning">Return for Editing</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- Quote Finalization Modal -->
 <div class="modal fade" id="finalizeQuoteModal" tabindex="-1" role="dialog" aria-labelledby="finalizeQuoteModalLabel" aria-hidden="true">

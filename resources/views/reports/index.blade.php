@@ -21,7 +21,7 @@
     </div>
     @endif
 
-    <!-- KPI Metrics Row -->
+    <!-- Second Row of KPI Cards -->
     <div class="row mb-4">
         <div class="col-xl-3 col-sm-6">
             <div class="card">
@@ -29,18 +29,15 @@
                     <div class="row">
                         <div class="col-8">
                             <div class="numbers">
-                                <p class="text-sm mb-0 text-uppercase font-weight-bold">Monthly Revenue</p>
+                                <p class="text-sm mb-0 text-uppercase font-weight-bold">Amount Quoted</p>
                                 <h5 class="font-weight-bolder mb-0">
-                                    KES <span class="count-up" data-value="{{ $financialHealth->projected_monthly_revenue }}">0</span>
-                                    <span class="text-{{ $financialHealth->growth_rate >= 0 ? 'success' : 'danger' }} text-sm font-weight-bolder">
-                                        {{ ($financialHealth->growth_rate >= 0 ? '+' : '') }}{{ number_format($financialHealth->growth_rate, 1) }}%
-                                    </span>
+                                    KES <span class="count-up" data-value="{{ $quoteStats->total_quoted_amount }}">0</span>
                                 </h5>
                             </div>
                         </div>
                         <div class="col-4 text-end">
-                            <div class="icon icon-shape bg-gradient-primary shadow text-center border-radius-md">
-                                <i class="ni ni-money-coins text-lg opacity-10" aria-hidden="true"></i>
+                            <div class="icon icon-shape bg-gradient-warning shadow text-center border-radius-md">
+                                <i class="ni ni-paper-diploma text-lg opacity-10" aria-hidden="true"></i>
                             </div>
                         </div>
                     </div>
@@ -54,15 +51,15 @@
                     <div class="row">
                         <div class="col-8">
                             <div class="numbers">
-                                <p class="text-sm mb-0 text-uppercase font-weight-bold">Average Deal Size</p>
+                                <p class="text-sm mb-0 text-uppercase font-weight-bold">Amount Awarded</p>
                                 <h5 class="font-weight-bolder mb-0">
-                                    KES <span class="count-up" data-value="{{ $quoteStats->avg_value }}">0</span>
+                                    KES <span class="count-up" data-value="{{ $quoteStats->awarded_amount }}">0</span>
                                 </h5>
                             </div>
                         </div>
                         <div class="col-4 text-end">
                             <div class="icon icon-shape bg-gradient-success shadow text-center border-radius-md">
-                                <i class="ni ni-chart-bar-32 text-lg opacity-10" aria-hidden="true"></i>
+                                <i class="ni ni-trophy text-lg opacity-10" aria-hidden="true"></i>
                             </div>
                         </div>
                     </div>
@@ -76,15 +73,37 @@
                     <div class="row">
                         <div class="col-8">
                             <div class="numbers">
-                                <p class="text-sm mb-0 text-uppercase font-weight-bold">Success Rate</p>
+                                <p class="text-sm mb-0 text-uppercase font-weight-bold">Amount Rejected</p>
                                 <h5 class="font-weight-bolder mb-0">
-                                    <span class="count-up" data-value="{{ $quoteStats->success_rate }}">0</span>
+                                    KES <span class="count-up" data-value="{{ $quoteStats->rejected_amount }}">0</span>
                                 </h5>
                             </div>
                         </div>
                         <div class="col-4 text-end">
-                            <div class="icon icon-shape bg-gradient-info shadow text-center border-radius-md">
-                                <i class="ni ni-check-bold text-lg opacity-10" aria-hidden="true"></i>
+                            <div class="icon icon-shape bg-gradient-danger shadow text-center border-radius-md">
+                                <i class="ni ni-fat-remove text-lg opacity-10" aria-hidden="true"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-sm-6">
+            <div class="card">
+                <div class="card-body p-3">
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="numbers">
+                                <p class="text-sm mb-0 text-uppercase font-weight-bold">Amount Pending</p>
+                                <h5 class="font-weight-bolder mb-0">
+                                    KES <span class="count-up" data-value="{{ $quoteStats->pending_amount }}">0</span>
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="col-4 text-end">
+                            <div class="icon icon-shape bg-gradient-secondary shadow text-center border-radius-md">
+                                <i class="ni ni-time-alarm text-lg opacity-10" aria-hidden="true"></i>
                             </div>
                         </div>
                     </div>
@@ -214,7 +233,7 @@
                 </div>
                 <div class="card-body">
                     <div class="chart">
-                        <canvas id="quote-trends-chart" class="chart-canvas" 
+                        <canvas id="quote-trends-chart" class="chart-canvas"
                             data-labels="{{ json_encode($quoteTrends->labels) }}"
                             data-values="{{ json_encode($quoteTrends->success_rates) }}">
                         </canvas>
@@ -222,7 +241,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Approval Stats -->
         <div class="col-xl-4">
             <div class="card h-100">
@@ -244,7 +263,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="row mt-4">
                         <div class="col-12">
                             <h6 class="text-sm mb-3">Approval Rates by Role</h6>
@@ -318,11 +337,11 @@
                                             <p class="text-sm font-weight-bold mb-0">{{ $history['closed_at'] }}</p>
                                         </td>
                                         <td>
-                                            <span class="badge badge-sm bg-gradient-{{ 
-                                                $history['status'] === 'completed' ? 'success' : 
-                                                ($history['status'] === 'pending_manager' ? 'info' : 
-                                                ($history['status'] === 'pending_customer' ? 'warning' : 
-                                                ($history['status'] === 'pending_finance' ? 'primary' : 'danger'))) 
+                                            <span class="badge badge-sm bg-gradient-{{
+                                                $history['status'] === 'completed' ? 'success' :
+                                                ($history['status'] === 'pending_manager' ? 'info' :
+                                                ($history['status'] === 'pending_customer' ? 'warning' :
+                                                ($history['status'] === 'pending_finance' ? 'primary' : 'danger')))
                                             }}">
                                                 {{ ucwords(str_replace('_', ' ', $history['status'])) }}
                                             </span>
@@ -346,7 +365,7 @@
                 </div>
                 <div class="card-body">
                     <div class="chart">
-                        <canvas id="revenue-forecast-chart" class="chart-canvas" 
+                        <canvas id="revenue-forecast-chart" class="chart-canvas"
                             data-labels="{{ json_encode($quoteTrends->labels) }}"
                             data-projected="{{ json_encode($quoteTrends->monthly_approved_amounts) }}"
                             data-actual="{{ json_encode($quoteTrends->monthly_amounts) }}">
@@ -363,7 +382,7 @@
     window.addEventListener('load', function() {
         var ctx = document.getElementById("quote-trends-chart").getContext("2d");
         var chart = ctx.canvas;
-        
+
         new Chart(ctx, {
             type: "line",
             data: {
@@ -443,7 +462,7 @@
         // Revenue Forecast Chart
         var forecastCtx = document.getElementById("revenue-forecast-chart").getContext("2d");
         var forecastChart = forecastCtx.canvas;
-        
+
         new Chart(forecastCtx, {
             type: "line",
             data: {
@@ -586,11 +605,11 @@
     .card {
         transition: all 0.3s ease;
     }
-    
+
     .icon-shape {
         transition: all 0.3s ease;
     }
-    
+
     .card:hover .icon-shape {
         transform: scale(1.1);
     }

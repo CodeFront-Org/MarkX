@@ -706,4 +706,28 @@ class QuoteController extends Controller
 
         return response()->json(['success' => true, 'approved' => $item->approved]);
     }
+
+    public function returnForEditing(Request $request, Quote $quote)
+    {
+        if (!auth()->user()->isLpoAdmin()) {
+            return back()->with('error', 'Only LPO Admin users can return quotes for editing.');
+        }
+
+        if ($quote->status === 'completed') {
+            return back()->with('error', 'Completed quotes cannot be returned for editing.');
+        }
+
+        $validated = $request->validate([
+            'return_reason' => 'required|string|max:1000'
+        ]);
+
+        $quote->update([
+            'status' => 'pending_manager',
+            'rejection_reason' => 'returned_for_editing',
+            'rejection_details' => $validated['return_reason']
+        ]);
+
+        return redirect()->route('quotes.show', $quote)
+            ->with('success', 'Quote returned to RFQ Processor for editing.');
+    }
 }

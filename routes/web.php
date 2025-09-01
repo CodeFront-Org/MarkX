@@ -87,6 +87,7 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
     
     // Quote item management routes
     Route::post('quotes/items/{item}/toggle-approval', [QuoteController::class, 'toggleItemApproval'])->name('quotes.toggle-item-approval');
+    Route::post('quotes/{quote}/return-for-editing', [QuoteController::class, 'returnForEditing'])->name('quotes.return-for-editing');
 
     // Reports route
     Route::get('reports', [ReportsController::class, 'index'])->middleware('role:rfq_approver')->name('reports.index');
