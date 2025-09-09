@@ -21,91 +21,136 @@
     </div>
     @endif
 
-    <!-- Second Row of KPI Cards -->
+    <!-- Performance Overview Card -->
     <div class="row mb-4">
-        <div class="col-xl-3 col-sm-6">
+        <div class="col-12">
             <div class="card">
-                <div class="card-body p-3">
-                    <div class="row">
-                        <div class="col-8">
-                            <div class="numbers">
-                                <p class="text-sm mb-0 text-uppercase font-weight-bold">Amount Quoted</p>
-                                <h5 class="font-weight-bolder mb-0">
-                                    KES <span class="count-up" data-value="{{ $quoteStats->total_quoted_amount }}">0</span>
-                                </h5>
+                <div class="card-header pb-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6>Performance Overview</h6>
+                        <form method="GET" class="d-flex align-items-center gap-3">
+                            <div class="form-group mb-0">
+                                <select name="user_filter" class="form-select form-select-sm" style="min-width: 150px; height: 31px;">
+                                    <option value="">All Processors</option>
+                                    @foreach($rfq_processors as $processor)
+                                        <option value="{{ $processor->id }}" {{ request('user_filter') == $processor->id ? 'selected' : '' }}>
+                                            {{ $processor->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="form-group mb-0">
+                                <div class="btn-group btn-group-sm" role="group" style="height: 31px;">
+                                    <input type="radio" class="btn-check" name="date_mode" id="range_mode" value="range" checked>
+                                    <label class="btn btn-outline-secondary" for="range_mode" style="height: 31px; line-height: 19px;">Range</label>
+                                    <input type="radio" class="btn-check" name="date_mode" id="single_mode" value="single">
+                                    <label class="btn btn-outline-secondary" for="single_mode" style="height: 31px; line-height: 19px;">Single</label>
+                                </div>
+                            </div>
+                            <div class="form-group mb-0">
+                                <input type="text" name="daterange" class="form-control form-control-sm" id="daterange" placeholder="Select Date" readonly style="min-width: 180px; height: 31px;">
+                            </div>
+                            <div class="form-group mb-0">
+                                <button type="submit" class="btn btn-primary btn-sm px-3" style="height: 31px;">Filter</button>
+                                <a href="{{ route('reports.index') }}" class="btn btn-outline-secondary btn-sm px-3 ms-1" style="height: 31px; line-height: 19px;">Reset</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Company-wide KPI Metrics -->
+                    <div class="row mb-4">
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="border-radius-md text-center p-3 bg-gradient-warning bg-opacity-10 mb-3">
+                                <h6 class="text-sm mb-1 text-uppercase font-weight-bold">Total Amount Quoted</h6>
+                                <h4 class="font-weight-bold mb-0">KES {{ number_format($quoteStats->total_quoted_amount, 0) }}</h4>
+                                <small class="text-muted">Company-wide total</small>
                             </div>
                         </div>
-                        <div class="col-4 text-end">
-                            <div class="icon icon-shape bg-gradient-warning shadow text-center border-radius-md">
-                                <i class="ni ni-paper-diploma text-lg opacity-10" aria-hidden="true"></i>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="border-radius-md text-center p-3 bg-gradient-success bg-opacity-10 mb-3">
+                                <h6 class="text-sm mb-1 text-uppercase font-weight-bold">Total Amount Awarded</h6>
+                                <h4 class="font-weight-bold mb-0">KES {{ number_format($quoteStats->awarded_amount, 0) }}</h4>
+                                <small class="text-muted">Company-wide total</small>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="border-radius-md text-center p-3 bg-gradient-danger bg-opacity-10 mb-3">
+                                <h6 class="text-sm mb-1 text-uppercase font-weight-bold">Total Amount Rejected</h6>
+                                <h4 class="font-weight-bold mb-0">KES {{ number_format($quoteStats->rejected_amount, 0) }}</h4>
+                                <small class="text-muted">Company-wide total</small>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="border-radius-md text-center p-3 bg-gradient-secondary bg-opacity-10 mb-3">
+                                <h6 class="text-sm mb-1 text-uppercase font-weight-bold">Total Amount Pending</h6>
+                                <h4 class="font-weight-bold mb-0">KES {{ number_format($quoteStats->pending_amount, 0) }}</h4>
+                                <small class="text-muted">Company-wide total</small>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-sm-6">
-            <div class="card">
-                <div class="card-body p-3">
-                    <div class="row">
-                        <div class="col-8">
-                            <div class="numbers">
-                                <p class="text-sm mb-0 text-uppercase font-weight-bold">Amount Awarded</p>
-                                <h5 class="font-weight-bolder mb-0">
-                                    KES <span class="count-up" data-value="{{ $quoteStats->awarded_amount }}">0</span>
-                                </h5>
-                            </div>
-                        </div>
-                        <div class="col-4 text-end">
-                            <div class="icon icon-shape bg-gradient-success shadow text-center border-radius-md">
-                                <i class="ni ni-trophy text-lg opacity-10" aria-hidden="true"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-sm-6">
-            <div class="card">
-                <div class="card-body p-3">
-                    <div class="row">
-                        <div class="col-8">
-                            <div class="numbers">
-                                <p class="text-sm mb-0 text-uppercase font-weight-bold">Amount Rejected</p>
-                                <h5 class="font-weight-bolder mb-0">
-                                    KES <span class="count-up" data-value="{{ $quoteStats->rejected_amount }}">0</span>
-                                </h5>
-                            </div>
-                        </div>
-                        <div class="col-4 text-end">
-                            <div class="icon icon-shape bg-gradient-danger shadow text-center border-radius-md">
-                                <i class="ni ni-fat-remove text-lg opacity-10" aria-hidden="true"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-sm-6">
-            <div class="card">
-                <div class="card-body p-3">
-                    <div class="row">
-                        <div class="col-8">
-                            <div class="numbers">
-                                <p class="text-sm mb-0 text-uppercase font-weight-bold">Amount Pending</p>
-                                <h5 class="font-weight-bolder mb-0">
-                                    KES <span class="count-up" data-value="{{ $quoteStats->pending_amount }}">0</span>
-                                </h5>
-                            </div>
-                        </div>
-                        <div class="col-4 text-end">
-                            <div class="icon icon-shape bg-gradient-secondary shadow text-center border-radius-md">
-                                <i class="ni ni-time-alarm text-lg opacity-10" aria-hidden="true"></i>
-                            </div>
-                        </div>
+                    
+                    <!-- RFQ Processor Performance Table -->
+                    <h6 class="mb-3">RFQ Processor Performance</h6>
+                    <div class="table-responsive p-0">
+                        <table class="table align-items-center mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Processor</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Total Quotes</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Total Amount</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Completed</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Pending</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Rejected</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Success Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($rfqProcessorStats as $stat)
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex px-3 py-1">
+                                                <div class="d-flex flex-column justify-content-center">
+                                                    <a href="{{ route('reports.user', ['user' => $rfq_processors->where('name', $stat->name)->first()->id]) }}" class="text-decoration-none">
+                                                        <h6 class="mb-0 text-sm text-primary">{{ $stat->name }}</h6>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <p class="text-sm font-weight-bold mb-0">{{ $stat->total_quotes }}</p>
+                                        </td>
+                                        <td>
+                                            <p class="text-sm font-weight-bold mb-0">KES {{ number_format($stat->total_amount, 0) }}</p>
+                                        </td>
+                                        <td>
+                                            <p class="text-sm mb-0">
+                                                {{ $stat->status_breakdown['completed']['count'] }}
+                                                <small class="text-muted">({{ $stat->status_breakdown['completed']['percentage'] }}%)</small><br>
+                                                <small class="text-success">KES {{ number_format($stat->status_breakdown['completed']['amount'], 0) }}</small>
+                                            </p>
+                                        </td>
+                                        <td>
+                                            <p class="text-sm mb-0">
+                                                {{ $stat->status_breakdown['pending']['count'] }}
+                                                <small class="text-muted">({{ $stat->status_breakdown['pending']['percentage'] }}%)</small><br>
+                                                <small class="text-warning">KES {{ number_format($stat->status_breakdown['pending']['amount'], 0) }}</small>
+                                            </p>
+                                        </td>
+                                        <td>
+                                            <p class="text-sm mb-0">
+                                                {{ $stat->status_breakdown['rejected']['count'] }}
+                                                <small class="text-muted">({{ $stat->status_breakdown['rejected']['percentage'] }}%)</small><br>
+                                                <small class="text-danger">KES {{ number_format($stat->status_breakdown['rejected']['amount'], 0) }}</small>
+                                            </p>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-sm bg-gradient-success">{{ number_format($stat->status_breakdown['completed']['percentage'], 1) }}%</span>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -134,95 +179,6 @@
         </div>
     </div>
     @endif
-
-    <!-- RFQ Processor Performance Card -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card mb-4">
-                <div class="card-header pb-0">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6>RFQ Processor Performance Overview</h6>
-                        <form method="GET" class="d-flex gap-2">
-                            <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}" placeholder="From">
-                            <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}" placeholder="To">
-                            <button type="submit" class="btn btn-primary btn-sm">Filter</button>
-                            <a href="{{ route('reports.index') }}" class="btn btn-secondary btn-sm">Reset</a>
-                        </form>
-                    </div>
-                </div>
-                <div class="card-body px-0 pt-0 pb-2">
-                    <div class="table-responsive p-0">
-                        <table class="table align-items-center mb-0">
-                            <thead>
-                                <tr>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">RFQ Processor</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Quoted vs Awarded</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Status Breakdown</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($rfqProcessorStats as $stat)
-                                    <tr class="
-                                        @if($loop->first) gold-border
-                                        @elseif($loop->iteration == 2) silver-border
-                                        @elseif($loop->iteration == 3) bronze-border
-                                        @endif
-                                    ">
-                                        <td>
-                                            <div class="d-flex px-3 py-1">
-                                                <div class="d-flex flex-column justify-content-center">
-                                                    <h6 class="mb-0 text-sm">
-                                                        @if($loop->first)
-                                                            <i class="fas fa-medal text-warning me-2" title="Gold Medal - Top Performer"></i>&nbsp;
-                                                        @elseif($loop->iteration == 2)
-                                                            <i class="fas fa-medal text-secondary me-2" title="Silver Medal - Second Place"></i>&nbsp;
-                                                        @elseif($loop->iteration == 3)
-                                                            <i class="fas fa-medal text-bronze me-2" style="color: #CD7F32;" title="Bronze Medal - Third Place"></i>&nbsp;
-                                                        @endif
-                                                        {{ $stat->name }}
-                                                    </h6>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="mb-2">
-                                                <strong>Quoted:</strong> {{ $stat->quoted_vs_awarded['quoted']['count'] }} quotes (KES {{ number_format($stat->quoted_vs_awarded['quoted']['amount'], 0) }})
-                                            </div>
-                                            <div>
-                                                <strong>Awarded:</strong> {{ $stat->quoted_vs_awarded['awarded']['count'] }} quotes ({{ $stat->quoted_vs_awarded['awarded']['percentage'] }}%) - KES {{ number_format($stat->quoted_vs_awarded['awarded']['amount'], 0) }}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="row">
-                                                <div class="col-6">
-                                                    <small><strong>Pending:</strong> {{ $stat->status_breakdown['pending']['count'] }} ({{ $stat->status_breakdown['pending']['percentage'] }}%)<br>
-                                                    KES {{ number_format($stat->status_breakdown['pending']['amount'], 0) }}</small>
-                                                </div>
-                                                <div class="col-6">
-                                                    <small><strong>Approved:</strong> {{ $stat->status_breakdown['approved']['count'] }} ({{ $stat->status_breakdown['approved']['percentage'] }}%)<br>
-                                                    KES {{ number_format($stat->status_breakdown['approved']['amount'], 0) }}</small>
-                                                </div>
-                                            </div>
-                                            <div class="row mt-2">
-                                                <div class="col-6">
-                                                    <small><strong>Completed:</strong> {{ $stat->status_breakdown['completed']['count'] }} ({{ $stat->status_breakdown['completed']['percentage'] }}%)<br>
-                                                    KES {{ number_format($stat->status_breakdown['completed']['amount'], 0) }}</small>
-                                                </div>
-                                                <div class="col-6">
-                                                    <small><strong>Rejected:</strong> {{ $stat->status_breakdown['rejected']['count'] }} ({{ $stat->status_breakdown['rejected']['percentage'] }}%)<br>
-                                                    KES {{ number_format($stat->status_breakdown['rejected']['amount'], 0) }}</small>
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Quote Analytics -->
     <div class="row">
@@ -378,6 +334,10 @@
 </div>
 
 @push('dashboard')
+<script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
 <script>
     window.addEventListener('load', function() {
         var ctx = document.getElementById("quote-trends-chart").getContext("2d");
@@ -564,6 +524,58 @@
             element.textContent = prefix + Math.floor(start).toLocaleString() + suffix;
         }, 16);
     }
+
+    // Initialize date range picker
+    $(function() {
+        function initializeDatePicker(singleMode = false) {
+            $('#daterange').daterangepicker({
+                opens: 'left',
+                autoUpdateInput: false,
+                singleDatePicker: singleMode,
+                locale: {
+                    cancelLabel: 'Clear'
+                }
+            });
+        }
+
+        // Initialize with range mode
+        initializeDatePicker(false);
+
+        // Handle mode switching
+        $('input[name="date_mode"]').change(function() {
+            const isSingle = $(this).val() === 'single';
+            $('#daterange').val('').data('daterangepicker').remove();
+            initializeDatePicker(isSingle);
+            $('#daterange').attr('placeholder', isSingle ? 'Select Date' : 'Select Date Range');
+        });
+
+        $(document).on('apply.daterangepicker', '#daterange', function(ev, picker) {
+            const isSingle = $('input[name="date_mode"]:checked').val() === 'single';
+            if (isSingle) {
+                $(this).val(picker.startDate.format('MM/DD/YYYY'));
+                $('input[name="date_from"]').remove();
+                $('input[name="date_to"]').remove();
+                $(this).closest('form').append('<input type="hidden" name="date_from" value="' + picker.startDate.format('YYYY-MM-DD') + '">');
+            } else {
+                $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
+                $('input[name="date_from"]').remove();
+                $('input[name="date_to"]').remove();
+                $(this).closest('form').append('<input type="hidden" name="date_from" value="' + picker.startDate.format('YYYY-MM-DD') + '">');
+                $(this).closest('form').append('<input type="hidden" name="date_to" value="' + picker.endDate.format('YYYY-MM-DD') + '">');
+            }
+        });
+
+        $(document).on('cancel.daterangepicker', '#daterange', function(ev, picker) {
+            $(this).val('');
+            $('input[name="date_from"]').remove();
+            $('input[name="date_to"]').remove();
+        });
+
+        // Set initial value if dates are present
+        @if(request('date_from') && request('date_to'))
+            $('#daterange').val('{{ date('m/d/Y', strtotime(request('date_from'))) }} - {{ date('m/d/Y', strtotime(request('date_to'))) }}');
+        @endif
+    });
 
     // Initialize animated counters
     document.addEventListener('DOMContentLoaded', function() {

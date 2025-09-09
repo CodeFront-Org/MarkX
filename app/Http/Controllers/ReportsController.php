@@ -25,7 +25,7 @@ class ReportsController extends Controller
         
         // Get quote trends and stats
         $quoteTrends = $this->getQuoteTrends();
-        $quoteStats = $this->getQuoteStats();
+        $quoteStats = $this->getQuoteStats($request);
         
         // Get approval stats
         $approvalStats = $this->getApprovalStats();
@@ -57,10 +57,36 @@ class ReportsController extends Controller
         ));
     }
 
+    public function userReport(User $user)
+    {
+        if ($user->role !== 'rfq_processor') {
+            return redirect()->route('reports.index')->with('error', 'User reports are only available for RFQ processors.');
+        }
+
+        $quotes = $user->quotes()->with('items')->latest()->paginate(15);
+        
+        $stats = (object)[
+            'total_quotes' => $user->quotes()->count(),
+            'total_amount' => $user->quotes()->sum('amount'),
+            'completed_quotes' => $user->quotes()->where('status', 'completed')->count(),
+            'pending_quotes' => $user->quotes()->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance'])->count(),
+            'rejected_quotes' => $user->quotes()->where('status', 'rejected')->count(),
+            'avg_quote_value' => $user->quotes()->avg('amount') ?? 0,
+            'success_rate' => $user->quotes()->count() > 0 ? ($user->quotes()->where('status', 'completed')->count() / $user->quotes()->count()) * 100 : 0
+        ];
+
+        return view('reports.user', compact('user', 'quotes', 'stats'));
+    }
+
     private function getRfqProcessorStats($request = null)
     {
-        return User::where('role', 'rfq_processor')
-            ->with(['quotes' => function($query) use ($request) {
+        $query = User::where('role', 'rfq_processor');
+        
+        if ($request && $request->filled('user_filter')) {
+            $query->where('id', $request->user_filter);
+        }
+        
+        return $query->with(['quotes' => function($query) use ($request) {
                 if ($request && $request->filled('date_from')) {
                     $query->whereDate('created_at', '>=', $request->date_from);
                 }
@@ -266,12 +292,20 @@ class ReportsController extends Controller
         }
     }
 
-    private function getQuoteStats()
+    private function getQuoteStats($request = null)
     {
-        $totalQuotes = Quote::where('created_at', '>=', now()->subYear())->count();
-        $successfulQuotes = Quote::whereIn('status', ['approved', 'completed'])
-            ->where('created_at', '>=', now()->subYear())
-            ->count();
+        $query = Quote::query();
+        
+        // Only apply date filters, not user filters for company-wide KPIs
+        if ($request && $request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request && $request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+        
+        $totalQuotes = $query->count();
+        $successfulQuotes = (clone $query)->whereIn('status', ['approved', 'completed'])->count();
 
         // Calculate average time from creation to approval using database-agnostic functions
         $avgTimeToApprove = Quote::whereIn('status', ['approved', 'completed'])
@@ -305,15 +339,15 @@ class ReportsController extends Controller
             ? (($monthlyTrend - $lastMonthTrend) / $lastMonthTrend) * 100 
             : 0;
 
-        // Calculate amounts by status
-        $totalQuotedAmount = Quote::sum('amount') ?? 0;
-        $awardedAmount = Quote::whereIn('status', ['approved', 'completed'])->sum('amount') ?? 0;
-        $rejectedAmount = Quote::where('status', 'rejected')->sum('amount') ?? 0;
-        $pendingAmount = Quote::whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance', 'pending'])->sum('amount') ?? 0;
+        // Calculate amounts by status with date filtering
+        $totalQuotedAmount = (clone $query)->sum('amount') ?? 0;
+        $awardedAmount = (clone $query)->whereIn('status', ['approved', 'completed'])->sum('amount') ?? 0;
+        $rejectedAmount = (clone $query)->where('status', 'rejected')->sum('amount') ?? 0;
+        $pendingAmount = (clone $query)->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance', 'pending'])->sum('amount') ?? 0;
 
         return (object)[
             'success_rate' => $totalQuotes > 0 ? round(($successfulQuotes / $totalQuotes) * 100, 1) : 0,
-            'avg_value' => Quote::whereIn('status', ['approved', 'completed'])->avg('amount') ?? 0,
+            'avg_value' => (clone $query)->whereIn('status', ['approved', 'completed'])->avg('amount') ?? 0,
             'total_value' => $awardedAmount,
             'total_quoted_amount' => $totalQuotedAmount,
             'awarded_amount' => $awardedAmount,
@@ -325,8 +359,8 @@ class ReportsController extends Controller
             'last_month' => $lastMonthTrend,
             'total_quotes' => $totalQuotes,
             'successful_quotes' => $successfulQuotes,
-            'pending_quotes' => Quote::whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance', 'pending'])->count(),
-            'rejected_quotes' => Quote::where('status', 'rejected')->count(),
+            'pending_quotes' => (clone $query)->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance', 'pending'])->count(),
+            'rejected_quotes' => (clone $query)->where('status', 'rejected')->count(),
             'average_quotes_per_day' => round($totalQuotes / 365, 1),
             'highest_value' => Quote::whereIn('status', ['approved', 'completed'])->max('amount') ?? 0,
             'lowest_value' => Quote::whereIn('status', ['approved', 'completed'])->min('amount') ?? 0
