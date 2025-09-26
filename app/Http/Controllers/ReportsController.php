@@ -296,12 +296,15 @@ class ReportsController extends Controller
     {
         $query = Quote::query();
         
-        // Only apply date filters, not user filters for company-wide KPIs
+        // Apply both date and user filters
         if ($request && $request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
         if ($request && $request->filled('date_to')) {
             $query->whereDate('created_at', '<=', $request->date_to);
+        }
+        if ($request && $request->filled('user_filter')) {
+            $query->where('user_id', $request->user_filter);
         }
         
         $totalQuotes = $query->count();

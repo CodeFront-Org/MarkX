@@ -58,34 +58,58 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <!-- Company-wide KPI Metrics -->
+                    <!-- KPI Metrics -->
                     <div class="row mb-4">
                         <div class="col-xl-3 col-sm-6">
-                            <div class="border-radius-md text-center p-3 bg-gradient-warning bg-opacity-10 mb-3">
-                                <h6 class="text-sm mb-1 text-uppercase font-weight-bold">Total Amount Quoted</h6>
-                                <h4 class="font-weight-bold mb-0">KES {{ number_format($quoteStats->total_quoted_amount, 0) }}</h4>
-                                <small class="text-muted">Company-wide total</small>
+                            <div class="border-radius-md text-center p-3 bg-gradient-warning mb-3">
+                                <h6 class="text-sm mb-1 text-uppercase font-weight-bold text-white">Total Amount Quoted</h6>
+                                <h4 class="font-weight-bold mb-0 text-white">KES {{ number_format($quoteStats->total_quoted_amount, 0) }}</h4>
+                                <small class="text-white opacity-8">
+                                    @if(request('user_filter'))
+                                        {{ $rfq_processors->where('id', request('user_filter'))->first()->name ?? 'Selected user' }} total
+                                    @else
+                                        Company-wide total
+                                    @endif
+                                </small>
                             </div>
                         </div>
                         <div class="col-xl-3 col-sm-6">
-                            <div class="border-radius-md text-center p-3 bg-gradient-success bg-opacity-10 mb-3">
-                                <h6 class="text-sm mb-1 text-uppercase font-weight-bold">Total Amount Awarded</h6>
-                                <h4 class="font-weight-bold mb-0">KES {{ number_format($quoteStats->awarded_amount, 0) }}</h4>
-                                <small class="text-muted">Company-wide total</small>
+                            <div class="border-radius-md text-center p-3 bg-gradient-success mb-3">
+                                <h6 class="text-sm mb-1 text-uppercase font-weight-bold text-white">Total Amount Awarded</h6>
+                                <h4 class="font-weight-bold mb-0 text-white">KES {{ number_format($quoteStats->awarded_amount, 0) }}</h4>
+                                <small class="text-white opacity-8">
+                                    @if(request('user_filter'))
+                                        {{ $rfq_processors->where('id', request('user_filter'))->first()->name ?? 'Selected user' }} total
+                                    @else
+                                        Company-wide total
+                                    @endif
+                                </small>
                             </div>
                         </div>
                         <div class="col-xl-3 col-sm-6">
-                            <div class="border-radius-md text-center p-3 bg-gradient-danger bg-opacity-10 mb-3">
-                                <h6 class="text-sm mb-1 text-uppercase font-weight-bold">Total Amount Rejected</h6>
-                                <h4 class="font-weight-bold mb-0">KES {{ number_format($quoteStats->rejected_amount, 0) }}</h4>
-                                <small class="text-muted">Company-wide total</small>
+                            <div class="border-radius-md text-center p-3 bg-gradient-danger mb-3">
+                                <h6 class="text-sm mb-1 text-uppercase font-weight-bold text-white">Total Amount Rejected</h6>
+                                <h4 class="font-weight-bold mb-0 text-white">KES {{ number_format($quoteStats->rejected_amount, 0) }}</h4>
+                                <small class="text-white opacity-8">
+                                    @if(request('user_filter'))
+                                        {{ $rfq_processors->where('id', request('user_filter'))->first()->name ?? 'Selected user' }} total
+                                    @else
+                                        Company-wide total
+                                    @endif
+                                </small>
                             </div>
                         </div>
                         <div class="col-xl-3 col-sm-6">
-                            <div class="border-radius-md text-center p-3 bg-gradient-secondary bg-opacity-10 mb-3">
-                                <h6 class="text-sm mb-1 text-uppercase font-weight-bold">Total Amount Pending</h6>
-                                <h4 class="font-weight-bold mb-0">KES {{ number_format($quoteStats->pending_amount, 0) }}</h4>
-                                <small class="text-muted">Company-wide total</small>
+                            <div class="border-radius-md text-center p-3 bg-gradient-secondary mb-3">
+                                <h6 class="text-sm mb-1 text-uppercase font-weight-bold text-white">Total Amount Pending</h6>
+                                <h4 class="font-weight-bold mb-0 text-white">KES {{ number_format($quoteStats->pending_amount, 0) }}</h4>
+                                <small class="text-white opacity-8">
+                                    @if(request('user_filter'))
+                                        {{ $rfq_processors->where('id', request('user_filter'))->first()->name ?? 'Selected user' }} total
+                                    @else
+                                        Company-wide total
+                                    @endif
+                                </small>
                             </div>
                         </div>
                     </div>
