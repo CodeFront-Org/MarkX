@@ -24,11 +24,11 @@ class ReportsController extends Controller
         [$topProducts, $lowProducts] = $this->getProductPerformance();
         
         // Get quote trends and stats
-        $quoteTrends = $this->getQuoteTrends();
+        $quoteTrends = $this->getQuoteTrends($request);
         $quoteStats = $this->getQuoteStats($request);
         
         // Get approval stats
-        $approvalStats = $this->getApprovalStats();
+        $approvalStats = $this->getApprovalStats($request);
         
         // Get quote aging
         $quoteAging = $this->getQuoteAging();
@@ -179,7 +179,7 @@ class ReportsController extends Controller
         return [$topProducts, $lowProducts];
     }
 
-    private function getQuoteTrends()
+    private function getQuoteTrends($request = null)
     {
         // Add debug logging for SQL query
         try {
@@ -188,14 +188,27 @@ class ReportsController extends Controller
                     ? "strftime('%Y-%m', created_at) as month" 
                     : "DATE_FORMAT(created_at, '%Y-%m') as month"),
                 DB::raw('COUNT(*) as total'),
-                DB::raw('SUM(CASE WHEN status IN ("approved", "completed") THEN 1 ELSE 0 END) as approved'),
+                DB::raw('SUM(CASE WHEN status = "completed" THEN 1 ELSE 0 END) as approved'),
                 DB::raw('SUM(amount) as total_amount'),
-                DB::raw('SUM(CASE WHEN status IN ("approved", "completed") THEN amount ELSE 0 END) as approved_amount'),
-                DB::raw('AVG(CASE WHEN status IN ("approved", "completed") THEN amount ELSE NULL END) as avg_amount'),
+                DB::raw('SUM(CASE WHEN status = "completed" THEN amount ELSE 0 END) as approved_amount'),
+                DB::raw('AVG(CASE WHEN status = "completed" THEN amount ELSE NULL END) as avg_amount'),
                 DB::raw('COUNT(DISTINCT user_id) as unique_users')
-            )
-            ->where('created_at', '>=', now()->subMonths(12))
-            ->groupBy(DB::connection()->getDriverName() === 'sqlite' 
+            );
+            
+            // Apply date filters if provided
+            if ($request && $request->filled('date_from')) {
+                $query->whereDate('created_at', '>=', $request->date_from);
+            } else {
+                $query->where('created_at', '>=', now()->subMonths(12));
+            }
+            if ($request && $request->filled('date_to')) {
+                $query->whereDate('created_at', '<=', $request->date_to);
+            }
+            if ($request && $request->filled('user_filter')) {
+                $query->where('user_id', $request->user_filter);
+            }
+            
+            $query->groupBy(DB::connection()->getDriverName() === 'sqlite' 
                 ? DB::raw("strftime('%Y-%m', created_at)") 
                 : DB::raw("DATE_FORMAT(created_at, '%Y-%m')"));
             
@@ -308,7 +321,7 @@ class ReportsController extends Controller
         }
         
         $totalQuotes = $query->count();
-        $successfulQuotes = (clone $query)->whereIn('status', ['approved', 'completed'])->count();
+        $successfulQuotes = (clone $query)->where('status', 'completed')->count();
 
         // Calculate average time from creation to approval using database-agnostic functions
         $avgTimeToApprove = Quote::whereIn('status', ['approved', 'completed'])
@@ -343,14 +356,21 @@ class ReportsController extends Controller
             : 0;
 
         // Calculate amounts by status with date filtering
-        $totalQuotedAmount = (clone $query)->sum('amount') ?? 0;
-        $awardedAmount = (clone $query)->whereIn('status', ['approved', 'completed'])->sum('amount') ?? 0;
+        $totalQuotedQuery = clone $query;
+        $totalQuotedAmount = $totalQuotedQuery->sum('amount') ?? 0;
+        
+        // Debug logging
+        \Log::info('Total Quoted Query SQL: ' . $totalQuotedQuery->toSql());
+        \Log::info('Total Quoted Query Bindings: ' . json_encode($totalQuotedQuery->getBindings()));
+        \Log::info('Total Quoted Amount: ' . $totalQuotedAmount);
+        
+        $awardedAmount = (clone $query)->where('status', 'completed')->sum('amount') ?? 0;
         $rejectedAmount = (clone $query)->where('status', 'rejected')->sum('amount') ?? 0;
-        $pendingAmount = (clone $query)->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance', 'pending'])->sum('amount') ?? 0;
+        $pendingAmount = (clone $query)->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance'])->sum('amount') ?? 0;
 
         return (object)[
             'success_rate' => $totalQuotes > 0 ? round(($successfulQuotes / $totalQuotes) * 100, 1) : 0,
-            'avg_value' => (clone $query)->whereIn('status', ['approved', 'completed'])->avg('amount') ?? 0,
+            'avg_value' => (clone $query)->where('status', 'completed')->avg('amount') ?? 0,
             'total_value' => $awardedAmount,
             'total_quoted_amount' => $totalQuotedAmount,
             'awarded_amount' => $awardedAmount,
@@ -362,7 +382,7 @@ class ReportsController extends Controller
             'last_month' => $lastMonthTrend,
             'total_quotes' => $totalQuotes,
             'successful_quotes' => $successfulQuotes,
-            'pending_quotes' => (clone $query)->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance', 'pending'])->count(),
+            'pending_quotes' => (clone $query)->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance'])->count(),
             'rejected_quotes' => (clone $query)->where('status', 'rejected')->count(),
             'average_quotes_per_day' => round($totalQuotes / 365, 1),
             'highest_value' => Quote::whereIn('status', ['approved', 'completed'])->max('amount') ?? 0,
@@ -370,27 +390,42 @@ class ReportsController extends Controller
         ];
     }
 
-    private function getApprovalStats()
+    private function getApprovalStats($request = null)
     {
+        $approvalQuery = Quote::whereNotNull('approved_at')->where('status', '!=', 'rejected');
+        $closingQuery = Quote::whereNotNull('closed_at')->where('status', 'completed');
+        $historyQuery = Quote::with(['approver', 'closer'])->whereNotNull('approved_at');
+        
+        // Apply filters
+        if ($request && $request->filled('date_from')) {
+            $approvalQuery->whereDate('created_at', '>=', $request->date_from);
+            $closingQuery->whereDate('created_at', '>=', $request->date_from);
+            $historyQuery->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request && $request->filled('date_to')) {
+            $approvalQuery->whereDate('created_at', '<=', $request->date_to);
+            $closingQuery->whereDate('created_at', '<=', $request->date_to);
+            $historyQuery->whereDate('created_at', '<=', $request->date_to);
+        }
+        if ($request && $request->filled('user_filter')) {
+            $approvalQuery->where('user_id', $request->user_filter);
+            $closingQuery->where('user_id', $request->user_filter);
+            $historyQuery->where('user_id', $request->user_filter);
+        }
+        
         return (object)[
-            'avg_approval_time' => Quote::whereNotNull('approved_at')
-                ->where('status', '!=', 'rejected')
-                ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, approved_at)) as avg_hours')
+            'avg_approval_time' => $approvalQuery->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, approved_at)) as avg_hours')
                 ->value('avg_hours') ?? 0,
             
-            'avg_closing_time' => Quote::whereNotNull('closed_at')
-                ->where('status', 'completed')
-                ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, approved_at, closed_at)) as avg_hours')
+            'avg_closing_time' => $closingQuery->selectRaw('AVG(TIMESTAMPDIFF(HOUR, approved_at, closed_at)) as avg_hours')
                 ->value('avg_hours') ?? 0,
             
             'approval_rates' => [
-                'manager' => $this->calculateRateByRole('manager'),
-                'lpo_admin' => $this->calculateRateByRole('lpo_admin')
+                'manager' => $this->calculateRateByRole('manager', $request),
+                'lpo_admin' => $this->calculateRateByRole('lpo_admin', $request)
             ],
             
-            'approval_history' => Quote::with(['approver', 'closer'])
-                ->whereNotNull('approved_at')
-                ->orderBy('approved_at', 'desc')
+            'approval_history' => $historyQuery->orderBy('approved_at', 'desc')
                 ->limit(10)
                 ->get()
                 ->map(function($quote) {
@@ -407,15 +442,32 @@ class ReportsController extends Controller
         ];
     }
 
-    private function calculateRateByRole($role)
+    private function calculateRateByRole($role, $request = null)
     {
-        $total = Quote::whereHas('approver', function($query) use ($role) {
+        $totalQuery = Quote::whereHas('approver', function($query) use ($role) {
             $query->where('role', $role);
-        })->count();
+        });
         
-        $approved = Quote::whereHas('approver', function($query) use ($role) {
+        $approvedQuery = Quote::whereHas('approver', function($query) use ($role) {
             $query->where('role', $role);
-        })->where('status', 'completed')->count();
+        })->where('status', 'completed');
+        
+        // Apply filters
+        if ($request && $request->filled('date_from')) {
+            $totalQuery->whereDate('created_at', '>=', $request->date_from);
+            $approvedQuery->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request && $request->filled('date_to')) {
+            $totalQuery->whereDate('created_at', '<=', $request->date_to);
+            $approvedQuery->whereDate('created_at', '<=', $request->date_to);
+        }
+        if ($request && $request->filled('user_filter')) {
+            $totalQuery->where('user_id', $request->user_filter);
+            $approvedQuery->where('user_id', $request->user_filter);
+        }
+        
+        $total = $totalQuery->count();
+        $approved = $approvedQuery->count();
         
         return $total > 0 ? ($approved / $total) * 100 : 0;
     }

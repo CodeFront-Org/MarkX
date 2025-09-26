@@ -40,15 +40,12 @@
                                 </select>
                             </div>
                             <div class="form-group mb-0">
-                                <div class="btn-group btn-group-sm" role="group" style="height: 31px;">
-                                    <input type="radio" class="btn-check" name="date_mode" id="range_mode" value="range" checked>
-                                    <label class="btn btn-outline-secondary" for="range_mode" style="height: 31px; line-height: 19px;">Range</label>
-                                    <input type="radio" class="btn-check" name="date_mode" id="single_mode" value="single">
-                                    <label class="btn btn-outline-secondary" for="single_mode" style="height: 31px; line-height: 19px;">Single</label>
-                                </div>
+                                <label class="form-label text-xs mb-1">From Date</label>
+                                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}" style="min-width: 140px; height: 31px;">
                             </div>
                             <div class="form-group mb-0">
-                                <input type="text" name="daterange" class="form-control form-control-sm" id="daterange" placeholder="Select Date" readonly style="min-width: 180px; height: 31px;">
+                                <label class="form-label text-xs mb-1">To Date</label>
+                                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}" style="min-width: 140px; height: 31px;">
                             </div>
                             <div class="form-group mb-0">
                                 <button type="submit" class="btn btn-primary btn-sm px-3" style="height: 31px;">Filter</button>
@@ -358,10 +355,6 @@
 </div>
 
 @push('dashboard')
-<script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
-<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
 <script>
     window.addEventListener('load', function() {
         var ctx = document.getElementById("quote-trends-chart").getContext("2d");
@@ -549,57 +542,7 @@
         }, 16);
     }
 
-    // Initialize date range picker
-    $(function() {
-        function initializeDatePicker(singleMode = false) {
-            $('#daterange').daterangepicker({
-                opens: 'left',
-                autoUpdateInput: false,
-                singleDatePicker: singleMode,
-                locale: {
-                    cancelLabel: 'Clear'
-                }
-            });
-        }
 
-        // Initialize with range mode
-        initializeDatePicker(false);
-
-        // Handle mode switching
-        $('input[name="date_mode"]').change(function() {
-            const isSingle = $(this).val() === 'single';
-            $('#daterange').val('').data('daterangepicker').remove();
-            initializeDatePicker(isSingle);
-            $('#daterange').attr('placeholder', isSingle ? 'Select Date' : 'Select Date Range');
-        });
-
-        $(document).on('apply.daterangepicker', '#daterange', function(ev, picker) {
-            const isSingle = $('input[name="date_mode"]:checked').val() === 'single';
-            if (isSingle) {
-                $(this).val(picker.startDate.format('MM/DD/YYYY'));
-                $('input[name="date_from"]').remove();
-                $('input[name="date_to"]').remove();
-                $(this).closest('form').append('<input type="hidden" name="date_from" value="' + picker.startDate.format('YYYY-MM-DD') + '">');
-            } else {
-                $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
-                $('input[name="date_from"]').remove();
-                $('input[name="date_to"]').remove();
-                $(this).closest('form').append('<input type="hidden" name="date_from" value="' + picker.startDate.format('YYYY-MM-DD') + '">');
-                $(this).closest('form').append('<input type="hidden" name="date_to" value="' + picker.endDate.format('YYYY-MM-DD') + '">');
-            }
-        });
-
-        $(document).on('cancel.daterangepicker', '#daterange', function(ev, picker) {
-            $(this).val('');
-            $('input[name="date_from"]').remove();
-            $('input[name="date_to"]').remove();
-        });
-
-        // Set initial value if dates are present
-        @if(request('date_from') && request('date_to'))
-            $('#daterange').val('{{ date('m/d/Y', strtotime(request('date_from'))) }} - {{ date('m/d/Y', strtotime(request('date_to'))) }}');
-        @endif
-    });
 
     // Initialize animated counters
     document.addEventListener('DOMContentLoaded', function() {
