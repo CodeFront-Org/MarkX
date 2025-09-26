@@ -1,7 +1,7 @@
 @extends('layouts.user_type.auth')
 
 @section('content')
-<div class="container-fluid py-4">
+<div class="container-fluid py-2 py-md-4" style="max-width: 100vw; overflow-x: hidden;">
     <!-- Flash Messages -->
     @if(session('error'))
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -28,9 +28,9 @@
                 <div class="card-header pb-0">
                     <div class="d-flex justify-content-between align-items-center">
                         <h6>Performance Overview</h6>
-                        <form method="GET" class="d-flex align-items-center gap-3">
-                            <div class="form-group mb-0">
-                                <select name="user_filter" class="form-select form-select-sm" style="min-width: 150px; height: 31px;">
+                        <form method="GET" class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-3">
+                            <div class="form-group mb-2 mb-md-0">
+                                <select name="user_filter" class="form-select form-select-sm" style="width: 100%; min-width: 150px; height: 31px;">
                                     <option value="">All Processors</option>
                                     @foreach($rfq_processors as $processor)
                                         <option value="{{ $processor->id }}" {{ request('user_filter') == $processor->id ? 'selected' : '' }}>
@@ -39,17 +39,17 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="form-group mb-0">
+                            <div class="form-group mb-2 mb-md-0">
                                 <label class="form-label text-xs mb-1">From Date</label>
-                                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}" style="min-width: 140px; height: 31px;">
+                                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}" style="width: 100%; min-width: 140px; height: 31px;">
                             </div>
-                            <div class="form-group mb-0">
+                            <div class="form-group mb-2 mb-md-0">
                                 <label class="form-label text-xs mb-1">To Date</label>
-                                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}" style="min-width: 140px; height: 31px;">
+                                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}" style="width: 100%; min-width: 140px; height: 31px;">
                             </div>
-                            <div class="form-group mb-0">
+                            <div class="form-group mb-0 d-flex gap-2">
                                 <button type="submit" class="btn btn-primary btn-sm px-3" style="height: 31px;">Filter</button>
-                                <a href="{{ route('reports.index') }}" class="btn btn-outline-secondary btn-sm px-3 ms-1" style="height: 31px; line-height: 19px;">Reset</a>
+                                <a href="{{ route('reports.index') }}" class="btn btn-outline-secondary btn-sm px-3" style="height: 31px; line-height: 19px;">Reset</a>
                             </div>
                         </form>
                     </div>
@@ -57,7 +57,7 @@
                 <div class="card-body">
                     <!-- KPI Metrics -->
                     <div class="row mb-4">
-                        <div class="col-xl-3 col-sm-6">
+                        <div class="col-lg-3 col-md-6 col-12">
                             <div class="border-radius-md text-center p-3 bg-gradient-warning mb-3">
                                 <h6 class="text-sm mb-1 text-uppercase font-weight-bold text-white">Total Amount Quoted</h6>
                                 <h4 class="font-weight-bold mb-0 text-white">KES {{ number_format($quoteStats->total_quoted_amount, 0) }}</h4>
@@ -70,7 +70,7 @@
                                 </small>
                             </div>
                         </div>
-                        <div class="col-xl-3 col-sm-6">
+                        <div class="col-lg-3 col-md-6 col-12">
                             <div class="border-radius-md text-center p-3 bg-gradient-success mb-3">
                                 <h6 class="text-sm mb-1 text-uppercase font-weight-bold text-white">Total Amount Awarded</h6>
                                 <h4 class="font-weight-bold mb-0 text-white">KES {{ number_format($quoteStats->awarded_amount, 0) }}</h4>
@@ -83,7 +83,7 @@
                                 </small>
                             </div>
                         </div>
-                        <div class="col-xl-3 col-sm-6">
+                        <div class="col-lg-3 col-md-6 col-12">
                             <div class="border-radius-md text-center p-3 bg-gradient-danger mb-3">
                                 <h6 class="text-sm mb-1 text-uppercase font-weight-bold text-white">Total Amount Rejected</h6>
                                 <h4 class="font-weight-bold mb-0 text-white">KES {{ number_format($quoteStats->rejected_amount, 0) }}</h4>
@@ -96,7 +96,7 @@
                                 </small>
                             </div>
                         </div>
-                        <div class="col-xl-3 col-sm-6">
+                        <div class="col-lg-3 col-md-6 col-12">
                             <div class="border-radius-md text-center p-3 bg-gradient-secondary mb-3">
                                 <h6 class="text-sm mb-1 text-uppercase font-weight-bold text-white">Total Amount Pending</h6>
                                 <h4 class="font-weight-bold mb-0 text-white">KES {{ number_format($quoteStats->pending_amount, 0) }}</h4>
@@ -110,7 +110,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- RFQ Processor Performance Table -->
                     <h6 class="mb-3">RFQ Processor Performance</h6>
                     <div class="table-responsive p-0">
@@ -179,7 +179,7 @@
     </div>
 
     <!-- Export Options -->
-    @if(auth()->user()->isRfqApprover())
+    <!-- @if(auth()->user()->isRfqApprover())
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
@@ -199,11 +199,11 @@
             </div>
         </div>
     </div>
-    @endif
+    @endif -->
 
     <!-- Quote Analytics -->
     <div class="row">
-        <div class="col-xl-8">
+        <div class="col-lg-8 col-12 mb-4">
             <div class="card h-100">
                 <div class="card-header pb-0">
                     <h6>Quote Success Rate Trends</h6>
@@ -220,7 +220,7 @@
         </div>
 
         <!-- Approval Stats -->
-        <div class="col-xl-4">
+        <div class="col-lg-4 col-12">
             <div class="card h-100">
                 <div class="card-header pb-0">
                     <h6>Approval Metrics</h6>
@@ -355,6 +355,7 @@
 </div>
 
 @push('dashboard')
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <script>
     window.addEventListener('load', function() {
         var ctx = document.getElementById("quote-trends-chart").getContext("2d");
@@ -581,6 +582,34 @@
 </script>
 
 <style>
+    body {
+        overflow-x: hidden;
+    }
+
+    .container-fluid {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+
+    @media (max-width: 768px) {
+        .container-fluid {
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+
+        .card-body {
+            padding: 1rem 0.75rem;
+        }
+
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+
+        .form-control, .form-select {
+            font-size: 14px;
+        }
+    }
+
     .card {
         transition: all 0.3s ease;
     }
