@@ -92,14 +92,70 @@ class QuoteController extends Controller
             ->paginate(10)
             ->withQueryString();
 
+        // Get performance stats for cards
+        $stats = $this->getQuoteStats($request);
+
         if ($request->ajax()) {
             return response()->json([
-                'html' => view('quotes.partials.quote-list', compact('quotes'))->render(),
+                'html' => view('quotes.partials.quote-list', compact('quotes', 'stats'))->render(),
                 'pagination' => $quotes->links()->toHtml()
             ]);
         }
 
-        return view('quotes.index', compact('quotes'));
+        return view('quotes.index', compact('quotes', 'stats'));
+    }
+
+    private function getQuoteStats($request = null)
+    {
+        $query = Auth::user()->role === 'rfq_approver' || Auth::user()->role === 'lpo_admin'
+            ? Quote::query()
+            : Quote::where('user_id', Auth::id());
+
+        // Apply same filters as main query
+        if ($request && $request->filled('search')) {
+            $query->where('title', 'like', '%' . $request->search . '%');
+        }
+        if ($request && $request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request && $request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request && $request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+        if ($request && $request->filled('product_item')) {
+            $query->whereHas('items', function($q) use ($request) {
+                $q->where('item', 'like', '%' . $request->product_item . '%');
+            });
+        }
+        if ($request && $request->filled('marketer')) {
+            $query->whereHas('user', function($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->marketer . '%')
+                    ->orWhere('email', 'like', '%' . $request->marketer . '%');
+            });
+        }
+
+        $totalQuotes = $query->count();
+        $totalAmount = $query->sum('amount');
+        $completedQuotes = (clone $query)->where('status', 'completed')->count();
+        $completedAmount = (clone $query)->where('status', 'completed')->sum('amount');
+        $pendingQuotes = (clone $query)->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance'])->count();
+        $pendingAmount = (clone $query)->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance'])->sum('amount');
+        $rejectedQuotes = (clone $query)->where('status', 'rejected')->count();
+        $rejectedAmount = (clone $query)->where('status', 'rejected')->sum('amount');
+
+        return (object)[
+            'total_quotes' => $totalQuotes,
+            'total_amount' => $totalAmount,
+            'completed_quotes' => $completedQuotes,
+            'completed_amount' => $completedAmount,
+            'pending_quotes' => $pendingQuotes,
+            'pending_amount' => $pendingAmount,
+            'rejected_quotes' => $rejectedQuotes,
+            'rejected_amount' => $rejectedAmount,
+            'success_rate' => $totalQuotes > 0 ? round(($completedQuotes / $totalQuotes) * 100, 1) : 0
+        ];
     }
 
     public function create()

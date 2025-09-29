@@ -92,6 +92,7 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
     // Reports route
     Route::get('reports', [ReportsController::class, 'index'])->middleware('role:rfq_approver')->name('reports.index');
     Route::get('reports/user/{user}', [ReportsController::class, 'userReport'])->middleware('role:rfq_approver')->name('reports.user');
+    Route::get('reports/search-quotes', [ReportsController::class, 'searchQuotes'])->middleware('role:rfq_approver')->name('reports.search-quotes');
 
     // Company Files routes
     Route::get('company-files', [CompanyFileController::class, 'index'])->name('company-files.index');

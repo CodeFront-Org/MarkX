@@ -1,3 +1,35 @@
+<!-- Performance Overview Cards -->
+<div class="row mb-3">
+    <div class="col-lg-3 col-md-6 col-12">
+        <div class="border-radius-md text-center p-2 bg-gradient-warning mb-2">
+            <h6 class="text-xs mb-1 text-uppercase font-weight-bold text-white">Total</h6>
+            <h5 class="font-weight-bold mb-0 text-white">{{ $stats->total_quotes }}</h5>
+            <small class="text-white opacity-8">KES {{ number_format($stats->total_amount/1000, 0) }}K</small>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 col-12">
+        <div class="border-radius-md text-center p-2 bg-gradient-success mb-2">
+            <h6 class="text-xs mb-1 text-uppercase font-weight-bold text-white">Completed</h6>
+            <h5 class="font-weight-bold mb-0 text-white">{{ $stats->completed_quotes }}</h5>
+            <small class="text-white opacity-8">{{ $stats->success_rate }}% success</small>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 col-12">
+        <div class="border-radius-md text-center p-2 bg-gradient-secondary mb-2">
+            <h6 class="text-xs mb-1 text-uppercase font-weight-bold text-white">Pending</h6>
+            <h5 class="font-weight-bold mb-0 text-white">{{ $stats->pending_quotes }}</h5>
+            <small class="text-white opacity-8">{{ $stats->total_quotes > 0 ? round(($stats->pending_quotes / $stats->total_quotes) * 100, 1) : 0 }}% pending</small>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 col-12">
+        <div class="border-radius-md text-center p-2 bg-gradient-danger mb-2">
+            <h6 class="text-xs mb-1 text-uppercase font-weight-bold text-white">Rejected</h6>
+            <h5 class="font-weight-bold mb-0 text-white">{{ $stats->rejected_quotes }}</h5>
+            <small class="text-white opacity-8">{{ $stats->total_quotes > 0 ? round(($stats->rejected_quotes / $stats->total_quotes) * 100, 1) : 0 }}% rejected</small>
+        </div>
+    </div>
+</div>
+
 @if($quotes->isEmpty())
     <div class="text-center py-4">
         <p class="text-secondary">No quotes found matching your search criteria.</p>

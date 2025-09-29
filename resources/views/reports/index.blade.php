@@ -1,5 +1,17 @@
 @extends('layouts.user_type.auth')
 
+@push('css')
+<style>
+.select2-container--bootstrap-5 .select2-selection--single {
+    height: 38px !important;
+}
+.select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+    line-height: 36px !important;
+    font-size: 14px !important;
+}
+</style>
+@endpush
+
 @section('content')
 <div class="container-fluid py-2 py-md-4" style="max-width: 100vw; overflow-x: hidden;">
     <!-- Flash Messages -->
@@ -28,9 +40,9 @@
                 <div class="card-header pb-0">
                     <div class="d-flex justify-content-between align-items-center">
                         <h6>Performance Overview</h6>
-                        <form method="GET" class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-3">
-                            <div class="form-group mb-2 mb-md-0">
-                                <select name="user_filter" class="form-select form-select-sm" style="width: 100%; min-width: 150px; height: 31px;">
+                        <form method="GET" class="d-flex flex-wrap align-items-end gap-3">
+                            <div class="form-group">
+                                <select name="user_filter" class="form-select form-select-sm" style="width: 150px; height: 38px;">
                                     <option value="">All Processors</option>
                                     @foreach($rfq_processors as $processor)
                                         <option value="{{ $processor->id }}" {{ request('user_filter') == $processor->id ? 'selected' : '' }}>
@@ -39,17 +51,30 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="form-group mb-2 mb-md-0">
+                            <div class="form-group">
+                                <label class="form-label text-xs mb-1">Quote Title</label>
+                                <select name="quote_title_filter" id="quote-title-select" class="form-select form-select-sm" style="width: 200px; height: 38px;">
+                                    @if(request('quote_title_filter'))
+                                        @php
+                                            $selectedQuote = \App\Models\Quote::find(request('quote_title_filter'));
+                                        @endphp
+                                        @if($selectedQuote)
+                                            <option value="{{ $selectedQuote->id }}" selected>{{ $selectedQuote->title }}</option>
+                                        @endif
+                                    @endif
+                                </select>
+                            </div>
+                            <div class="form-group">
                                 <label class="form-label text-xs mb-1">From Date</label>
-                                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}" style="width: 100%; min-width: 140px; height: 31px;">
+                                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}" style="width: 140px; height: 38px;">
                             </div>
-                            <div class="form-group mb-2 mb-md-0">
+                            <div class="form-group">
                                 <label class="form-label text-xs mb-1">To Date</label>
-                                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}" style="width: 100%; min-width: 140px; height: 31px;">
+                                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}" style="width: 140px; height: 38px;">
                             </div>
-                            <div class="form-group mb-0 d-flex gap-2">
-                                <button type="submit" class="btn btn-primary btn-sm px-3" style="height: 31px;">Filter</button>
-                                <a href="{{ route('reports.index') }}" class="btn btn-outline-secondary btn-sm px-3" style="height: 31px; line-height: 19px;">Reset</a>
+                            <div class="form-group d-flex gap-2">
+                                <button type="submit" class="btn btn-primary btn-sm px-3" style="height: 38px;">FILTER</button>
+                                <a href="{{ route('reports.index') }}" class="btn btn-outline-secondary btn-sm px-3" style="height: 38px; line-height: 26px;">RESET</a>
                             </div>
                         </form>
                     </div>
@@ -62,6 +87,7 @@
                                 <h6 class="text-sm mb-1 text-uppercase font-weight-bold text-white">Total Amount Quoted</h6>
                                 <h4 class="font-weight-bold mb-0 text-white">KES {{ number_format($quoteStats->total_quoted_amount, 0) }}</h4>
                                 <small class="text-white opacity-8">
+                                    {{ $quoteStats->total_quotes }} quotes (100%)<br>
                                     @if(request('user_filter'))
                                         {{ $rfq_processors->where('id', request('user_filter'))->first()->name ?? 'Selected user' }} total
                                     @else
@@ -75,6 +101,7 @@
                                 <h6 class="text-sm mb-1 text-uppercase font-weight-bold text-white">Total Amount Awarded</h6>
                                 <h4 class="font-weight-bold mb-0 text-white">KES {{ number_format($quoteStats->awarded_amount, 0) }}</h4>
                                 <small class="text-white opacity-8">
+                                    {{ $quoteStats->successful_quotes }} quotes ({{ $quoteStats->success_rate }}%)<br>
                                     @if(request('user_filter'))
                                         {{ $rfq_processors->where('id', request('user_filter'))->first()->name ?? 'Selected user' }} total
                                     @else
@@ -88,6 +115,7 @@
                                 <h6 class="text-sm mb-1 text-uppercase font-weight-bold text-white">Total Amount Rejected</h6>
                                 <h4 class="font-weight-bold mb-0 text-white">KES {{ number_format($quoteStats->rejected_amount, 0) }}</h4>
                                 <small class="text-white opacity-8">
+                                    {{ $quoteStats->rejected_quotes }} quotes ({{ $quoteStats->total_quotes > 0 ? round(($quoteStats->rejected_quotes / $quoteStats->total_quotes) * 100, 1) : 0 }}%)<br>
                                     @if(request('user_filter'))
                                         {{ $rfq_processors->where('id', request('user_filter'))->first()->name ?? 'Selected user' }} total
                                     @else
@@ -101,6 +129,7 @@
                                 <h6 class="text-sm mb-1 text-uppercase font-weight-bold text-white">Total Amount Pending</h6>
                                 <h4 class="font-weight-bold mb-0 text-white">KES {{ number_format($quoteStats->pending_amount, 0) }}</h4>
                                 <small class="text-white opacity-8">
+                                    {{ $quoteStats->pending_quotes }} quotes ({{ $quoteStats->total_quotes > 0 ? round(($quoteStats->pending_quotes / $quoteStats->total_quotes) * 100, 1) : 0 }}%)<br>
                                     @if(request('user_filter'))
                                         {{ $rfq_processors->where('id', request('user_filter'))->first()->name ?? 'Selected user' }} total
                                     @else
@@ -357,6 +386,33 @@
 @push('dashboard')
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <script>
+    // Initialize Select2 for quote title search
+    $(document).ready(function() {
+        $('#quote-title-select').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'Search quote by title...',
+            allowClear: true,
+            width: '100%',
+            ajax: {
+                url: '{{ route("reports.search-quotes") }}',
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return {
+                        q: params.term
+                    };
+                },
+                processResults: function (data) {
+                    return {
+                        results: data.results
+                    };
+                },
+                cache: true
+            },
+            minimumInputLength: 2
+        });
+    });
+
     window.addEventListener('load', function() {
         var ctx = document.getElementById("quote-trends-chart").getContext("2d");
         var chart = ctx.canvas;

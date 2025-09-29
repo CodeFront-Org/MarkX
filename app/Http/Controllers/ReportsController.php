@@ -57,6 +57,26 @@ class ReportsController extends Controller
         ));
     }
 
+    public function searchQuotes(\Illuminate\Http\Request $request)
+    {
+        $search = $request->get('q', '');
+        
+        $quotes = Quote::where('title', 'LIKE', "%{$search}%")
+            ->select('id', 'title')
+            ->limit(20)
+            ->get()
+            ->map(function($quote) {
+                return [
+                    'id' => $quote->id,
+                    'text' => $quote->title
+                ];
+            });
+        
+        return response()->json([
+            'results' => $quotes
+        ]);
+    }
+
     public function userReport(User $user)
     {
         if ($user->role !== 'rfq_processor') {
@@ -92,6 +112,9 @@ class ReportsController extends Controller
                 }
                 if ($request && $request->filled('date_to')) {
                     $query->whereDate('created_at', '<=', $request->date_to);
+                }
+                if ($request && $request->filled('quote_title_filter')) {
+                    $query->where('id', $request->quote_title_filter);
                 }
             }])
             ->get()
@@ -207,6 +230,9 @@ class ReportsController extends Controller
             if ($request && $request->filled('user_filter')) {
                 $query->where('user_id', $request->user_filter);
             }
+            if ($request && $request->filled('quote_title_filter')) {
+                $query->where('id', $request->quote_title_filter);
+            }
             
             $query->groupBy(DB::connection()->getDriverName() === 'sqlite' 
                 ? DB::raw("strftime('%Y-%m', created_at)") 
@@ -319,6 +345,9 @@ class ReportsController extends Controller
         if ($request && $request->filled('user_filter')) {
             $query->where('user_id', $request->user_filter);
         }
+        if ($request && $request->filled('quote_title_filter')) {
+            $query->where('id', $request->quote_title_filter);
+        }
         
         $totalQuotes = $query->count();
         $successfulQuotes = (clone $query)->where('status', 'completed')->count();
@@ -412,6 +441,11 @@ class ReportsController extends Controller
             $closingQuery->where('user_id', $request->user_filter);
             $historyQuery->where('user_id', $request->user_filter);
         }
+        if ($request && $request->filled('quote_title_filter')) {
+            $approvalQuery->where('id', $request->quote_title_filter);
+            $closingQuery->where('id', $request->quote_title_filter);
+            $historyQuery->where('id', $request->quote_title_filter);
+        }
         
         return (object)[
             'avg_approval_time' => $approvalQuery->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, approved_at)) as avg_hours')
@@ -464,6 +498,10 @@ class ReportsController extends Controller
         if ($request && $request->filled('user_filter')) {
             $totalQuery->where('user_id', $request->user_filter);
             $approvedQuery->where('user_id', $request->user_filter);
+        }
+        if ($request && $request->filled('quote_title_filter')) {
+            $totalQuery->where('id', $request->quote_title_filter);
+            $approvedQuery->where('id', $request->quote_title_filter);
         }
         
         $total = $totalQuery->count();

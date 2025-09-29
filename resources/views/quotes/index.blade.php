@@ -58,7 +58,7 @@
                 </div>
 
                 <div id="search-results">
-                    @include('quotes.partials.quote-list')
+                    @include('quotes.partials.quote-list', ['stats' => $stats])
                 </div>
 
                 <div class="d-flex justify-content-center" id="pagination-links">
