@@ -138,12 +138,14 @@ class QuoteController extends Controller
 
         $totalQuotes = $query->count();
         $totalAmount = $query->sum('amount');
-        $completedQuotes = (clone $query)->where('status', 'completed')->count();
-        $completedAmount = (clone $query)->where('status', 'completed')->sum('amount');
-        $pendingQuotes = (clone $query)->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance'])->count();
-        $pendingAmount = (clone $query)->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance'])->sum('amount');
+        $completedQuotes = (clone $query)->whereIn('status', ['completed', 'approved'])->count();
+        $completedAmount = (clone $query)->whereIn('status', ['completed', 'approved'])->sum('amount');
+        $pendingQuotes = (clone $query)->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance', 'pending'])->count();
+        $pendingAmount = (clone $query)->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance', 'pending'])->sum('amount');
         $rejectedQuotes = (clone $query)->where('status', 'rejected')->count();
         $rejectedAmount = (clone $query)->where('status', 'rejected')->sum('amount');
+        
+
 
         return (object)[
             'total_quotes' => $totalQuotes,
@@ -154,7 +156,9 @@ class QuoteController extends Controller
             'pending_amount' => $pendingAmount,
             'rejected_quotes' => $rejectedQuotes,
             'rejected_amount' => $rejectedAmount,
-            'success_rate' => $totalQuotes > 0 ? round(($completedQuotes / $totalQuotes) * 100, 1) : 0
+            'completed_percentage' => $totalQuotes > 0 ? round(($completedQuotes / $totalQuotes) * 100, 1) : 0,
+            'pending_percentage' => $totalQuotes > 0 ? round(($pendingQuotes / $totalQuotes) * 100, 1) : 0,
+            'rejected_percentage' => $totalQuotes > 0 ? round(($rejectedQuotes / $totalQuotes) * 100, 1) : 0
         ];
     }
 
