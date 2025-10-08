@@ -50,7 +50,14 @@
             <div class="card mb-4">
                 <div class="card-header pb-0 d-flex justify-content-between align-items-center">
                     <h6>Quote Details</h6>
-                    <div>
+                    <div class="d-flex align-items-center">
+                        <div class="badge bg-light text-dark border me-3 px-3 py-2" style="font-size: 0.875rem; font-weight: 600;">
+                            <i class="fas fa-check-circle me-1"></i>
+                            Approved: {{ $quote->items->where('approved', true)->count() }}/{{ $quote->items->count() }}
+                            @if($quote->items->count() > 0)
+                                <span class="text-muted ms-1">({{ number_format(($quote->items->where('approved', true)->count() / $quote->items->count()) * 100, 1) }}%)</span>
+                            @endif
+                        </div>
                         @if($quote->status === 'pending_manager' && auth()->user()->isRfqApprover())
                         <form action="{{ route('quotes.approve', $quote) }}" method="POST" class="d-inline">
                             @csrf
@@ -148,6 +155,7 @@
                             <p class="text-sm">{{ $quote->user->name }}</p>
                         </div>
                     </div>
+
                     <div class="row mt-4">
                         <div class="col-md-12">
                             <p class="text-sm mb-0 text-uppercase font-weight-bold">Description</p>
