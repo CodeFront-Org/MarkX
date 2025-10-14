@@ -42,7 +42,7 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
     })->name('rtl');
 
     // User management routes
-    Route::middleware('role:rfq_approver')->group(function () {
+    Route::middleware('role:rfq_approver,lpo_admin')->group(function () {
         Route::get('user-management', [UserController::class, 'index'])->name('user-management');
         Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
         Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
@@ -90,9 +90,9 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
     Route::post('quotes/{quote}/return-for-editing', [QuoteController::class, 'returnForEditing'])->name('quotes.return-for-editing');
 
     // Reports route
-    Route::get('reports', [ReportsController::class, 'index'])->middleware('role:rfq_approver')->name('reports.index');
-    Route::get('reports/user/{user}', [ReportsController::class, 'userReport'])->middleware('role:rfq_approver')->name('reports.user');
-    Route::get('reports/search-quotes', [ReportsController::class, 'searchQuotes'])->middleware('role:rfq_approver')->name('reports.search-quotes');
+    Route::get('reports', [ReportsController::class, 'index'])->middleware('role:rfq_approver,lpo_admin')->name('reports.index');
+    Route::get('reports/user/{user}', [ReportsController::class, 'userReport'])->middleware('role:rfq_approver,lpo_admin')->name('reports.user');
+    Route::get('reports/search-quotes', [ReportsController::class, 'searchQuotes'])->middleware('role:rfq_approver,lpo_admin')->name('reports.search-quotes');
 
     // Company Files routes
     Route::get('company-files', [CompanyFileController::class, 'index'])->name('company-files.index');
@@ -100,8 +100,8 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
     Route::get('company-files/{fileName}/download', [CompanyFileController::class, 'download'])->name('company-files.download');
     Route::delete('company-files/{fileName}', [CompanyFileController::class, 'destroy'])->middleware(['auth', 'role:rfq_approver'])->name('company-files.destroy');
 
-    // Manager Only Routes
-    Route::middleware('role:rfq_approver')->group(function () {
+    // Admin Routes (RFQ Approver and LPO Admin)
+    Route::middleware('role:rfq_approver,lpo_admin')->group(function () {
         // Export routes
         Route::get('exports/data', [ExportController::class, 'exportData'])->name('exports.data');
         

@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="container-fluid py-4">
-    @if(auth()->user()->hasRole('manager'))
+    @if(in_array(auth()->user()->role, ['rfq_approver', 'lpo_admin']))
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
@@ -34,20 +34,17 @@
                         <table class="table align-items-center mb-0">
                             <thead>
                                 <tr>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">ID</th>
                                     <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Name</th>
                                     <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Email</th>
                                     <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Role</th>
+                                    <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach($users as $user)
                                 <tr>
-                                    <td class="ps-4">
-                                        <a href="{{ route('users.edit', $user->id) }}" class="text-xs font-weight-bold mb-0">{{ $user->id }}</a>
-                                    </td>
                                     <td class="text-center">
-                                        <a href="{{ route('users.edit', $user->id) }}" class="text-xs font-weight-bold mb-0 text-secondary">{{ $user->name }}</a>
+                                        <p class="text-xs font-weight-bold mb-0">{{ $user->name }}</p>
                                     </td>
                                     <td class="text-center">
                                         <p class="text-xs font-weight-bold mb-0">{{ $user->email }}</p>
@@ -55,10 +52,60 @@
                                     <td class="text-center">
                                         <p class="text-xs font-weight-bold mb-0">{{ ucfirst($user->role) }}</p>
                                     </td>
+                                    <td class="text-center">
+                                        <a href="{{ route('users.edit', $user->id) }}" class="btn btn-sm bg-gradient-secondary me-1">View</a>
+                                        @if(in_array(auth()->user()->role, ['rfq_approver', 'lpo_admin']))
+                                        <a href="{{ route('users.edit', $user->id) }}" class="btn btn-sm bg-gradient-info me-1">Edit</a>
+                                        @if(auth()->id() !== $user->id)
+                                        <form action="{{ route('users.destroy', $user->id) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm bg-gradient-danger" onclick="return confirm('Are you sure you want to delete this user?')">
+                                                Delete
+                                            </button>
+                                        </form>
+                                        @endif
+                                        @endif
+                                    </td>
                                 </tr>
                                 @endforeach
                             </tbody>
                         </table>
+                    </div>
+                </div>
+                <div class="card-footer px-3 pt-0 pb-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="text-sm text-muted">
+                            Showing {{ $users->firstItem() ?? 0 }} to {{ $users->lastItem() ?? 0 }} of {{ $users->total() }} users
+                        </div>
+                        @if ($users->hasPages())
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0">
+                                {{-- Previous Page Link --}}
+                                @if ($users->onFirstPage())
+                                    <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                                @else
+                                    <li class="page-item"><a class="page-link" href="{{ $users->previousPageUrl() }}">Previous</a></li>
+                                @endif
+
+                                {{-- Pagination Elements --}}
+                                @foreach ($users->getUrlRange(1, $users->lastPage()) as $page => $url)
+                                    @if ($page == $users->currentPage())
+                                        <li class="page-item active"><span class="page-link bg-gradient-primary">{{ $page }}</span></li>
+                                    @else
+                                        <li class="page-item"><a class="page-link" href="{{ $url }}">{{ $page }}</a></li>
+                                    @endif
+                                @endforeach
+
+                                {{-- Next Page Link --}}
+                                @if ($users->hasMorePages())
+                                    <li class="page-item"><a class="page-link" href="{{ $users->nextPageUrl() }}">Next</a></li>
+                                @else
+                                    <li class="page-item disabled"><span class="page-link">Next</span></li>
+                                @endif
+                            </ul>
+                        </nav>
+                        @endif
                     </div>
                 </div>
             </div>
