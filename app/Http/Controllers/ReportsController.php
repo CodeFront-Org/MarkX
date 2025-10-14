@@ -124,8 +124,9 @@ class ReportsController extends Controller
                 $total_amount = $quotes->sum('amount');
                 
                 // Status breakdown
-                $pending = $quotes->where('status', 'pending_manager');
-                $approved = $quotes->where('status', 'approved');
+                $pending_manager = $quotes->where('status', 'pending_manager');
+                $pending_customer = $quotes->where('status', 'pending_customer');
+                $pending_finance = $quotes->where('status', 'pending_finance');
                 $completed = $quotes->where('status', 'completed');
                 $rejected = $quotes->where('status', 'rejected');
                 $awarded = $quotes->where('status', 'completed');
@@ -147,15 +148,20 @@ class ReportsController extends Controller
                         ]
                     ],
                     'status_breakdown' => [
-                        'pending' => [
-                            'count' => $pending->count(),
-                            'amount' => $pending->sum('amount'),
-                            'percentage' => $total_quotes > 0 ? round(($pending->count() / $total_quotes) * 100, 1) : 0
+                        'pending_manager' => [
+                            'count' => $pending_manager->count(),
+                            'amount' => $pending_manager->sum('amount'),
+                            'percentage' => $total_quotes > 0 ? round(($pending_manager->count() / $total_quotes) * 100, 1) : 0
                         ],
-                        'approved' => [
-                            'count' => $approved->count(),
-                            'amount' => $approved->sum('amount'),
-                            'percentage' => $total_quotes > 0 ? round(($approved->count() / $total_quotes) * 100, 1) : 0
+                        'pending_customer' => [
+                            'count' => $pending_customer->count(),
+                            'amount' => $pending_customer->sum('amount'),
+                            'percentage' => $total_quotes > 0 ? round(($pending_customer->count() / $total_quotes) * 100, 1) : 0
+                        ],
+                        'pending_finance' => [
+                            'count' => $pending_finance->count(),
+                            'amount' => $pending_finance->sum('amount'),
+                            'percentage' => $total_quotes > 0 ? round(($pending_finance->count() / $total_quotes) * 100, 1) : 0
                         ],
                         'completed' => [
                             'count' => $completed->count(),

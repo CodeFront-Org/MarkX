@@ -174,7 +174,7 @@ table, th, td {
                 <tr>
                     <td style="border: none; vertical-align: top; text-align: left; width: 40%;">
                           <div class="quote-date" style="font-weight: bold; margin-bottom: 6px;">
-                            {{ $quote->created_at->isoFormat('Do MMMM, YYYY') }}
+                            {{ now()->isoFormat('Do MMMM, YYYY') }}
                         </div>
                     </td>
                     <td style="border: none; vertical-align: top; text-align: right; width: 40%;">

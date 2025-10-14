@@ -150,7 +150,9 @@
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Total Quotes</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Total Amount</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Completed</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Pending</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Pending Manager</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Pending Customer</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Pending Finance</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Rejected</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Success Rate</th>
                                 </tr>
@@ -182,9 +184,23 @@
                                         </td>
                                         <td>
                                             <p class="text-sm mb-0">
-                                                {{ $stat->status_breakdown['pending']['count'] }}
-                                                <small class="text-muted">({{ $stat->status_breakdown['pending']['percentage'] }}%)</small><br>
-                                                <small class="text-warning">KES {{ number_format($stat->status_breakdown['pending']['amount'], 0) }}</small>
+                                                {{ $stat->status_breakdown['pending_manager']['count'] }}
+                                                <small class="text-muted">({{ $stat->status_breakdown['pending_manager']['percentage'] }}%)</small><br>
+                                                <small class="text-warning">KES {{ number_format($stat->status_breakdown['pending_manager']['amount'], 0) }}</small>
+                                            </p>
+                                        </td>
+                                        <td>
+                                            <p class="text-sm mb-0">
+                                                {{ $stat->status_breakdown['pending_customer']['count'] }}
+                                                <small class="text-muted">({{ $stat->status_breakdown['pending_customer']['percentage'] }}%)</small><br>
+                                                <small class="text-info">KES {{ number_format($stat->status_breakdown['pending_customer']['amount'], 0) }}</small>
+                                            </p>
+                                        </td>
+                                        <td>
+                                            <p class="text-sm mb-0">
+                                                {{ $stat->status_breakdown['pending_finance']['count'] }}
+                                                <small class="text-muted">({{ $stat->status_breakdown['pending_finance']['percentage'] }}%)</small><br>
+                                                <small class="text-primary">KES {{ number_format($stat->status_breakdown['pending_finance']['amount'], 0) }}</small>
                                             </p>
                                         </td>
                                         <td>
