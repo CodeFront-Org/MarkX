@@ -90,9 +90,15 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
     Route::post('quotes/{quote}/return-for-editing', [QuoteController::class, 'returnForEditing'])->name('quotes.return-for-editing');
 
     // Reports route
-    Route::get('reports', [ReportsController::class, 'index'])->middleware('role:rfq_approver,lpo_admin')->name('reports.index');
-    Route::get('reports/user/{user}', [ReportsController::class, 'userReport'])->middleware('role:rfq_approver,lpo_admin')->name('reports.user');
-    Route::get('reports/search-quotes', [ReportsController::class, 'searchQuotes'])->middleware('role:rfq_approver,lpo_admin')->name('reports.search-quotes');
+  // Reports routes
+  Route::middleware(['role:lpo_admin'])
+    ->prefix('reports')
+    ->name('reports.')
+    ->group(function () {
+        Route::get('/', [ReportsController::class, 'index'])->name('index');
+        Route::get('/user/{user}', [ReportsController::class, 'userReport'])->name('user');
+        Route::get('/search-quotes', [ReportsController::class, 'searchQuotes'])->name('search-quotes');
+    });
 
     // Company Files routes
     Route::get('company-files', [CompanyFileController::class, 'index'])->name('company-files.index');
