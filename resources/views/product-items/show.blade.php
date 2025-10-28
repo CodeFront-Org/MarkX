@@ -145,7 +145,16 @@
                     <!-- Quote History -->
                     <div class="card">
                         <div class="card-header pb-0">
-                            <h6>Quote History</h6>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6>Quote History</h6>
+                                <form method="GET" class="d-flex align-items-center">
+                                    <select name="approved_status" class="form-select form-select-sm me-2" style="width: 150px;" onchange="this.form.submit()">
+                                        <option value="">All Status</option>
+                                        <option value="approved" {{ request('approved_status') === 'approved' ? 'selected' : '' }}>Approved Only</option>
+                                        <option value="not_approved" {{ request('approved_status') === 'not_approved' ? 'selected' : '' }}>Not Approved Only</option>
+                                    </select>
+                                </form>
+                            </div>
                         </div>
                         <div class="card-body">
                             @if($quoteHistory->count() > 0)
@@ -154,11 +163,13 @@
                                     <thead>
                                         <tr>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Quote</th>
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Marketer</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Date</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Quantity</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Price</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Amount</th>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Status</th>
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Quote Status</th>
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Item Status</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Comment</th>
                                         </tr>
                                     </thead>
@@ -178,6 +189,9 @@
                                                 </div>
                                             </td>
                                             <td>
+                                                <p class="text-sm font-weight-bold mb-0">{{ $quote->marketer_name ?: '-' }}</p>
+                                            </td>
+                                            <td>
                                                 <p class="text-sm font-weight-bold mb-0">{{ \Carbon\Carbon::parse($quote->created_at)->format('d M Y') }}</p>
                                             </td>
                                             <td>
@@ -190,8 +204,16 @@
                                                 <p class="text-sm font-weight-bold mb-0">KES {{ number_format($quote->amount, 2) }}</p>
                                             </td>
                                             <td>
+                                                <span class="badge badge-sm bg-gradient-{{ 
+                                                    $quote->quote_status === 'completed' ? 'success' : 
+                                                    ($quote->quote_status === 'rejected' ? 'danger' : 'warning') 
+                                                }}">
+                                                    {{ ucwords(str_replace('_', ' ', $quote->quote_status)) }}
+                                                </span>
+                                            </td>
+                                            <td>
                                                 <span class="badge badge-sm bg-gradient-{{ $quote->approved ? 'success' : 'warning' }}">
-                                                    {{ $quote->approved ? 'APPROVED' : 'PENDING' }}
+                                                    {{ $quote->approved ? 'APPROVED' : 'NOT APPROVED' }}
                                                 </span>
                                             </td>
                                             <td>

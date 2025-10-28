@@ -119,7 +119,7 @@ class ProductItemController extends Controller
             ->with('success', 'Product item updated successfully.');
     }
 
-    public function show($itemName)
+    public function show($itemName, Request $request)
     {
         $isUsingMysql = DB::connection()->getDriverName() === 'mysql';
         $groupConcatFunction = $isUsingMysql ? 'GROUP_CONCAT' : 'GROUP_CONCAT';
@@ -147,23 +147,35 @@ class ProductItemController extends Controller
             abort(404, 'Product item not found');
         }
 
-        // Get quote history
-        $quoteHistory = DB::table('quotes as q')
+        // Get quote history with approval filter
+        $quoteHistoryQuery = DB::table('quotes as q')
             ->select(
                 'q.id as quote_id',
                 'q.reference',
                 'q.title',
+                'q.status as quote_status',
                 'q.created_at',
                 'qi.quantity',
                 'qi.price',
                 'qi.approved',
                 'qi.comment',
+                'u.name as marketer_name',
                 DB::raw('qi.quantity * qi.price as amount')
             )
             ->join('quote_items as qi', 'q.id', '=', 'qi.quote_id')
-            ->where('qi.item', $itemName)
-            ->orderBy('q.created_at', 'desc')
-            ->get();
+            ->leftJoin('users as u', 'q.user_id', '=', 'u.id')
+            ->where('qi.item', $itemName);
+
+        // Apply approval status filter
+        if ($request->filled('approved_status')) {
+            if ($request->approved_status === 'approved') {
+                $quoteHistoryQuery->where('qi.approved', 1);
+            } elseif ($request->approved_status === 'not_approved') {
+                $quoteHistoryQuery->where('qi.approved', 0);
+            }
+        }
+
+        $quoteHistory = $quoteHistoryQuery->orderBy('q.created_at', 'desc')->get();
 
         // Calculate approval counts
         $approvedCount = $quoteHistory->where('approved', 1)->count();

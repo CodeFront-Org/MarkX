@@ -19,29 +19,29 @@ class ReportsController extends Controller
     {
         // Get RFQ processor performance stats
         $rfqProcessorStats = $this->getRfqProcessorStats($request);
-        
+
         // Get product performance
         [$topProducts, $lowProducts] = $this->getProductPerformance();
-        
+
         // Get quote trends and stats
         $quoteTrends = $this->getQuoteTrends($request);
         $quoteStats = $this->getQuoteStats($request);
-        
+
         // Get approval stats
         $approvalStats = $this->getApprovalStats($request);
-        
+
         // Get quote aging
         $quoteAging = $this->getQuoteAging();
-        
+
         // Get top clients
         $topClients = $this->getTopClients();
-        
+
         // Get financial health metrics
         $financialHealth = $this->getFinancialHealthMetrics();
-        
+
         // Get all RFQ processors for export modal
         $rfq_processors = User::where('role', 'rfq_processor')->get();
-        
+
         return view('reports.index', compact(
             'rfqProcessorStats',
             'topProducts',
@@ -60,7 +60,7 @@ class ReportsController extends Controller
     public function searchQuotes(\Illuminate\Http\Request $request)
     {
         $search = $request->get('q', '');
-        
+
         $quotes = Quote::where('title', 'LIKE', "%{$search}%")
             ->select('id', 'title')
             ->limit(20)
@@ -71,7 +71,7 @@ class ReportsController extends Controller
                     'text' => $quote->title
                 ];
             });
-        
+
         return response()->json([
             'results' => $quotes
         ]);
@@ -83,16 +83,24 @@ class ReportsController extends Controller
             return redirect()->route('reports.index')->with('error', 'User reports are only available for RFQ processors.');
         }
 
-        $quotes = $user->quotes()->with('items')->latest()->paginate(15);
-        
+        $quotes = $user->quotes()->with(['items' => function($query) {
+            $query->selectRaw('quote_id, SUM(quantity * price) as total_amount')
+                  ->groupBy('quote_id');
+        }])->latest()->paginate(15);
+
+        $userQuoteIds = $user->quotes()->pluck('id');
+        $totalAmount = QuoteItem::whereIn('quote_id', $userQuoteIds)->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0;
+        $completedQuotes = $user->quotes()->where('status', 'completed')->count();
+        $totalQuotes = $user->quotes()->count();
+
         $stats = (object)[
-            'total_quotes' => $user->quotes()->count(),
-            'total_amount' => $user->quotes()->sum('amount'),
-            'completed_quotes' => $user->quotes()->where('status', 'completed')->count(),
+            'total_quotes' => $totalQuotes,
+            'total_amount' => $totalAmount,
+            'completed_quotes' => $completedQuotes,
             'pending_quotes' => $user->quotes()->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance'])->count(),
             'rejected_quotes' => $user->quotes()->where('status', 'rejected')->count(),
-            'avg_quote_value' => $user->quotes()->avg('amount') ?? 0,
-            'success_rate' => $user->quotes()->count() > 0 ? ($user->quotes()->where('status', 'completed')->count() / $user->quotes()->count()) * 100 : 0
+            'avg_quote_value' => $totalQuotes > 0 ? $totalAmount / $totalQuotes : 0,
+            'success_rate' => $totalQuotes > 0 ? ($completedQuotes / $totalQuotes) * 100 : 0
         ];
 
         return view('reports.user', compact('user', 'quotes', 'stats'));
@@ -101,11 +109,11 @@ class ReportsController extends Controller
     private function getRfqProcessorStats($request = null)
     {
         $query = User::where('role', 'rfq_processor');
-        
+
         if ($request && $request->filled('user_filter')) {
             $query->where('id', $request->user_filter);
         }
-        
+
         return $query->with(['quotes' => function($query) use ($request) {
                 if ($request && $request->filled('date_from')) {
                     $query->whereDate('created_at', '>=', $request->date_from);
@@ -121,8 +129,11 @@ class ReportsController extends Controller
             ->map(function($processor) {
                 $quotes = $processor->quotes;
                 $total_quotes = $quotes->count();
-                $total_amount = $quotes->sum('amount');
-                
+
+                // Calculate amounts based on approved items
+                $quoteIds = $quotes->pluck('id');
+                $total_amount = QuoteItem::whereIn('quote_id', $quoteIds)->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0;
+
                 // Status breakdown
                 $pending_manager = $quotes->where('status', 'pending_manager');
                 $pending_customer = $quotes->where('status', 'pending_customer');
@@ -130,7 +141,7 @@ class ReportsController extends Controller
                 $completed = $quotes->where('status', 'completed');
                 $rejected = $quotes->where('status', 'rejected');
                 $awarded = $quotes->where('status', 'completed');
-                
+
                 return (object)[
                     'name' => $processor->name,
                     'total_quotes' => $total_quotes,
@@ -143,34 +154,34 @@ class ReportsController extends Controller
                         ],
                         'awarded' => [
                             'count' => $awarded->count(),
-                            'amount' => $awarded->sum('amount'),
+                            'amount' => QuoteItem::whereIn('quote_id', $awarded->pluck('id'))->where('approved', true)->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0,
                             'percentage' => $total_quotes > 0 ? round(($awarded->count() / $total_quotes) * 100, 1) : 0
                         ]
                     ],
                     'status_breakdown' => [
                         'pending_manager' => [
                             'count' => $pending_manager->count(),
-                            'amount' => $pending_manager->sum('amount'),
+                            'amount' => QuoteItem::whereIn('quote_id', $pending_manager->pluck('id'))->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0,
                             'percentage' => $total_quotes > 0 ? round(($pending_manager->count() / $total_quotes) * 100, 1) : 0
                         ],
                         'pending_customer' => [
                             'count' => $pending_customer->count(),
-                            'amount' => $pending_customer->sum('amount'),
+                            'amount' => QuoteItem::whereIn('quote_id', $pending_customer->pluck('id'))->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0,
                             'percentage' => $total_quotes > 0 ? round(($pending_customer->count() / $total_quotes) * 100, 1) : 0
                         ],
                         'pending_finance' => [
                             'count' => $pending_finance->count(),
-                            'amount' => $pending_finance->sum('amount'),
+                            'amount' => QuoteItem::whereIn('quote_id', $pending_finance->pluck('id'))->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0,
                             'percentage' => $total_quotes > 0 ? round(($pending_finance->count() / $total_quotes) * 100, 1) : 0
                         ],
                         'completed' => [
                             'count' => $completed->count(),
-                            'amount' => $completed->sum('amount'),
+                            'amount' => QuoteItem::whereIn('quote_id', $completed->pluck('id'))->where('approved', true)->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0,
                             'percentage' => $total_quotes > 0 ? round(($completed->count() / $total_quotes) * 100, 1) : 0
                         ],
                         'rejected' => [
                             'count' => $rejected->count(),
-                            'amount' => $rejected->sum('amount'),
+                            'amount' => QuoteItem::whereIn('quote_id', $rejected->pluck('id'))->where('approved', false)->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0,
                             'percentage' => $total_quotes > 0 ? round(($rejected->count() / $total_quotes) * 100, 1) : 0
                         ]
                     ]
@@ -213,17 +224,18 @@ class ReportsController extends Controller
         // Add debug logging for SQL query
         try {
             $query = Quote::select(
-                DB::raw(DB::connection()->getDriverName() === 'sqlite' 
-                    ? "strftime('%Y-%m', created_at) as month" 
-                    : "DATE_FORMAT(created_at, '%Y-%m') as month"),
-                DB::raw('COUNT(*) as total'),
-                DB::raw('SUM(CASE WHEN status = "completed" THEN 1 ELSE 0 END) as approved'),
-                DB::raw('SUM(amount) as total_amount'),
-                DB::raw('SUM(CASE WHEN status = "completed" THEN amount ELSE 0 END) as approved_amount'),
-                DB::raw('AVG(CASE WHEN status = "completed" THEN amount ELSE NULL END) as avg_amount'),
-                DB::raw('COUNT(DISTINCT user_id) as unique_users')
-            );
-            
+                DB::raw(DB::connection()->getDriverName() === 'sqlite'
+                    ? "strftime('%Y-%m', quotes.created_at) as month"
+                    : "DATE_FORMAT(quotes.created_at, '%Y-%m') as month"),
+                DB::raw('COUNT(DISTINCT quotes.id) as total'),
+                DB::raw('SUM(CASE WHEN quotes.status = "completed" THEN 1 ELSE 0 END) as approved'),
+                DB::raw('COALESCE(SUM(quote_items.quantity * quote_items.price), 0) as total_amount'),
+                DB::raw('COALESCE(SUM(CASE WHEN quote_items.approved = 1 THEN quote_items.quantity * quote_items.price ELSE 0 END), 0) as approved_amount'),
+                DB::raw('AVG(CASE WHEN quote_items.approved = 1 THEN quote_items.quantity * quote_items.price ELSE NULL END) as avg_amount'),
+                DB::raw('COUNT(DISTINCT quotes.user_id) as unique_users')
+            )
+            ->leftJoin('quote_items', 'quotes.id', '=', 'quote_items.quote_id');
+
             // Apply date filters if provided
             if ($request && $request->filled('date_from')) {
                 $query->whereDate('created_at', '>=', $request->date_from);
@@ -239,40 +251,40 @@ class ReportsController extends Controller
             if ($request && $request->filled('quote_title_filter')) {
                 $query->where('id', $request->quote_title_filter);
             }
-            
-            $query->groupBy(DB::connection()->getDriverName() === 'sqlite' 
-                ? DB::raw("strftime('%Y-%m', created_at)") 
-                : DB::raw("DATE_FORMAT(created_at, '%Y-%m')"));
-            
+
+            $query->groupBy(DB::connection()->getDriverName() === 'sqlite'
+                ? DB::raw("strftime('%Y-%m', quotes.created_at)")
+                : DB::raw("DATE_FORMAT(quotes.created_at, '%Y-%m')"));
+
             // Get the raw SQL query for debugging
             $sql = $query->toSql();
             $bindings = $query->getBindings();
-            
+
             // Replace ? with actual values for easier debugging
             foreach ($bindings as $binding) {
                 $value = is_numeric($binding) ? $binding : "'".$binding."'";
                 $sql = preg_replace('/\?/', $value, $sql, 1);
             }
-            
+
             \Log::info('Quote trends SQL: ' . $sql);
-            
+
             $trends = $query->orderBy('month')->get();
-            
+
             \Log::info('Quote trends count: ' . $trends->count());
             \Log::info('Quote trends data: ' . json_encode($trends));
-            
+
             $currentYear = now()->format('Y');
-            
+
             // If we have fewer than 3 data points, add some synthetic data points
             // to ensure charts display properly
             if ($trends->count() < 3) {
                 $currentMonth = now();
                 $existingMonths = $trends->pluck('month')->toArray();
-                
+
                 // Add previous months if needed
                 for ($i = 1; $i <= 3; $i++) {
                     $prevMonth = now()->subMonths($i)->format('Y-m');
-                    
+
                     if (!in_array($prevMonth, $existingMonths)) {
                         $trends->push((object)[
                             'month' => $prevMonth,
@@ -285,11 +297,11 @@ class ReportsController extends Controller
                         ]);
                     }
                 }
-                
+
                 // Sort by month to ensure chronological order
                 $trends = $trends->sortBy('month')->values();
             }
-            
+
             return (object)[
                 'labels' => $trends->pluck('month'),
                 'success_rates' => $trends->map(function($trend) {
@@ -340,7 +352,7 @@ class ReportsController extends Controller
     private function getQuoteStats($request = null)
     {
         $query = Quote::query();
-        
+
         // Apply both date and user filters
         if ($request && $request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
@@ -354,7 +366,7 @@ class ReportsController extends Controller
         if ($request && $request->filled('quote_title_filter')) {
             $query->where('id', $request->quote_title_filter);
         }
-        
+
         $totalQuotes = $query->count();
         $successfulQuotes = (clone $query)->where('status', 'completed')->count();
 
@@ -370,7 +382,7 @@ class ReportsController extends Controller
         // Get monthly trend using database-agnostic date functions
         $currentMonth = now()->format('Y-m');
         $lastMonth = now()->subMonth()->format('Y-m');
-        
+
         // Use database-specific date formatting
         if (DB::connection()->getDriverName() === 'sqlite') {
             $monthlyTrend = Quote::whereRaw("strftime('%Y-%m', created_at) = ?", [$currentMonth])
@@ -386,26 +398,35 @@ class ReportsController extends Controller
                 ->count();
         }
 
-        $trendPercentage = $lastMonthTrend > 0 
-            ? (($monthlyTrend - $lastMonthTrend) / $lastMonthTrend) * 100 
+        $trendPercentage = $lastMonthTrend > 0
+            ? (($monthlyTrend - $lastMonthTrend) / $lastMonthTrend) * 100
             : 0;
 
-        // Calculate amounts by status with date filtering
-        $totalQuotedQuery = clone $query;
-        $totalQuotedAmount = $totalQuotedQuery->sum('amount') ?? 0;
-        
-        // Debug logging
-        \Log::info('Total Quoted Query SQL: ' . $totalQuotedQuery->toSql());
-        \Log::info('Total Quoted Query Bindings: ' . json_encode($totalQuotedQuery->getBindings()));
-        \Log::info('Total Quoted Amount: ' . $totalQuotedAmount);
-        
-        $awardedAmount = (clone $query)->where('status', 'completed')->sum('amount') ?? 0;
-        $rejectedAmount = (clone $query)->where('status', 'rejected')->sum('amount') ?? 0;
-        $pendingAmount = (clone $query)->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance'])->sum('amount') ?? 0;
+        // Calculate amounts based on approved items only
+        $baseItemQuery = QuoteItem::join('quotes', 'quote_items.quote_id', '=', 'quotes.id');
+
+        // Apply same filters to item query
+        if ($request && $request->filled('date_from')) {
+            $baseItemQuery->whereDate('quotes.created_at', '>=', $request->date_from);
+        }
+        if ($request && $request->filled('date_to')) {
+            $baseItemQuery->whereDate('quotes.created_at', '<=', $request->date_to);
+        }
+        if ($request && $request->filled('user_filter')) {
+            $baseItemQuery->where('quotes.user_id', $request->user_filter);
+        }
+        if ($request && $request->filled('quote_title_filter')) {
+            $baseItemQuery->where('quotes.id', $request->quote_title_filter);
+        }
+
+        $totalQuotedAmount = (clone $baseItemQuery)->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0;
+        $awardedAmount = (clone $baseItemQuery)->where('quote_items.approved', true)->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0;
+        $rejectedAmount = (clone $baseItemQuery)->where('quote_items.approved', false)->whereIn('quotes.status', ['rejected'])->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0;
+        $pendingAmount = (clone $baseItemQuery)->where('quote_items.approved', false)->whereIn('quotes.status', ['pending_manager', 'pending_customer', 'pending_finance'])->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0;
 
         return (object)[
             'success_rate' => $totalQuotes > 0 ? round(($successfulQuotes / $totalQuotes) * 100, 1) : 0,
-            'avg_value' => (clone $query)->where('status', 'completed')->avg('amount') ?? 0,
+            'avg_value' => $successfulQuotes > 0 ? $awardedAmount / $successfulQuotes : 0,
             'total_value' => $awardedAmount,
             'total_quoted_amount' => $totalQuotedAmount,
             'awarded_amount' => $awardedAmount,
@@ -420,8 +441,8 @@ class ReportsController extends Controller
             'pending_quotes' => (clone $query)->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance'])->count(),
             'rejected_quotes' => (clone $query)->where('status', 'rejected')->count(),
             'average_quotes_per_day' => round($totalQuotes / 365, 1),
-            'highest_value' => Quote::whereIn('status', ['approved', 'completed'])->max('amount') ?? 0,
-            'lowest_value' => Quote::whereIn('status', ['approved', 'completed'])->min('amount') ?? 0
+            'highest_value' => QuoteItem::where('approved', true)->selectRaw('MAX(quantity * price)')->value('MAX(quantity * price)') ?? 0,
+            'lowest_value' => QuoteItem::where('approved', true)->selectRaw('MIN(quantity * price)')->value('MIN(quantity * price)') ?? 0
         ];
     }
 
@@ -430,7 +451,7 @@ class ReportsController extends Controller
         $approvalQuery = Quote::whereNotNull('approved_at')->where('status', '!=', 'rejected');
         $closingQuery = Quote::whereNotNull('closed_at')->where('status', 'completed');
         $historyQuery = Quote::with(['approver', 'closer'])->whereNotNull('approved_at');
-        
+
         // Apply filters
         if ($request && $request->filled('date_from')) {
             $approvalQuery->whereDate('created_at', '>=', $request->date_from);
@@ -452,19 +473,19 @@ class ReportsController extends Controller
             $closingQuery->where('id', $request->quote_title_filter);
             $historyQuery->where('id', $request->quote_title_filter);
         }
-        
+
         return (object)[
             'avg_approval_time' => $approvalQuery->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, approved_at)) as avg_hours')
                 ->value('avg_hours') ?? 0,
-            
+
             'avg_closing_time' => $closingQuery->selectRaw('AVG(TIMESTAMPDIFF(HOUR, approved_at, closed_at)) as avg_hours')
                 ->value('avg_hours') ?? 0,
-            
+
             'approval_rates' => [
                 'manager' => $this->calculateRateByRole('manager', $request),
                 'lpo_admin' => $this->calculateRateByRole('lpo_admin', $request)
             ],
-            
+
             'approval_history' => $historyQuery->orderBy('approved_at', 'desc')
                 ->limit(10)
                 ->get()
@@ -487,11 +508,11 @@ class ReportsController extends Controller
         $totalQuery = Quote::whereHas('approver', function($query) use ($role) {
             $query->where('role', $role);
         });
-        
+
         $approvedQuery = Quote::whereHas('approver', function($query) use ($role) {
             $query->where('role', $role);
         })->where('status', 'completed');
-        
+
         // Apply filters
         if ($request && $request->filled('date_from')) {
             $totalQuery->whereDate('created_at', '>=', $request->date_from);
@@ -509,10 +530,10 @@ class ReportsController extends Controller
             $totalQuery->where('id', $request->quote_title_filter);
             $approvedQuery->where('id', $request->quote_title_filter);
         }
-        
+
         $total = $totalQuery->count();
         $approved = $approvedQuery->count();
-        
+
         return $total > 0 ? ($approved / $total) * 100 : 0;
     }
 
@@ -558,7 +579,7 @@ class ReportsController extends Controller
         $daysFunction = DB::connection()->getDriverName() === 'sqlite'
             ? "ROUND(julianday(updated_at) - julianday(created_at))"
             : "TIMESTAMPDIFF(DAY, created_at, updated_at)";
-            
+
         return User::where('role', 'client')
             ->withCount(['quotes as total_quotes'])
             ->withCount(['quotes as approved_quotes' => function($query) {
@@ -577,14 +598,14 @@ class ReportsController extends Controller
             ->map(function($client) {
                 // Calculate reliability score based on quote history
                 $reliabilityScore = $this->calculateClientReliabilityScore($client);
-                
+
                 return (object)[
                     'name' => $client->name,
                     'total_value' => $client->total_value ?? 0,
                     'total_quotes' => $client->total_quotes,
                     'approved_quotes' => $client->approved_quotes,
-                    'approval_rate' => $client->total_quotes > 0 
-                        ? ($client->approved_quotes / $client->total_quotes) * 100 
+                    'approval_rate' => $client->total_quotes > 0
+                        ? ($client->approved_quotes / $client->total_quotes) * 100
                         : 0,
                     'avg_response_time' => round($client->avg_response_days ?? 0),
                     'reliability_score' => $reliabilityScore
@@ -594,18 +615,18 @@ class ReportsController extends Controller
 
     private function calculateClientReliabilityScore($client)
     {
-        $approvalRate = $client->total_quotes > 0 
-            ? ($client->approved_quotes / $client->total_quotes) * 100 
+        $approvalRate = $client->total_quotes > 0
+            ? ($client->approved_quotes / $client->total_quotes) * 100
             : 0;
-        
-        $responseTimeScore = $client->avg_response_days 
+
+        $responseTimeScore = $client->avg_response_days
             ? max(0, 100 - ($client->avg_response_days * 2)) // Deduct points for slower responses
             : 50; // Default score if no data
-        
+
         // Weight the factors (adjust weights as needed)
         $approvalWeight = 0.7;
         $responseTimeWeight = 0.3;
-        
+
         return ($approvalRate * $approvalWeight) + ($responseTimeScore * $responseTimeWeight);
     }
 
@@ -616,16 +637,16 @@ class ReportsController extends Controller
         $lastMonth = now()->subMonth()->format('Y-m');
         $currentYear = now()->format('Y');
         $lastYear = now()->subYear()->format('Y');
-        
+
         // Use database-specific date formatting
         $dateFormat = DB::connection()->getDriverName() === 'sqlite'
             ? "strftime('%Y-%m', created_at)"
             : "DATE_FORMAT(created_at, '%Y-%m')";
-            
+
         $yearFormat = DB::connection()->getDriverName() === 'sqlite'
             ? "strftime('%Y', created_at)"
             : "YEAR(created_at)";
-        
+
         // Calculate current month's projected revenue
         $currentMonthRevenue = Quote::whereIn('status', ['approved', 'completed'])
             ->whereRaw("$dateFormat = ?", [$currentMonth])
@@ -637,8 +658,8 @@ class ReportsController extends Controller
             ->sum('amount');
 
         // Calculate growth rate
-        $growthRate = $lastMonthRevenue > 0 
-            ? (($currentMonthRevenue - $lastMonthRevenue) / $lastMonthRevenue) * 100 
+        $growthRate = $lastMonthRevenue > 0
+            ? (($currentMonthRevenue - $lastMonthRevenue) / $lastMonthRevenue) * 100
             : 0;
 
         // Project monthly revenue based on current month's daily average
@@ -647,7 +668,7 @@ class ReportsController extends Controller
         $projected_monthly_revenue = $daysPassed > 0
             ? ($currentMonthRevenue / $daysPassed) * $daysInMonth
             : $currentMonthRevenue;
-            
+
         // Calculate outstanding amount from pending quotes
         $outstanding_amount = Quote::where('status', 'pending')
             ->sum('amount');
@@ -655,26 +676,26 @@ class ReportsController extends Controller
         // Calculate conversion rate (approval rate) for current month
         $thisMonthQuotes = Quote::whereRaw("$dateFormat = ?", [$currentMonth])
             ->count();
-        
+
         $thisMonthApproved = Quote::whereRaw("$dateFormat = ?", [$currentMonth])
             ->whereIn('status', ['approved', 'completed'])
             ->count();
 
-        $conversion_rate = $thisMonthQuotes > 0 
-            ? ($thisMonthApproved / $thisMonthQuotes) * 100 
+        $conversion_rate = $thisMonthQuotes > 0
+            ? ($thisMonthApproved / $thisMonthQuotes) * 100
             : 0;
 
         // Get YTD and previous year metrics
         $ytdRevenue = Quote::whereIn('status', ['approved', 'completed'])
             ->whereRaw("$yearFormat = ?", [$currentYear])
             ->sum('amount');
-        
+
         $lastYearRevenue = Quote::whereIn('status', ['approved', 'completed'])
             ->whereRaw("$yearFormat = ?", [$lastYear])
             ->sum('amount');
 
-        $yearOverYearGrowth = $lastYearRevenue > 0 
-            ? (($ytdRevenue - $lastYearRevenue) / $lastYearRevenue) * 100 
+        $yearOverYearGrowth = $lastYearRevenue > 0
+            ? (($ytdRevenue - $lastYearRevenue) / $lastYearRevenue) * 100
             : 0;
 
         // Average daily revenue
@@ -695,8 +716,8 @@ class ReportsController extends Controller
             'avg_daily_revenue' => round($avgDailyRevenue),
             'days_in_month' => $daysInMonth,
             'days_passed' => $daysPassed,
-            'target_achievement' => $projected_monthly_revenue > 0 
-                ? ($currentMonthRevenue / $projected_monthly_revenue) * 100 
+            'target_achievement' => $projected_monthly_revenue > 0
+                ? ($currentMonthRevenue / $projected_monthly_revenue) * 100
                 : 0,
             'average_quote_size' => Quote::whereIn('status', ['approved', 'completed'])
                 ->whereRaw("$yearFormat = ?", [$currentYear])
