@@ -75,7 +75,7 @@
               </g>
             </svg>
           </div>
-          <span class="nav-link-text ms-1">Reports</span>
+          <span class="nav-link-text ms-1">Reports v1</span>
         </a>
       </li>
       @endcan
