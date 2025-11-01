@@ -191,4 +191,43 @@ class ProductItemController extends Controller
         return redirect()->route('product-items.index')
             ->with('success', 'Product item deleted successfully.');
     }
+
+    public function reports(Request $request)
+    {
+        $query = QuoteItem::select([
+            'quote_items.*',
+            'quotes.title as quote_title',
+            'quotes.status as quote_status'
+        ])
+        ->join('quotes', 'quotes.id', '=', 'quote_items.quote_id');
+
+        // Apply filters
+        if ($request->filled('item')) {
+            $query->where('quote_items.item', 'like', '%' . $request->item . '%');
+        }
+
+        if ($request->filled('quote_title')) {
+            $query->where('quotes.title', 'like', '%' . $request->quote_title . '%');
+        }
+
+        if ($request->filled('status')) {
+            if ($request->status === 'approved') {
+                $query->where('quote_items.approved', 1);
+            } elseif ($request->status === 'not_approved') {
+                $query->where('quote_items.approved', 0);
+            }
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('quotes.created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('quotes.created_at', '<=', $request->date_to);
+        }
+
+        $quoteItems = $query->orderBy('quotes.created_at', 'desc')->paginate(50)->withQueryString();
+
+        return view('product-items.reports', compact('quoteItems'));
+    }
 }

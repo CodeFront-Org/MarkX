@@ -12,7 +12,7 @@ class ReportsController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['auth', 'role:lpo_admin']);
+        $this->middleware(['auth', 'role:rfq_approver,lpo_admin']);
     }
 
     public function index(\Illuminate\Http\Request $request)

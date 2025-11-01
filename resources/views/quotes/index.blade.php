@@ -28,7 +28,7 @@
                             <select name="status" class="form-select search-input">
                                 <option value="">All Status</option>
                                 <option value="pending_manager" {{ request('status') == 'pending_manager' ? 'selected' : '' }}>Pending RFQ Approver</option>
-                                <option value="pending_customer" {{ request('status') == 'pending_customer' ? 'selected' : '' }}>Pending Customer Review</option>
+                                <option value="pending_customer" {{ request('status') == 'pending_customer' ? 'selected' : '' }}>Awaiting Customer Response</option>
                                 <option value="pending_finance" {{ request('status') == 'pending_finance' ? 'selected' : '' }}>Pending LPO Admin Review</option>
                                 <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed</option>
                                 <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Rejected</option>

@@ -10,7 +10,14 @@ class CheckRole
 {
     public function handle(Request $request, Closure $next, string $role): Response
     {
-        if (!$request->user() || !$request->user()->hasRole($role)) {
+        if (!$request->user()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $allowedRoles = explode(',', $role);
+        $userRole = $request->user()->role;
+        
+        if (!in_array($userRole, $allowedRoles)) {
             abort(403, 'Unauthorized action.');
         }
 

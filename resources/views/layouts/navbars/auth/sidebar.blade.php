@@ -124,6 +124,15 @@
       </li>
 
       <li class="nav-item">
+        <a class="nav-link {{ Request::is('product-reports*') ? 'active' : '' }}" href="{{ route('product-reports.index') }}">
+          <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+            <i class="fas fa-chart-bar text-md opacity-10" style="color: #000;" aria-hidden="true"></i>
+          </div>
+          <span class="nav-link-text ms-1">Product Report</span>
+        </a>
+      </li>
+
+      <li class="nav-item">
         <a class="nav-link {{ Request::is('suppliers*') ? 'active' : '' }}" href="{{ route('suppliers.index') }}">
           <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
             <i class="fas fa-industry text-md opacity-10" style="color: #000;" aria-hidden="true"></i>

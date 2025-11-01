@@ -67,7 +67,11 @@
                             ($quote->status === 'pending_customer' ? 'warning' : 
                             ($quote->status === 'pending_finance' ? 'primary' : 'danger'))) 
                         }}">
-                            {{ ucwords(str_replace('_', ' ', $quote->status)) }}
+                            @if($quote->status === 'pending_customer')
+                                Awaiting Customer Response
+                            @else
+                                {{ ucwords(str_replace('_', ' ', $quote->status)) }}
+                            @endif
                             ({{ $quote->created_at->diffInDays() }} days)
                         </span>
                     </td>

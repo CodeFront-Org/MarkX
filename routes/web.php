@@ -91,7 +91,7 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
 
     // Reports route
   // Reports routes
-  Route::middleware(['role:lpo_admin'])
+  Route::middleware(['role:rfq_approver,lpo_admin'])
     ->prefix('reports')
     ->name('reports.')
     ->group(function () {
@@ -127,6 +127,9 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
     // Product Items routes
     Route::get('product-items/{itemName}/details', [ProductItemController::class, 'show'])->name('product-items.details')->where('itemName', '.*');
     Route::resource('product-items', ProductItemController::class)->except(['show']);
+    
+    // Product Reports routes
+    Route::get('product-reports', [ProductItemController::class, 'reports'])->name('product-reports.index');
     
     // Supplier routes
     Route::resource('suppliers', SupplierController::class);
