@@ -178,7 +178,12 @@ table, th, td {
                         </div>
                     </td>
                     <td style="border: none; vertical-align: top; text-align: right; width: 40%;">
-                         <h3 style="margin: 0; color: #000000;">#IVD{{ $quote->reference ?? $quote->id }}</h3>
+                        <div style="margin-bottom: 10px;">
+                            <strong>Our Reference:</strong> <span style="color: #000000; font-size: 24px; font-weight: bold;">#IVD{{ $quote->reference ?? $quote->id }}</span>
+                        </div>
+                        <div>
+                            <strong>Your Reference:</strong> <span style="border-bottom: 1px solid #000; display: inline-block; width: 150px; height: 20px;">&nbsp;</span>
+                        </div>
                     </td>
                 </tr>
 
