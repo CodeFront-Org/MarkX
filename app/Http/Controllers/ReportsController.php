@@ -141,6 +141,12 @@ class ReportsController extends Controller
                 $completed = $quotes->where('status', 'completed');
                 $rejected = $quotes->where('status', 'rejected');
                 $awarded = $quotes->where('status', 'completed');
+                
+                // Calculate approved amount for completed/awarded quotes
+                $completedApprovedAmount = QuoteItem::whereIn('quote_id', $completed->pluck('id'))
+                    ->where('approved', true)
+                    ->selectRaw('SUM(quantity * price)')
+                    ->value('SUM(quantity * price)') ?? 0;
 
                 return (object)[
                     'name' => $processor->name,
@@ -154,7 +160,7 @@ class ReportsController extends Controller
                         ],
                         'awarded' => [
                             'count' => $awarded->count(),
-                            'amount' => QuoteItem::whereIn('quote_id', $awarded->pluck('id'))->where('approved', true)->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0,
+                            'amount' => $completedApprovedAmount,
                             'percentage' => $total_quotes > 0 ? round(($awarded->count() / $total_quotes) * 100, 1) : 0
                         ]
                     ],
@@ -176,7 +182,7 @@ class ReportsController extends Controller
                         ],
                         'completed' => [
                             'count' => $completed->count(),
-                            'amount' => QuoteItem::whereIn('quote_id', $completed->pluck('id'))->where('approved', true)->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0,
+                            'amount' => $completedApprovedAmount,
                             'percentage' => $total_quotes > 0 ? round(($completed->count() / $total_quotes) * 100, 1) : 0
                         ],
                         'rejected' => [

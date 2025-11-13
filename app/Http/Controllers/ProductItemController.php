@@ -197,9 +197,11 @@ class ProductItemController extends Controller
         $query = QuoteItem::select([
             'quote_items.*',
             'quotes.title as quote_title',
-            'quotes.status as quote_status'
+            'quotes.status as quote_status',
+            'users.name as marketer_name'
         ])
-        ->join('quotes', 'quotes.id', '=', 'quote_items.quote_id');
+        ->join('quotes', 'quotes.id', '=', 'quote_items.quote_id')
+        ->join('users', 'users.id', '=', 'quotes.user_id');
 
         // Apply filters
         if ($request->filled('item')) {
@@ -208,6 +210,10 @@ class ProductItemController extends Controller
 
         if ($request->filled('quote_title')) {
             $query->where('quotes.title', 'like', '%' . $request->quote_title . '%');
+        }
+
+        if ($request->filled('marketer')) {
+            $query->where('users.name', 'like', '%' . $request->marketer . '%');
         }
 
         if ($request->filled('status')) {

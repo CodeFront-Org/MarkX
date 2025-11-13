@@ -138,8 +138,22 @@ class QuoteController extends Controller
 
         $totalQuotes = $query->count();
         $totalAmount = $query->sum('amount');
-        $completedQuotes = (clone $query)->whereIn('status', ['completed', 'approved'])->count();
-        $completedAmount = (clone $query)->whereIn('status', ['completed', 'approved'])->sum('amount');
+        
+        // Get quotes with completed/approved status that have at least one approved item
+        $completedQuoteIds = (clone $query)->whereIn('status', ['completed', 'approved'])
+            ->whereHas('items', function($q) {
+                $q->where('approved', true);
+            })
+            ->pluck('id');
+            
+        $completedQuotes = $completedQuoteIds->count();
+        
+        // Calculate completed amount from approved items only
+        $completedAmount = QuoteItem::whereIn('quote_id', $completedQuoteIds)
+            ->where('approved', true)
+            ->selectRaw('SUM(quantity * price)')
+            ->value('SUM(quantity * price)') ?? 0;
+            
         $pendingQuotes = (clone $query)->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance', 'pending'])->count();
         $pendingAmount = (clone $query)->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance', 'pending'])->sum('amount');
         $rejectedQuotes = (clone $query)->where('status', 'rejected')->count();
