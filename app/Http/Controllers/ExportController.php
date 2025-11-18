@@ -48,8 +48,14 @@ class ExportController extends Controller
             // Generate response in requested format
             $response = $this->generateResponse($formattedData, $request->format, $request->type);
 
-            // Flash success message to session
+            // For file downloads, we need to handle the success message differently
+            // Store success message in session and return the download response
             session()->flash('export_success', ucfirst($request->type) . ' data exported successfully as ' . strtoupper($request->format));
+            
+            // Add a header to trigger page refresh after download
+            if ($response instanceof \Symfony\Component\HttpFoundation\BinaryFileResponse) {
+                $response->headers->set('X-Export-Success', 'true');
+            }
 
             return $response;
         } catch (\Exception $e) {
@@ -162,7 +168,7 @@ class ExportController extends Controller
                         'ID' => $quote->id,
                         'Date' => $quote->created_at->format('Y-m-d'),
                         'RFQ Processor' => $quote->user ? $quote->user->name : 'N/A',
-                        'Status' => $quote->status,
+                        'Status' => $this->formatStatusForDisplay($quote->status),
                         'Amount' => $quote->amount,
                         'Items Count' => $quote->items ? $quote->items->count() : 0,
                     ];
@@ -315,6 +321,18 @@ class ExportController extends Controller
         }
         
         return $formattedData;
+    }
+
+    private function formatStatusForDisplay($status)
+    {
+        return match($status) {
+            'pending_manager' => 'Pending RFQ Approver',
+            'pending_customer' => 'Awaiting Customer Response',
+            'pending_finance' => 'Pending LPO Admin Review',
+            'completed' => 'Completed',
+            'rejected' => 'Rejected',
+            default => ucwords(str_replace('_', ' ', $status))
+        };
     }
 
     private function arrayToCsv($data)

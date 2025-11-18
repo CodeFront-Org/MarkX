@@ -68,8 +68,10 @@
                             <label class="form-control-label">Status Filter</label>
                             <select name="status" class="form-control">
                                 <option value="">All Statuses</option>
-                                <option value="pending">Pending</option>
-                                <option value="approved">Approved</option>
+                                <option value="pending_manager">Pending RFQ Approver</option>
+                                <option value="pending_customer">Awaiting Customer Response</option>
+                                <option value="pending_finance">Pending LPO Admin Review</option>
+                                <option value="completed">Completed</option>
                                 <option value="rejected">Rejected</option>
                             </select>
                         </div>

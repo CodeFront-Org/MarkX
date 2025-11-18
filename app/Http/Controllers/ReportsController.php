@@ -361,10 +361,24 @@ class ReportsController extends Controller
 
         // Apply both date and user filters
         if ($request && $request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
+            $query->where(function($q) use ($request) {
+                $q->whereDate('created_at', '>=', $request->date_from)
+                  ->orWhere(function($subQ) use ($request) {
+                      $subQ->where('status', 'completed')
+                           ->whereNotNull('closed_at')
+                           ->whereDate('closed_at', '>=', $request->date_from);
+                  });
+            });
         }
         if ($request && $request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
+            $query->where(function($q) use ($request) {
+                $q->whereDate('created_at', '<=', $request->date_to)
+                  ->orWhere(function($subQ) use ($request) {
+                      $subQ->where('status', 'completed')
+                           ->whereNotNull('closed_at')
+                           ->whereDate('closed_at', '<=', $request->date_to);
+                  });
+            });
         }
         if ($request && $request->filled('user_filter')) {
             $query->where('user_id', $request->user_filter);
@@ -413,10 +427,24 @@ class ReportsController extends Controller
 
         // Apply same filters to item query
         if ($request && $request->filled('date_from')) {
-            $baseItemQuery->whereDate('quotes.created_at', '>=', $request->date_from);
+            $baseItemQuery->where(function($q) use ($request) {
+                $q->whereDate('quotes.created_at', '>=', $request->date_from)
+                  ->orWhere(function($subQ) use ($request) {
+                      $subQ->where('quotes.status', 'completed')
+                           ->whereNotNull('quotes.closed_at')
+                           ->whereDate('quotes.closed_at', '>=', $request->date_from);
+                  });
+            });
         }
         if ($request && $request->filled('date_to')) {
-            $baseItemQuery->whereDate('quotes.created_at', '<=', $request->date_to);
+            $baseItemQuery->where(function($q) use ($request) {
+                $q->whereDate('quotes.created_at', '<=', $request->date_to)
+                  ->orWhere(function($subQ) use ($request) {
+                      $subQ->where('quotes.status', 'completed')
+                           ->whereNotNull('quotes.closed_at')
+                           ->whereDate('quotes.closed_at', '<=', $request->date_to);
+                  });
+            });
         }
         if ($request && $request->filled('user_filter')) {
             $baseItemQuery->where('quotes.user_id', $request->user_filter);

@@ -224,7 +224,7 @@
     </div>
 
     <!-- Export Options -->
-    <!-- @if(auth()->user()->isRfqApprover())
+    @if(auth()->user()->isRfqApprover() || auth()->user()->isLpoAdmin())
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
@@ -244,7 +244,7 @@
             </div>
         </div>
     </div>
-    @endif -->
+    @endif
 
     <!-- Quote Analytics -->
     <div class="row">
