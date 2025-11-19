@@ -58,6 +58,14 @@ class QuoteController extends Controller
             $query->whereDate('closed_at', '<=', $request->date_to);
         }
 
+        // Submitted to customer date filter
+        if ($request->filled('submitted_from')) {
+            $query->whereDate('submitted_to_customer_at', '>=', $request->submitted_from);
+        }
+        if ($request->filled('submitted_to')) {
+            $query->whereDate('submitted_to_customer_at', '<=', $request->submitted_to);
+        }
+
         // Search by product item name
         if ($request->filled('product_item')) {
             $query->whereHas('items', function($q) use ($request) {
@@ -123,6 +131,12 @@ class QuoteController extends Controller
         }
         if ($request && $request->filled('date_to')) {
             $query->whereDate('closed_at', '<=', $request->date_to);
+        }
+        if ($request && $request->filled('submitted_from')) {
+            $query->whereDate('submitted_to_customer_at', '>=', $request->submitted_from);
+        }
+        if ($request && $request->filled('submitted_to')) {
+            $query->whereDate('submitted_to_customer_at', '<=', $request->submitted_to);
         }
         if ($request && $request->filled('product_item')) {
             $query->whereHas('items', function($q) use ($request) {
@@ -438,7 +452,8 @@ class QuoteController extends Controller
                 $quote->update([
                     'status' => 'pending_customer',
                     'approved_at' => now(),
-                    'approved_by' => auth()->id()
+                    'approved_by' => auth()->id(),
+                    'submitted_to_customer_at' => now()
                 ]);
                 return redirect()->route('quotes.show', $quote)
                     ->with('success', 'Quote approved. RFQ Processor can now download PDF for customer review.');

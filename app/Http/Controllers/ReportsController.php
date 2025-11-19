@@ -89,7 +89,10 @@ class ReportsController extends Controller
         }])->latest()->paginate(15);
 
         $userQuoteIds = $user->quotes()->pluck('id');
-        $totalAmount = QuoteItem::whereIn('quote_id', $userQuoteIds)->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0;
+        $totalAmount = QuoteItem::whereIn('quote_id', $userQuoteIds)
+            ->where('approved', true)
+            ->selectRaw('SUM(quantity * price)')
+            ->value('SUM(quantity * price)') ?? 0;
         $completedQuotes = $user->quotes()->where('status', 'completed')->count();
         $totalQuotes = $user->quotes()->count();
 
@@ -117,22 +120,16 @@ class ReportsController extends Controller
         return $query->with(['quotes' => function($query) use ($request) {
                 if ($request && $request->filled('date_from')) {
                     $query->where(function($q) use ($request) {
-                        $q->whereDate('created_at', '>=', $request->date_from)
-                          ->orWhere(function($subQ) use ($request) {
-                              $subQ->where('status', 'completed')
-                                   ->whereNotNull('closed_at')
-                                   ->whereDate('closed_at', '>=', $request->date_from);
-                          });
+                        $q->where('status', 'completed')
+                          ->whereNotNull('closed_at')
+                          ->whereDate('closed_at', '>=', $request->date_from);
                     });
                 }
                 if ($request && $request->filled('date_to')) {
                     $query->where(function($q) use ($request) {
-                        $q->whereDate('created_at', '<=', $request->date_to)
-                          ->orWhere(function($subQ) use ($request) {
-                              $subQ->where('status', 'completed')
-                                   ->whereNotNull('closed_at')
-                                   ->whereDate('closed_at', '<=', $request->date_to);
-                          });
+                        $q->where('status', 'completed')
+                          ->whereNotNull('closed_at')
+                          ->whereDate('closed_at', '<=', $request->date_to);
                     });
                 }
                 if ($request && $request->filled('quote_title_filter')) {
@@ -144,9 +141,12 @@ class ReportsController extends Controller
                 $quotes = $processor->quotes;
                 $total_quotes = $quotes->count();
 
-                // Calculate amounts based on approved items
+                // Calculate amounts based on approved items only
                 $quoteIds = $quotes->pluck('id');
-                $total_amount = QuoteItem::whereIn('quote_id', $quoteIds)->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0;
+                $total_amount = QuoteItem::whereIn('quote_id', $quoteIds)
+                    ->where('approved', true)
+                    ->selectRaw('SUM(quantity * price)')
+                    ->value('SUM(quantity * price)') ?? 0;
 
                 // Status breakdown - include all possible statuses
                 $pending_manager = $quotes->where('status', 'pending_manager');
@@ -182,17 +182,17 @@ class ReportsController extends Controller
                     'status_breakdown' => [
                         'pending_manager' => [
                             'count' => $pending_manager->count(),
-                            'amount' => QuoteItem::whereIn('quote_id', $pending_manager->pluck('id'))->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0,
+                            'amount' => QuoteItem::whereIn('quote_id', $pending_manager->pluck('id'))->where('approved', true)->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0,
                             'percentage' => $total_quotes > 0 ? round(($pending_manager->count() / $total_quotes) * 100, 1) : 0
                         ],
                         'pending_customer' => [
                             'count' => $pending_customer->count(),
-                            'amount' => QuoteItem::whereIn('quote_id', $pending_customer->pluck('id'))->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0,
+                            'amount' => QuoteItem::whereIn('quote_id', $pending_customer->pluck('id'))->where('approved', true)->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0,
                             'percentage' => $total_quotes > 0 ? round(($pending_customer->count() / $total_quotes) * 100, 1) : 0
                         ],
                         'pending_finance' => [
                             'count' => $pending_finance->count(),
-                            'amount' => QuoteItem::whereIn('quote_id', $pending_finance->pluck('id'))->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0,
+                            'amount' => QuoteItem::whereIn('quote_id', $pending_finance->pluck('id'))->where('approved', true)->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0,
                             'percentage' => $total_quotes > 0 ? round(($pending_finance->count() / $total_quotes) * 100, 1) : 0
                         ],
 
@@ -373,38 +373,48 @@ class ReportsController extends Controller
 
     private function getQuoteStats($request = null)
     {
-        $query = Quote::query();
+        // Base query for all quotes (not filtered by status)
+        $allQuotesQuery = Quote::query();
+        
+        // Query specifically for completed quotes with date filters
+        $completedQuotesQuery = Quote::where('status', 'completed');
 
-        // Apply both date and user filters
+        // Apply date filters - use closed_at for completed quotes only
         if ($request && $request->filled('date_from')) {
-            $query->where(function($q) use ($request) {
-                $q->whereDate('created_at', '>=', $request->date_from)
-                  ->orWhere(function($subQ) use ($request) {
-                      $subQ->where('status', 'completed')
-                           ->whereNotNull('closed_at')
-                           ->whereDate('closed_at', '>=', $request->date_from);
-                  });
+            $allQuotesQuery->where(function($q) use ($request) {
+                $q->where(function($subQ) use ($request) {
+                    // For completed quotes, use closed_at
+                    $subQ->where('status', 'completed')
+                        ->whereNotNull('closed_at')
+                        ->whereDate('closed_at', '>=', $request->date_from);
+                });
             });
+            $completedQuotesQuery->whereNotNull('closed_at')
+                ->whereDate('closed_at', '>=', $request->date_from);
         }
         if ($request && $request->filled('date_to')) {
-            $query->where(function($q) use ($request) {
-                $q->whereDate('created_at', '<=', $request->date_to)
-                  ->orWhere(function($subQ) use ($request) {
-                      $subQ->where('status', 'completed')
-                           ->whereNotNull('closed_at')
-                           ->whereDate('closed_at', '<=', $request->date_to);
-                  });
+            $allQuotesQuery->where(function($q) use ($request) {
+                $q->where(function($subQ) use ($request) {
+                    // For completed quotes, use closed_at
+                    $subQ->where('status', 'completed')
+                        ->whereNotNull('closed_at')
+                        ->whereDate('closed_at', '<=', $request->date_to);
+                });
             });
+            $completedQuotesQuery->whereNotNull('closed_at')
+                ->whereDate('closed_at', '<=', $request->date_to);
         }
         if ($request && $request->filled('user_filter')) {
-            $query->where('user_id', $request->user_filter);
+            $allQuotesQuery->where('user_id', $request->user_filter);
+            $completedQuotesQuery->where('user_id', $request->user_filter);
         }
         if ($request && $request->filled('quote_title_filter')) {
-            $query->where('id', $request->quote_title_filter);
+            $allQuotesQuery->where('id', $request->quote_title_filter);
+            $completedQuotesQuery->where('id', $request->quote_title_filter);
         }
 
-        $totalQuotes = $query->count();
-        $successfulQuotes = (clone $query)->where('status', 'completed')->count();
+        $totalQuotes = $allQuotesQuery->count();
+        $successfulQuotes = $completedQuotesQuery->count();
 
         // Calculate average time from creation to approval using database-agnostic functions
         $avgTimeToApprove = Quote::whereIn('status', ['approved', 'completed'])
@@ -442,25 +452,19 @@ class ReportsController extends Controller
         $baseItemQuery = QuoteItem::join('quotes', 'quote_items.quote_id', '=', 'quotes.id')
             ->whereNull('quotes.deleted_at');
 
-        // Apply same filters to item query
+        // Apply same filters to item query - use closed_at for completed quotes
         if ($request && $request->filled('date_from')) {
             $baseItemQuery->where(function($q) use ($request) {
-                $q->whereDate('quotes.created_at', '>=', $request->date_from)
-                  ->orWhere(function($subQ) use ($request) {
-                      $subQ->where('quotes.status', 'completed')
-                           ->whereNotNull('quotes.closed_at')
-                           ->whereDate('quotes.closed_at', '>=', $request->date_from);
-                  });
+                $q->where('quotes.status', 'completed')
+                  ->whereNotNull('quotes.closed_at')
+                  ->whereDate('quotes.closed_at', '>=', $request->date_from);
             });
         }
         if ($request && $request->filled('date_to')) {
             $baseItemQuery->where(function($q) use ($request) {
-                $q->whereDate('quotes.created_at', '<=', $request->date_to)
-                  ->orWhere(function($subQ) use ($request) {
-                      $subQ->where('quotes.status', 'completed')
-                           ->whereNotNull('quotes.closed_at')
-                           ->whereDate('quotes.closed_at', '<=', $request->date_to);
-                  });
+                $q->where('quotes.status', 'completed')
+                  ->whereNotNull('quotes.closed_at')
+                  ->whereDate('quotes.closed_at', '<=', $request->date_to);
             });
         }
         if ($request && $request->filled('user_filter')) {
@@ -489,8 +493,8 @@ class ReportsController extends Controller
             'last_month' => $lastMonthTrend,
             'total_quotes' => $totalQuotes,
             'successful_quotes' => $successfulQuotes,
-            'pending_quotes' => (clone $query)->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance'])->count(),
-            'rejected_quotes' => (clone $query)->where('status', 'rejected')->count(),
+            'pending_quotes' => (clone $allQuotesQuery)->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance'])->count(),
+            'rejected_quotes' => (clone $allQuotesQuery)->where('status', 'rejected')->count(),
             'average_quotes_per_day' => round($totalQuotes / 365, 1),
             'highest_value' => QuoteItem::where('approved', true)->selectRaw('MAX(quantity * price)')->value('MAX(quantity * price)') ?? 0,
             'lowest_value' => QuoteItem::where('approved', true)->selectRaw('MIN(quantity * price)')->value('MIN(quantity * price)') ?? 0
@@ -503,16 +507,16 @@ class ReportsController extends Controller
         $closingQuery = Quote::whereNotNull('closed_at')->where('status', 'completed');
         $historyQuery = Quote::with(['approver', 'closer'])->whereNotNull('approved_at');
 
-        // Apply filters
+        // Apply filters - use closed_at for completed quotes
         if ($request && $request->filled('date_from')) {
-            $approvalQuery->whereDate('created_at', '>=', $request->date_from);
-            $closingQuery->whereDate('created_at', '>=', $request->date_from);
-            $historyQuery->whereDate('created_at', '>=', $request->date_from);
+            $approvalQuery->whereDate('closed_at', '>=', $request->date_from);
+            $closingQuery->whereDate('closed_at', '>=', $request->date_from);
+            $historyQuery->whereDate('closed_at', '>=', $request->date_from);
         }
         if ($request && $request->filled('date_to')) {
-            $approvalQuery->whereDate('created_at', '<=', $request->date_to);
-            $closingQuery->whereDate('created_at', '<=', $request->date_to);
-            $historyQuery->whereDate('created_at', '<=', $request->date_to);
+            $approvalQuery->whereDate('closed_at', '<=', $request->date_to);
+            $closingQuery->whereDate('closed_at', '<=', $request->date_to);
+            $historyQuery->whereDate('closed_at', '<=', $request->date_to);
         }
         if ($request && $request->filled('user_filter')) {
             $approvalQuery->where('user_id', $request->user_filter);
@@ -564,14 +568,14 @@ class ReportsController extends Controller
             $query->where('role', $role);
         })->where('status', 'completed');
 
-        // Apply filters
+        // Apply filters - use closed_at for completed quotes
         if ($request && $request->filled('date_from')) {
-            $totalQuery->whereDate('created_at', '>=', $request->date_from);
-            $approvedQuery->whereDate('created_at', '>=', $request->date_from);
+            $totalQuery->whereDate('closed_at', '>=', $request->date_from);
+            $approvedQuery->whereDate('closed_at', '>=', $request->date_from);
         }
         if ($request && $request->filled('date_to')) {
-            $totalQuery->whereDate('created_at', '<=', $request->date_to);
-            $approvedQuery->whereDate('created_at', '<=', $request->date_to);
+            $totalQuery->whereDate('closed_at', '<=', $request->date_to);
+            $approvedQuery->whereDate('closed_at', '<=', $request->date_to);
         }
         if ($request && $request->filled('user_filter')) {
             $totalQuery->where('user_id', $request->user_filter);

@@ -36,7 +36,8 @@ class Quote extends Model
         'approved_at',
         'approved_by',
         'closed_at',
-        'closed_by'
+        'closed_by',
+        'submitted_to_customer_at'
     ];
 
     protected $casts = [
@@ -46,7 +47,8 @@ class Quote extends Model
         'total_rfq_items' => 'integer',
         'rfq_files_count' => 'integer',
         'approved_at' => 'datetime',
-        'closed_at' => 'datetime'
+        'closed_at' => 'datetime',
+        'submitted_to_customer_at' => 'datetime'
     ];
 
     protected $appends = [

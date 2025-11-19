@@ -74,8 +74,16 @@ class ExportController extends Controller
             case 'quotes':
                 $query = Quote::query()
                     ->with(['user', 'items'])
-                    ->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
-                    ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo))
+                    ->when($dateFrom, fn($q) => $q->where(function($subQ) use ($dateFrom) {
+                        $subQ->where('status', 'completed')
+                            ->whereNotNull('closed_at')
+                            ->whereDate('closed_at', '>=', $dateFrom);
+                    }))
+                    ->when($dateTo, fn($q) => $q->where(function($subQ) use ($dateTo) {
+                        $subQ->where('status', 'completed')
+                            ->whereNotNull('closed_at')
+                            ->whereDate('closed_at', '<=', $dateTo);
+                    }))
                     ->when($request->rfq_processor, fn($q) => $q->where('user_id', $request->rfq_processor))
                     ->when($request->status, fn($q) => $q->where('status', $request->status));
                 break;
@@ -164,13 +172,18 @@ class ExportController extends Controller
         switch ($type) {
             case 'quotes':
                 return $data->map(function($quote) {
+                    // Calculate approved items amount
+                    $approvedAmount = $quote->items ? $quote->items->where('approved', true)->sum(function($item) {
+                        return $item->quantity * $item->price;
+                    }) : 0;
+                    
                     return [
-                        'ID' => $quote->id,
-                        'Date' => $quote->created_at->format('Y-m-d'),
+                        'Quote Title' => $quote->title ?? 'N/A',
+                        'Date' => $quote->closed_at ? $quote->closed_at->format('Y-m-d') : $quote->created_at->format('Y-m-d'),
                         'RFQ Processor' => $quote->user ? $quote->user->name : 'N/A',
                         'Status' => $this->formatStatusForDisplay($quote->status),
-                        'Amount' => $quote->amount,
-                        'Items Count' => $quote->items ? $quote->items->count() : 0,
+                        'Amount' => $approvedAmount,
+                        'Items Count' => $quote->items ? $quote->items->where('approved', true)->count() : 0,
                     ];
                 });
 

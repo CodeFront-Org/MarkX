@@ -23,7 +23,7 @@
                             <select class="form-control" name="status">
                                 <option value="">All Status</option>
                                 <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>Approved</option>
-                                <option value="not_approved" {{ request('status') === 'not_approved' ? 'selected' : '' }}>Rejected</option>
+                                <option value="not_approved" {{ request('status') === 'not_approved' ? 'selected' : '' }}>Not Approved</option>
                             </select>
                         </div>
                         <div class="col-md-2">
@@ -44,6 +44,7 @@
                             <thead>
                                 <tr>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Quote Title</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Quote Status</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Marketer</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Item Description</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Unit Pack</th>
@@ -52,7 +53,7 @@
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Total</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">VAT Amount</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Lead Time</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Status</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Item Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -62,6 +63,20 @@
                                         <a href="{{ route('quotes.show', $item->quote_id) }}" class="text-primary">
                                             {{ $item->quote_title }}
                                         </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-sm bg-gradient-{{ 
+                                            $item->quote_status === 'completed' ? 'success' : 
+                                            ($item->quote_status === 'pending_manager' ? 'info' : 
+                                            ($item->quote_status === 'pending_customer' ? 'warning' : 
+                                            ($item->quote_status === 'pending_finance' ? 'primary' : 'danger'))) 
+                                        }}">
+                                            @if($item->quote_status === 'pending_customer')
+                                                Awaiting Customer
+                                            @else
+                                                {{ ucwords(str_replace('_', ' ', $item->quote_status)) }}
+                                            @endif
+                                        </span>
                                     </td>
                                     <td class="text-sm font-weight-normal">{{ $item->marketer_name }}</td>
                                     <td class="text-sm font-weight-normal">{{ $item->item }}</td>
@@ -75,13 +90,13 @@
                                         @if($item->approved)
                                             <span class="badge badge-sm bg-gradient-success">Approved</span>
                                         @else
-                                            <span class="badge badge-sm bg-gradient-danger">Rejected</span>
+                                            <span class="badge badge-sm bg-gradient-danger">Not Approved</span>
                                         @endif
                                     </td>
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="10" class="text-center py-4">No quote items found.</td>
+                                    <td colspan="11" class="text-center py-4">No quote items found.</td>
                                 </tr>
                                 @endforelse
                             </tbody>

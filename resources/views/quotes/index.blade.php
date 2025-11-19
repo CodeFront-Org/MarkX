@@ -15,46 +15,81 @@
                         @endif
                     </div>
                 </div>
-                
+
                 <!-- Search Filters -->
-                <div class="card-body pb-0">
-                    <form method="GET" action="{{ route('quotes.index') }}" class="row g-3" id="search-form">
-                        <div class="col-md-3">
-                            <label class="form-label">Search Title</label>
-                            <input type="text" name="search" class="form-control search-input" value="{{ request('search') }}" placeholder="Search by title...">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Status</label>
-                            <select name="status" class="form-select search-input">
-                                <option value="">All Status</option>
-                                <option value="pending_manager" {{ request('status') == 'pending_manager' ? 'selected' : '' }}>Pending RFQ Approver</option>
-                                <option value="pending_customer" {{ request('status') == 'pending_customer' ? 'selected' : '' }}>Awaiting Customer Response</option>
-                                <option value="pending_finance" {{ request('status') == 'pending_finance' ? 'selected' : '' }}>Pending LPO Admin Review</option>
-                                <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed</option>
-                                <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Rejected</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Product Item</label>
-                            <input type="text" name="product_item" class="form-control search-input" value="{{ request('product_item') }}" placeholder="Search by product...">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">RFQ Processor</label>
-                            <input type="text" name="marketer" class="form-control search-input" value="{{ request('marketer') }}" placeholder="Search by RFQ processor...">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Quotes Created </label>
-                            <div class="d-flex gap-2">
-                                <label>From</label>
-                                <input type="date" name="date_from" class="form-control search-input" value="{{ request('date_from') }}" placeholder="From">
-                                <label>To</label>
-                                <input type="date" name="date_to" class="form-control search-input" value="{{ request('date_to') }}" placeholder="To">
+                <div class="card-body pb-2">
+                    <div class="bg-gradient-light border-radius-lg p-3 mb-3">
+                        <h6 class="text-dark text-sm mb-3">
+                            <i class="fas fa-filter me-2"></i>Filter Quotes
+                        </h6>
+                        <form method="GET" action="{{ route('quotes.index') }}" id="search-form">
+                            <div class="row g-3">
+                                <!-- Row 1: Basic Filters -->
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label text-xs font-weight-bold mb-1">
+                                        <i class="fas fa-search text-primary me-1"></i>Search Title
+                                    </label>
+                                    <input type="text" name="search" class="form-control form-control-sm search-input" value="{{ request('search') }}" placeholder="Enter quote title...">
+                                </div>
+                                <div class="col-lg-2 col-md-6">
+                                    <label class="form-label text-xs font-weight-bold mb-1">
+                                        <i class="fas fa-tasks text-info me-1"></i>Status
+                                    </label>
+                                    <select name="status" class="form-select form-select-sm search-input">
+                                        <option value="">All Status</option>
+                                        <option value="pending_manager" {{ request('status') == 'pending_manager' ? 'selected' : '' }}>Pending RFQ Approver</option>
+                                        <option value="pending_customer" {{ request('status') == 'pending_customer' ? 'selected' : '' }}>Awaiting Customer Response</option>
+                                        <option value="pending_finance" {{ request('status') == 'pending_finance' ? 'selected' : '' }}>Pending LPO Admin Review</option>
+                                        <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed</option>
+                                        <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Rejected</option>
+                                    </select>
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label text-xs font-weight-bold mb-1">
+                                        <i class="fas fa-box text-warning me-1"></i>Product Item
+                                    </label>
+                                    <input type="text" name="product_item" class="form-control form-control-sm search-input" value="{{ request('product_item') }}" placeholder="Search by product...">
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label text-xs font-weight-bold mb-1">
+                                        <i class="fas fa-user text-success me-1"></i>RFQ Processor
+                                    </label>
+                                    <input type="text" name="marketer" class="form-control form-control-sm search-input" value="{{ request('marketer') }}" placeholder="Search by processor...">
+                                </div>
+                                <div class="col-lg-1 col-md-12 d-flex align-items-end">
+                                    <a href="{{ route('quotes.index') }}" class="btn btn-sm bg-gradient-secondary w-100" id="reset-search">
+                                        <i class="fas fa-redo me-1"></i>Reset
+                                    </a>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-12 mt-3">
-                            <a href="{{ route('quotes.index') }}" class="btn bg-gradient-secondary" id="reset-search">Reset</a>
-                        </div>
-                    </form>
+                            
+                            <!-- Row 2: Date Filters -->
+                            <div class="row g-3 mt-2">
+                                <div class="col-lg-6 col-md-6">
+                                    <label class="form-label text-xs font-weight-bold mb-1">
+                                        <i class="fas fa-calendar-check text-success me-1"></i>Quotes Closed On
+                                    </label>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">From</span>
+                                        <input type="date" name="date_from" class="form-control search-input" value="{{ request('date_from') }}">
+                                        <span class="input-group-text">To</span>
+                                        <input type="date" name="date_to" class="form-control search-input" value="{{ request('date_to') }}">
+                                    </div>
+                                </div>
+                                <div class="col-lg-6 col-md-6">
+                                    <label class="form-label text-xs font-weight-bold mb-1">
+                                        <i class="fas fa-paper-plane text-primary me-1"></i>Submitted to Customer
+                                    </label>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">From</span>
+                                        <input type="date" name="submitted_from" class="form-control search-input" value="{{ request('submitted_from') }}">
+                                        <span class="input-group-text">To</span>
+                                        <input type="date" name="submitted_to" class="form-control search-input" value="{{ request('submitted_to') }}">
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
                 </div>
 
                 <div id="search-results">
@@ -80,7 +115,7 @@
             const form = document.getElementById('search-form');
             const formData = new FormData(form);
             const searchParams = new URLSearchParams(formData);
-            
+
             // Update URL with search parameters
             window.history.pushState({}, '', `${form.action}?${searchParams.toString()}`);
 
@@ -124,12 +159,12 @@
             e.preventDefault();
             const form = document.getElementById('search-form');
             form.reset();
-            
+
             // Clear all date inputs explicitly
             form.querySelectorAll('input[type="date"]').forEach(input => {
                 input.value = '';
             });
-            
+
             // Trigger the search
             performSearch();
         });
