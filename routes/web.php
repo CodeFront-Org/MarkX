@@ -91,14 +91,14 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
 
     // Reports route
   // Reports routes
-Route::middleware(['role:lpo_admin,rfq_approver'])
-    ->prefix('reports')
-    ->name('reports.')
-    ->group(function () {
-        Route::get('/', [ReportsController::class, 'index'])->name('index');
-        Route::get('/user/{user}', [ReportsController::class, 'userReport'])->name('user');
-        Route::get('/search-quotes', [ReportsController::class, 'searchQuotes'])->name('search-quotes');
-    });
+    Route::middleware(['role:lpo_admin,rfq_approver'])
+        ->prefix('reports')
+        ->name('reports.')
+        ->group(function () {
+            Route::get('/', [ReportsController::class, 'index'])->name('index');
+            Route::get('/user/{user}', [ReportsController::class, 'userReport'])->name('user');
+            Route::get('/search-quotes', [ReportsController::class, 'searchQuotes'])->name('search-quotes');
+        });
 
 
     // Company Files routes
