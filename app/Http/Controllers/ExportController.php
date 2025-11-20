@@ -19,7 +19,7 @@ class ExportController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['auth', 'role:rfq_approver']);
+        $this->middleware(['auth', 'role:rfq_admin']);
     }
 
     public function exportData(Request $request)
