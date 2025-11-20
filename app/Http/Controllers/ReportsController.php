@@ -118,18 +118,25 @@ class ReportsController extends Controller
         }
 
         return $query->with(['quotes' => function($query) use ($request) {
+                // Apply date filters to ALL quotes, not just completed ones
                 if ($request && $request->filled('date_from')) {
                     $query->where(function($q) use ($request) {
-                        $q->where('status', 'completed')
-                          ->whereNotNull('closed_at')
-                          ->whereDate('closed_at', '>=', $request->date_from);
+                        $q->whereDate('created_at', '>=', $request->date_from)
+                          ->orWhere(function($subQ) use ($request) {
+                              $subQ->where('status', 'completed')
+                                   ->whereNotNull('closed_at')
+                                   ->whereDate('closed_at', '>=', $request->date_from);
+                          });
                     });
                 }
                 if ($request && $request->filled('date_to')) {
                     $query->where(function($q) use ($request) {
-                        $q->where('status', 'completed')
-                          ->whereNotNull('closed_at')
-                          ->whereDate('closed_at', '<=', $request->date_to);
+                        $q->whereDate('created_at', '<=', $request->date_to)
+                          ->orWhere(function($subQ) use ($request) {
+                              $subQ->where('status', 'completed')
+                                   ->whereNotNull('closed_at')
+                                   ->whereDate('closed_at', '<=', $request->date_to);
+                          });
                     });
                 }
                 if ($request && $request->filled('quote_title_filter')) {
@@ -373,36 +380,46 @@ class ReportsController extends Controller
 
     private function getQuoteStats($request = null)
     {
-        // Base query for all quotes (not filtered by status)
+        // Base query for all quotes
         $allQuotesQuery = Quote::query();
         
-        // Query specifically for completed quotes with date filters
+        // Query specifically for completed quotes
         $completedQuotesQuery = Quote::where('status', 'completed');
 
-        // Apply date filters - use closed_at for completed quotes only
+        // Apply date filters - include ALL quotes by created_at OR completed quotes by closed_at
         if ($request && $request->filled('date_from')) {
             $allQuotesQuery->where(function($q) use ($request) {
-                $q->where(function($subQ) use ($request) {
-                    // For completed quotes, use closed_at
-                    $subQ->where('status', 'completed')
-                        ->whereNotNull('closed_at')
-                        ->whereDate('closed_at', '>=', $request->date_from);
-                });
+                $q->whereDate('created_at', '>=', $request->date_from)
+                  ->orWhere(function($subQ) use ($request) {
+                      $subQ->where('status', 'completed')
+                           ->whereNotNull('closed_at')
+                           ->whereDate('closed_at', '>=', $request->date_from);
+                  });
             });
-            $completedQuotesQuery->whereNotNull('closed_at')
-                ->whereDate('closed_at', '>=', $request->date_from);
+            $completedQuotesQuery->where(function($q) use ($request) {
+                $q->whereDate('created_at', '>=', $request->date_from)
+                  ->orWhere(function($subQ) use ($request) {
+                      $subQ->whereNotNull('closed_at')
+                           ->whereDate('closed_at', '>=', $request->date_from);
+                  });
+            });
         }
         if ($request && $request->filled('date_to')) {
             $allQuotesQuery->where(function($q) use ($request) {
-                $q->where(function($subQ) use ($request) {
-                    // For completed quotes, use closed_at
-                    $subQ->where('status', 'completed')
-                        ->whereNotNull('closed_at')
-                        ->whereDate('closed_at', '<=', $request->date_to);
-                });
+                $q->whereDate('created_at', '<=', $request->date_to)
+                  ->orWhere(function($subQ) use ($request) {
+                      $subQ->where('status', 'completed')
+                           ->whereNotNull('closed_at')
+                           ->whereDate('closed_at', '<=', $request->date_to);
+                  });
             });
-            $completedQuotesQuery->whereNotNull('closed_at')
-                ->whereDate('closed_at', '<=', $request->date_to);
+            $completedQuotesQuery->where(function($q) use ($request) {
+                $q->whereDate('created_at', '<=', $request->date_to)
+                  ->orWhere(function($subQ) use ($request) {
+                      $subQ->whereNotNull('closed_at')
+                           ->whereDate('closed_at', '<=', $request->date_to);
+                  });
+            });
         }
         if ($request && $request->filled('user_filter')) {
             $allQuotesQuery->where('user_id', $request->user_filter);
@@ -448,23 +465,29 @@ class ReportsController extends Controller
             ? (($monthlyTrend - $lastMonthTrend) / $lastMonthTrend) * 100
             : 0;
 
-        // Calculate amounts based on approved items only
+        // Calculate amounts based on items from filtered quotes
         $baseItemQuery = QuoteItem::join('quotes', 'quote_items.quote_id', '=', 'quotes.id')
             ->whereNull('quotes.deleted_at');
 
-        // Apply same filters to item query - use closed_at for completed quotes
+        // Apply same filters to item query - include ALL quotes by created_at OR completed by closed_at
         if ($request && $request->filled('date_from')) {
             $baseItemQuery->where(function($q) use ($request) {
-                $q->where('quotes.status', 'completed')
-                  ->whereNotNull('quotes.closed_at')
-                  ->whereDate('quotes.closed_at', '>=', $request->date_from);
+                $q->whereDate('quotes.created_at', '>=', $request->date_from)
+                  ->orWhere(function($subQ) use ($request) {
+                      $subQ->where('quotes.status', 'completed')
+                           ->whereNotNull('quotes.closed_at')
+                           ->whereDate('quotes.closed_at', '>=', $request->date_from);
+                  });
             });
         }
         if ($request && $request->filled('date_to')) {
             $baseItemQuery->where(function($q) use ($request) {
-                $q->where('quotes.status', 'completed')
-                  ->whereNotNull('quotes.closed_at')
-                  ->whereDate('quotes.closed_at', '<=', $request->date_to);
+                $q->whereDate('quotes.created_at', '<=', $request->date_to)
+                  ->orWhere(function($subQ) use ($request) {
+                      $subQ->where('quotes.status', 'completed')
+                           ->whereNotNull('quotes.closed_at')
+                           ->whereDate('quotes.closed_at', '<=', $request->date_to);
+                  });
             });
         }
         if ($request && $request->filled('user_filter')) {
