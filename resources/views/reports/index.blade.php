@@ -82,60 +82,79 @@
                 <div class="card-body">
                     <!-- KPI Metrics -->
                     <div class="row mb-4">
-                        <div class="col-lg-3 col-md-6 col-12">
-                            <div class="border-radius-md text-center p-3 bg-gradient-warning mb-3">
-                                <h6 class="text-sm mb-1 text-uppercase font-weight-bold text-white">Total Amount Quoted</h6>
-                                <h4 class="font-weight-bold mb-0 text-white">KES {{ number_format($quoteStats->total_quoted_amount, 0) }}</h4>
-                                <small class="text-white opacity-8">
-                                    {{ $quoteStats->total_quotes }} quotes (100%)<br>
-                                    @if(request('user_filter'))
-                                        {{ $rfq_processors->where('id', request('user_filter'))->first()->name ?? 'Selected user' }} total
-                                    @else
-                                        Company-wide total
-                                    @endif
-                                </small>
+                        <div class="col-lg-3 col-md-6 col-12 mb-3">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <p class="text-xs text-uppercase text-muted mb-1 font-weight-bold">Total Quoted</p>
+                                            <h4 class="font-weight-bold mb-0">KES {{ number_format($quoteStats->total_quoted_amount, 0) }}</h4>
+                                            <div class="mt-2">
+                                                <span class="badge badge-sm bg-light text-dark">{{ $quoteStats->total_quotes }} quotes</span>
+                                            </div>
+                                        </div>
+                                        <div class="icon icon-shape bg-gradient-warning shadow text-center border-radius-md">
+                                            <i class="ni ni-money-coins text-lg opacity-10" aria-hidden="true"></i>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-12">
-                            <div class="border-radius-md text-center p-3 bg-gradient-success mb-3">
-                                <h6 class="text-sm mb-1 text-uppercase font-weight-bold text-white">Total Amount Awarded</h6>
-                                <h4 class="font-weight-bold mb-0 text-white">KES {{ number_format($quoteStats->awarded_amount, 0) }}</h4>
-                                <small class="text-white opacity-8">
-                                    {{ $quoteStats->successful_quotes }} quotes ({{ $quoteStats->success_rate }}%)<br>
-                                    @if(request('user_filter'))
-                                        {{ $rfq_processors->where('id', request('user_filter'))->first()->name ?? 'Selected user' }} total
-                                    @else
-                                        Company-wide total
-                                    @endif
-                                </small>
+                        <div class="col-lg-3 col-md-6 col-12 mb-3">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <p class="text-xs text-uppercase text-muted mb-1 font-weight-bold">Total Awarded</p>
+                                            <h4 class="font-weight-bold mb-0 text-success">KES {{ number_format($quoteStats->awarded_amount, 0) }}</h4>
+                                            <div class="mt-2">
+                                                <span class="badge badge-sm bg-gradient-success">{{ $quoteStats->success_rate }}%</span>
+                                                <span class="text-xs text-muted ms-1">{{ $quoteStats->successful_quotes }} quotes</span>
+                                            </div>
+                                        </div>
+                                        <div class="icon icon-shape bg-gradient-success shadow text-center border-radius-md">
+                                            <i class="ni ni-check-bold text-lg opacity-10" aria-hidden="true"></i>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-12">
-                            <div class="border-radius-md text-center p-3 bg-gradient-danger mb-3">
-                                <h6 class="text-sm mb-1 text-uppercase font-weight-bold text-white">Total Amount Rejected</h6>
-                                <h4 class="font-weight-bold mb-0 text-white">KES {{ number_format($quoteStats->rejected_amount, 0) }}</h4>
-                                <small class="text-white opacity-8">
-                                    {{ $quoteStats->rejected_quotes }} quotes ({{ $quoteStats->total_quotes > 0 ? round(($quoteStats->rejected_quotes / $quoteStats->total_quotes) * 100, 1) : 0 }}%)<br>
-                                    @if(request('user_filter'))
-                                        {{ $rfq_processors->where('id', request('user_filter'))->first()->name ?? 'Selected user' }} total
-                                    @else
-                                        Company-wide total
-                                    @endif
-                                </small>
+                        <div class="col-lg-3 col-md-6 col-12 mb-3">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <p class="text-xs text-uppercase text-muted mb-1 font-weight-bold">Total Rejected</p>
+                                            <h4 class="font-weight-bold mb-0 text-danger">KES {{ number_format($quoteStats->rejected_amount, 0) }}</h4>
+                                            <div class="mt-2">
+                                                <span class="badge badge-sm bg-gradient-danger">{{ $quoteStats->total_quotes > 0 ? round(($quoteStats->rejected_quotes / $quoteStats->total_quotes) * 100, 1) : 0 }}%</span>
+                                                <span class="text-xs text-muted ms-1">{{ $quoteStats->rejected_quotes }} quotes</span>
+                                            </div>
+                                        </div>
+                                        <div class="icon icon-shape bg-gradient-danger shadow text-center border-radius-md">
+                                            <i class="ni ni-fat-remove text-lg opacity-10" aria-hidden="true"></i>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 col-12">
-                            <div class="border-radius-md text-center p-3 bg-gradient-secondary mb-3">
-                                <h6 class="text-sm mb-1 text-uppercase font-weight-bold text-white">Total Amount Pending</h6>
-                                <h4 class="font-weight-bold mb-0 text-white">KES {{ number_format($quoteStats->pending_amount, 0) }}</h4>
-                                <small class="text-white opacity-8">
-                                    {{ $quoteStats->pending_quotes }} quotes ({{ $quoteStats->total_quotes > 0 ? round(($quoteStats->pending_quotes / $quoteStats->total_quotes) * 100, 1) : 0 }}%)<br>
-                                    @if(request('user_filter'))
-                                        {{ $rfq_processors->where('id', request('user_filter'))->first()->name ?? 'Selected user' }} total
-                                    @else
-                                        Company-wide total
-                                    @endif
-                                </small>
+                        <div class="col-lg-3 col-md-6 col-12 mb-3">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <p class="text-xs text-uppercase text-muted mb-1 font-weight-bold">Total Pending</p>
+                                            <h4 class="font-weight-bold mb-0 text-info">KES {{ number_format($quoteStats->pending_amount, 0) }}</h4>
+                                            <div class="mt-2">
+                                                <span class="badge badge-sm bg-gradient-info">{{ $quoteStats->total_quotes > 0 ? round(($quoteStats->pending_quotes / $quoteStats->total_quotes) * 100, 1) : 0 }}%</span>
+                                                <span class="text-xs text-muted ms-1">{{ $quoteStats->pending_quotes }} quotes</span>
+                                            </div>
+                                        </div>
+                                        <div class="icon icon-shape bg-gradient-info shadow text-center border-radius-md">
+                                            <i class="ni ni-time-alarm text-lg opacity-10" aria-hidden="true"></i>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -149,7 +168,7 @@
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Processor</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Total Quotes</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Total Amount</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Completed</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Awarded</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Pending Manager</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Pending Customer</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Pending Finance</th>
@@ -379,7 +398,7 @@
     </div>
 
     <!-- Revenue Forecast Chart -->
-    <div class="row mt-4">
+    <!-- <div class="row mt-4">
         <div class="col-12">
             <div class="card mb-4">
                 <div class="card-header pb-0">
@@ -396,7 +415,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> -->
 </div>
 
 @push('dashboard')
