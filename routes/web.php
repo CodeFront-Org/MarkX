@@ -91,7 +91,7 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
 
     // Reports route
   // Reports routes
-    Route::middleware(['role:lpo_admin,rfq_approver'])
+    Route::middleware(['role:rfq_approver,lpo_admin'])
         ->prefix('reports')
         ->name('reports.')
         ->group(function () {
