@@ -69,18 +69,10 @@ class ExportController extends Controller
             case 'quotes':
                 $query = Quote::query()
                     ->with(['user', 'items'])
-                    ->when($dateFrom, fn($q) => $q->where(function($subQ) use ($dateFrom) {
-                        $subQ->where('status', 'completed')
-                            ->whereNotNull('closed_at')
-                            ->whereDate('closed_at', '>=', $dateFrom);
-                    }))
-                    ->when($dateTo, fn($q) => $q->where(function($subQ) use ($dateTo) {
-                        $subQ->where('status', 'completed')
-                            ->whereNotNull('closed_at')
-                            ->whereDate('closed_at', '<=', $dateTo);
-                    }))
-                    ->when($request->rfq_processor, fn($q) => $q->where('user_id', $request->rfq_processor))
-                    ->when($request->status, fn($q) => $q->where('status', $request->status));
+                    ->where('status', 'completed')
+                    ->when($dateFrom, fn($q) => $q->whereDate('closed_at', '>=', $dateFrom))
+                    ->when($dateTo, fn($q) => $q->whereDate('closed_at', '<=', $dateTo))
+                    ->when($request->rfq_processor, fn($q) => $q->where('user_id', $request->rfq_processor));
                 break;
 
             case 'rfq_processors':

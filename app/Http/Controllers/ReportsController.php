@@ -545,7 +545,27 @@ class ReportsController extends Controller
         }
 
         $totalQuotedAmount = (clone $baseItemQuery)->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0;
-        $awardedAmount = (clone $baseItemQuery)->where('quote_items.approved', true)->where('quotes.status', 'completed')->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0;
+        
+        // Awarded amount: approved items from completed quotes within date range
+        $awardedQuery = QuoteItem::join('quotes', 'quote_items.quote_id', '=', 'quotes.id')
+            ->where('quote_items.approved', true)
+            ->where('quotes.status', 'completed')
+            ->whereNull('quotes.deleted_at');
+        
+        if ($request && $request->filled('date_from')) {
+            $awardedQuery->whereDate('quotes.closed_at', '>=', $request->date_from);
+        }
+        if ($request && $request->filled('date_to')) {
+            $awardedQuery->whereDate('quotes.closed_at', '<=', $request->date_to);
+        }
+        if ($request && $request->filled('user_filter')) {
+            $awardedQuery->where('quotes.user_id', $request->user_filter);
+        }
+        if ($request && $request->filled('quote_title_filter')) {
+            $awardedQuery->where('quotes.id', $request->quote_title_filter);
+        }
+        
+        $awardedAmount = $awardedQuery->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0;
         // Rejected = items from rejected quotes + non-approved items from completed quotes
         $rejectedAmount = (clone $baseItemQuery)->where(function($q) {
             $q->where('quotes.status', 'rejected')
