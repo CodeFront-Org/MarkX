@@ -12,7 +12,7 @@ class ReportsController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['auth', 'role:lpo_admin']);
+        $this->middleware(['auth', 'role:lpo_admin,rfq_approver']);
     }
 
     public function index(\Illuminate\Http\Request $request)
@@ -84,7 +84,7 @@ class ReportsController extends Controller
         }
 
         $quotesQuery = $user->quotes();
-        
+
         // Apply filters
         if ($request->filled('quote_id')) {
             $quotesQuery->where('id', $request->quote_id);
@@ -101,34 +101,34 @@ class ReportsController extends Controller
         if ($request->filled('date_to')) {
             $quotesQuery->whereDate('created_at', '<=', $request->date_to);
         }
-        
+
         $quotes = $quotesQuery->with(['items' => function($query) {
             $query->selectRaw('quote_id, SUM(quantity * price) as total_amount')
                   ->groupBy('quote_id');
         }])->latest()->paginate(15)->appends($request->all());
 
         $userQuoteIds = $user->quotes()->pluck('id');
-        
+
         // Total amount from ALL items
         $totalAmount = QuoteItem::whereIn('quote_id', $userQuoteIds)
             ->selectRaw('SUM(quantity * price)')
             ->value('SUM(quantity * price)') ?? 0;
-        
+
         $completedQuotes = $user->quotes()->where('status', 'completed')->count();
         $completedQuoteIds = $user->quotes()->where('status', 'completed')->pluck('id');
         $pendingQuoteIds = $user->quotes()->whereIn('status', ['pending_manager', 'pending_customer', 'pending_finance'])->pluck('id');
         $rejectedQuoteIds = $user->quotes()->where('status', 'rejected')->pluck('id');
         $totalQuotes = $user->quotes()->count();
-        
+
         // Calculate amounts by status
         $completedAmount = QuoteItem::whereIn('quote_id', $completedQuoteIds)
             ->selectRaw('SUM(quantity * price)')
             ->value('SUM(quantity * price)') ?? 0;
-        
+
         $pendingAmount = QuoteItem::whereIn('quote_id', $pendingQuoteIds)
             ->selectRaw('SUM(quantity * price)')
             ->value('SUM(quantity * price)') ?? 0;
-        
+
         $rejectedAmount = QuoteItem::whereIn('quote_id', $rejectedQuoteIds)
             ->selectRaw('SUM(quantity * price)')
             ->value('SUM(quantity * price)') ?? 0;
@@ -202,13 +202,8 @@ class ReportsController extends Controller
                 $completed = $quotes->where('status', 'completed');
                 $rejected = $quotes->where('status', 'rejected');
                 $awarded = $quotes->where('status', 'completed');
-                
-                // Calculate total amount for completed quotes (all items)
-                $completedAmount = QuoteItem::whereIn('quote_id', $completed->pluck('id'))
-                    ->selectRaw('SUM(quantity * price)')
-                    ->value('SUM(quantity * price)') ?? 0;
-                
-                // Calculate approved amount for completed quotes (for awarded card)
+
+                // Calculate approved amount for completed quotes (for awarded/completed column)
                 $completedApprovedAmount = QuoteItem::whereIn('quote_id', $completed->pluck('id'))
                     ->where('approved', true)
                     ->selectRaw('SUM(quantity * price)')
@@ -218,6 +213,8 @@ class ReportsController extends Controller
                     'name' => $processor->name,
                     'total_quotes' => $total_quotes,
                     'total_amount' => $total_amount,
+                    'success_rate_by_amount' => $total_amount > 0 ? round(($completedApprovedAmount / $total_amount) * 100, 1) : 0,
+                    'awarded_amount' => $completedApprovedAmount,
                     'quoted_vs_awarded' => [
                         'quoted' => [
                             'count' => $total_quotes,
@@ -249,12 +246,18 @@ class ReportsController extends Controller
 
                         'completed' => [
                             'count' => $completed->count(),
-                            'amount' => $completedAmount,
+                            'amount' => $completedApprovedAmount,
                             'percentage' => $total_quotes > 0 ? round(($completed->count() / $total_quotes) * 100, 1) : 0
                         ],
                         'rejected' => [
                             'count' => $rejected->count(),
-                            'amount' => QuoteItem::whereIn('quote_id', $rejected->pluck('id'))->where('approved', false)->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0,
+                            'amount' => QuoteItem::where(function($q) use ($rejected, $completed) {
+                                $q->whereIn('quote_id', $rejected->pluck('id'))
+                                  ->orWhere(function($subQ) use ($completed) {
+                                      $subQ->whereIn('quote_id', $completed->pluck('id'))
+                                           ->where('approved', false);
+                                  });
+                            })->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0,
                             'percentage' => $total_quotes > 0 ? round(($rejected->count() / $total_quotes) * 100, 1) : 0
                         ]
                     ]
@@ -311,12 +314,12 @@ class ReportsController extends Controller
 
             // Apply date filters if provided
             if ($request && $request->filled('date_from')) {
-                $query->whereDate('created_at', '>=', $request->date_from);
+                $query->whereDate('quotes.created_at', '>=', $request->date_from);
             } else {
-                $query->where('created_at', '>=', now()->subMonths(12));
+                $query->where('quotes.created_at', '>=', now()->subMonths(12));
             }
             if ($request && $request->filled('date_to')) {
-                $query->whereDate('created_at', '<=', $request->date_to);
+                $query->whereDate('quotes.created_at', '<=', $request->date_to);
             }
             if ($request && $request->filled('user_filter')) {
                 $query->where('user_id', $request->user_filter);
@@ -426,7 +429,7 @@ class ReportsController extends Controller
     {
         // Base query for all quotes
         $allQuotesQuery = Quote::query();
-        
+
         // Query specifically for completed quotes
         $completedQuotesQuery = Quote::where('status', 'completed');
 
@@ -543,7 +546,14 @@ class ReportsController extends Controller
 
         $totalQuotedAmount = (clone $baseItemQuery)->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0;
         $awardedAmount = (clone $baseItemQuery)->where('quote_items.approved', true)->where('quotes.status', 'completed')->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0;
-        $rejectedAmount = (clone $baseItemQuery)->where('quote_items.approved', false)->whereIn('quotes.status', ['rejected'])->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0;
+        // Rejected = items from rejected quotes + non-approved items from completed quotes
+        $rejectedAmount = (clone $baseItemQuery)->where(function($q) {
+            $q->where('quotes.status', 'rejected')
+              ->orWhere(function($subQ) {
+                  $subQ->where('quotes.status', 'completed')
+                       ->where('quote_items.approved', false);
+              });
+        })->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0;
         $pendingAmount = (clone $baseItemQuery)->whereIn('quotes.status', ['pending_manager', 'pending_customer', 'pending_finance'])->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0;
 
         return (object)[

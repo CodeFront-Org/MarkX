@@ -108,7 +108,7 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
     Route::delete('company-files/{fileName}', [CompanyFileController::class, 'destroy'])->middleware(['auth', 'role:rfq_approver'])->name('company-files.destroy');
 
     // Admin Routes (RFQ Approver and LPO Admin)
-    Route::middleware('role:rfq_approver,lpo_admin')->group(function () {
+    Route::middleware('role:rfq_approver|lpo_admin')->group(function () {
         // Export routes
         Route::get('exports/data', [ExportController::class, 'exportData'])->name('exports.data');
         

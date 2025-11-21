@@ -108,7 +108,7 @@
                                             <p class="text-xs text-uppercase text-muted mb-1 font-weight-bold">Total Awarded</p>
                                             <h4 class="font-weight-bold mb-0 text-success">KES {{ number_format($quoteStats->awarded_amount, 0) }}</h4>
                                             <div class="mt-2">
-                                                <span class="badge badge-sm bg-gradient-success">{{ $quoteStats->success_rate }}%</span>
+                                                <span class="badge badge-sm bg-gradient-success">{{ $quoteStats->total_quoted_amount > 0 ? round(($quoteStats->awarded_amount / $quoteStats->total_quoted_amount) * 100, 1) : 0 }}%</span>
                                                 <span class="text-xs text-muted ms-1">{{ $quoteStats->successful_quotes }} quotes</span>
                                             </div>
                                         </div>
@@ -127,7 +127,7 @@
                                             <p class="text-xs text-uppercase text-muted mb-1 font-weight-bold">Total Rejected</p>
                                             <h4 class="font-weight-bold mb-0 text-danger">KES {{ number_format($quoteStats->rejected_amount, 0) }}</h4>
                                             <div class="mt-2">
-                                                <span class="badge badge-sm bg-gradient-danger">{{ $quoteStats->total_quotes > 0 ? round(($quoteStats->rejected_quotes / $quoteStats->total_quotes) * 100, 1) : 0 }}%</span>
+                                                <span class="badge badge-sm bg-gradient-danger">{{ $quoteStats->total_quoted_amount > 0 ? round(($quoteStats->rejected_amount / $quoteStats->total_quoted_amount) * 100, 1) : 0 }}%</span>
                                                 <span class="text-xs text-muted ms-1">{{ $quoteStats->rejected_quotes }} quotes</span>
                                             </div>
                                         </div>
@@ -146,7 +146,7 @@
                                             <p class="text-xs text-uppercase text-muted mb-1 font-weight-bold">Total Pending</p>
                                             <h4 class="font-weight-bold mb-0 text-info">KES {{ number_format($quoteStats->pending_amount, 0) }}</h4>
                                             <div class="mt-2">
-                                                <span class="badge badge-sm bg-gradient-info">{{ $quoteStats->total_quotes > 0 ? round(($quoteStats->pending_quotes / $quoteStats->total_quotes) * 100, 1) : 0 }}%</span>
+                                                <span class="badge badge-sm bg-gradient-info">{{ $quoteStats->total_quoted_amount > 0 ? round(($quoteStats->pending_amount / $quoteStats->total_quoted_amount) * 100, 1) : 0 }}%</span>
                                                 <span class="text-xs text-muted ms-1">{{ $quoteStats->pending_quotes }} quotes</span>
                                             </div>
                                         </div>
@@ -197,40 +197,40 @@
                                         <td>
                                             <p class="text-sm mb-0">
                                                 {{ $stat->status_breakdown['completed']['count'] }}
-                                                <small class="text-muted">({{ $stat->status_breakdown['completed']['percentage'] }}%)</small><br>
+                                                <small class="text-muted">({{ $stat->total_amount > 0 ? round(($stat->status_breakdown['completed']['amount'] / $stat->total_amount) * 100, 1) : 0 }}%)</small><br>
                                                 <small class="text-success">KES {{ number_format($stat->status_breakdown['completed']['amount'], 0) }}</small>
                                             </p>
                                         </td>
                                         <td>
                                             <p class="text-sm mb-0">
                                                 {{ $stat->status_breakdown['pending_manager']['count'] }}
-                                                <small class="text-muted">({{ $stat->status_breakdown['pending_manager']['percentage'] }}%)</small><br>
+                                                <small class="text-muted">({{ $stat->total_amount > 0 ? round(($stat->status_breakdown['pending_manager']['amount'] / $stat->total_amount) * 100, 1) : 0 }}%)</small><br>
                                                 <small class="text-warning">KES {{ number_format($stat->status_breakdown['pending_manager']['amount'], 0) }}</small>
                                             </p>
                                         </td>
                                         <td>
                                             <p class="text-sm mb-0">
                                                 {{ $stat->status_breakdown['pending_customer']['count'] }}
-                                                <small class="text-muted">({{ $stat->status_breakdown['pending_customer']['percentage'] }}%)</small><br>
+                                                <small class="text-muted">({{ $stat->total_amount > 0 ? round(($stat->status_breakdown['pending_customer']['amount'] / $stat->total_amount) * 100, 1) : 0 }}%)</small><br>
                                                 <small class="text-info">KES {{ number_format($stat->status_breakdown['pending_customer']['amount'], 0) }}</small>
                                             </p>
                                         </td>
                                         <td>
                                             <p class="text-sm mb-0">
                                                 {{ $stat->status_breakdown['pending_finance']['count'] }}
-                                                <small class="text-muted">({{ $stat->status_breakdown['pending_finance']['percentage'] }}%)</small><br>
+                                                <small class="text-muted">({{ $stat->total_amount > 0 ? round(($stat->status_breakdown['pending_finance']['amount'] / $stat->total_amount) * 100, 1) : 0 }}%)</small><br>
                                                 <small class="text-primary">KES {{ number_format($stat->status_breakdown['pending_finance']['amount'], 0) }}</small>
                                             </p>
                                         </td>
                                         <td>
                                             <p class="text-sm mb-0">
                                                 {{ $stat->status_breakdown['rejected']['count'] }}
-                                                <small class="text-muted">({{ $stat->status_breakdown['rejected']['percentage'] }}%)</small><br>
+                                                <small class="text-muted">({{ $stat->total_amount > 0 ? round(($stat->status_breakdown['rejected']['amount'] / $stat->total_amount) * 100, 1) : 0 }}%)</small><br>
                                                 <small class="text-danger">KES {{ number_format($stat->status_breakdown['rejected']['amount'], 0) }}</small>
                                             </p>
                                         </td>
                                         <td>
-                                            <span class="badge badge-sm bg-gradient-success">{{ number_format($stat->status_breakdown['completed']['percentage'], 1) }}%</span>
+                                            <span class="badge badge-sm bg-gradient-success">{{ number_format($stat->success_rate_by_amount, 1) }}%</span>
                                         </td>
                                     </tr>
                                 @endforeach

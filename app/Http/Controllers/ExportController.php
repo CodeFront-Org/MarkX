@@ -17,11 +17,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ExportController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware(['auth', 'role:rfq_admin']);
-    }
-
     public function exportData(Request $request)
     {
         try {
@@ -51,7 +46,7 @@ class ExportController extends Controller
             // For file downloads, we need to handle the success message differently
             // Store success message in session and return the download response
             session()->flash('export_success', ucfirst($request->type) . ' data exported successfully as ' . strtoupper($request->format));
-            
+
             // Add a header to trigger page refresh after download
             if ($response instanceof \Symfony\Component\HttpFoundation\BinaryFileResponse) {
                 $response->headers->set('X-Export-Success', 'true');
@@ -166,9 +161,9 @@ class ExportController extends Controller
         if ($data->isEmpty()) {
             return [];
         }
-        
+
         $data = collect($data);
-        
+
         switch ($type) {
             case 'quotes':
                 return $data->map(function($quote) {
@@ -176,8 +171,9 @@ class ExportController extends Controller
                     $approvedAmount = $quote->items ? $quote->items->where('approved', true)->sum(function($item) {
                         return $item->quantity * $item->price;
                     }) : 0;
-                    
+
                     return [
+                        'ID' => $quote->id,
                         'Quote Title' => $quote->title ?? 'N/A',
                         'Date' => $quote->closed_at ? $quote->closed_at->format('Y-m-d') : $quote->created_at->format('Y-m-d'),
                         'RFQ Processor' => $quote->user ? $quote->user->name : 'N/A',
@@ -195,7 +191,7 @@ class ExportController extends Controller
                         'Email' => $user->email,
                         'Total Quotes' => $user->quotes_count ?? 0,
                         'Total Revenue' => $user->quotes_sum_total_amount ?? 0,
-                        'Average Quote Value' => ($user->quotes_count && $user->quotes_sum_total_amount) ? 
+                        'Average Quote Value' => ($user->quotes_count && $user->quotes_sum_total_amount) ?
                             $user->quotes_sum_total_amount / $user->quotes_count : 0,
                     ];
                 });
@@ -228,7 +224,7 @@ class ExportController extends Controller
             if (empty($data)) {
                 return back()->with('error', 'No data available to export with the selected filters.');
             }
-            
+
             switch ($format) {
                 case 'excel':
                     return Excel::download(new DataExport($data), $filename . '.xlsx');
@@ -237,16 +233,16 @@ class ExportController extends Controller
                     return response($this->arrayToCsv($data))
                         ->header('Content-Type', 'text/csv')
                         ->header('Content-Disposition', "attachment; filename=\"$filename.csv\"");
-                        
+
                 case 'pdf':
                     $headers = !empty($data) ? array_keys((array)$data[0]) : [];
-                    
+
                     // Format data for better PDF display
                     $formattedData = $this->formatDataForPdf($data, $type);
-                    
+
                     // Determine page orientation based on number of columns
                     $orientation = count($headers) > 5 ? 'landscape' : 'portrait';
-                    
+
                     // Use specialized templates based on export type
                     $view = match($type) {
                         'performance' => 'exports.performance-report',
@@ -256,19 +252,19 @@ class ExportController extends Controller
                         'items' => 'exports.items-report',
                         default => 'exports.pdf'
                     };
-                    
+
                     $pdf = Pdf::loadView($view, [
                         'type' => $type,
                         'headers' => $headers,
                         'data' => $formattedData,
                         'filters' => array_filter([
-                            'date range' => request('dateFrom') && request('dateTo') ? 
+                            'date range' => request('dateFrom') && request('dateTo') ?
                                 request('dateFrom') . ' to ' . request('dateTo') : null,
                             'rfq_processor' => request('rfq_processor') ? User::find(request('rfq_processor'))->name : null,
                             'status' => request('status'),
                         ])
                     ]);
-                    
+
                     // Set PDF options
                     $pdf->setPaper('a4', $orientation);
                     $pdf->setOptions([
@@ -277,7 +273,7 @@ class ExportController extends Controller
                         'isHtml5ParserEnabled' => true,
                         'isRemoteEnabled' => true
                     ]);
-                    
+
                     return $pdf->download($filename . '.pdf');
 
                 default:
@@ -297,16 +293,16 @@ class ExportController extends Controller
         if (empty($data)) {
             return [];
         }
-        
+
         $formattedData = [];
-        
+
         foreach ($data as $row) {
             $newRow = [];
-            
+
             foreach ((array)$row as $key => $value) {
                 // Format numeric values
                 if (is_numeric($value) && !in_array($key, ['id', 'ID'])) {
-                    if (stripos($key, 'amount') !== false || stripos($key, 'revenue') !== false || 
+                    if (stripos($key, 'amount') !== false || stripos($key, 'revenue') !== false ||
                         stripos($key, 'value') !== false || stripos($key, 'price') !== false) {
                         $newRow[$key] = $value; // Keep raw value for calculations in template
                     } elseif (stripos($key, 'rate') !== false || stripos($key, 'percentage') !== false) {
@@ -329,10 +325,10 @@ class ExportController extends Controller
                     $newRow[$key] = $value;
                 }
             }
-            
+
             $formattedData[] = $newRow;
         }
-        
+
         return $formattedData;
     }
 
@@ -356,19 +352,19 @@ class ExportController extends Controller
 
         // Create CSV string
         $output = fopen('php://temp', 'r+');
-        
+
         // Add headers
         fputcsv($output, array_keys((array)$data[0]));
-        
+
         // Add rows
         foreach ($data as $row) {
             fputcsv($output, (array)$row);
         }
-        
+
         rewind($output);
         $csv = stream_get_contents($output);
         fclose($output);
-        
+
         return $csv;
     }
 }

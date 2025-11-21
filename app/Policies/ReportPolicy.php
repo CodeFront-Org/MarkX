@@ -13,4 +13,9 @@ class ReportPolicy
     {
         return $user->role === 'rfq_approver' || $user->role === 'lpo_admin';
     }
+
+    public function export(User $user): bool
+    {
+        return $user->role === 'rfq_approver' || $user->role === 'lpo_admin';
+    }
 }
