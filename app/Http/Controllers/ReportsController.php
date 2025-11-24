@@ -203,8 +203,25 @@ class ReportsController extends Controller
                 $rejected = $quotes->where('status', 'rejected');
                 $awarded = $quotes->where('status', 'completed');
 
-                // Calculate approved amount for completed quotes (for awarded/completed column)
-                $completedApprovedAmount = QuoteItem::whereIn('quote_id', $completed->pluck('id'))
+                // Calculate approved amount for completed quotes closed within date range
+                $completedQuotesInRange = $completed->filter(function($quote) use ($request) {
+                    if (!$request || (!$request->filled('date_from') && !$request->filled('date_to'))) {
+                        return true;
+                    }
+                    if (!$quote->closed_at) {
+                        return false;
+                    }
+                    $closedDate = $quote->closed_at->format('Y-m-d');
+                    if ($request->filled('date_from') && $closedDate < $request->date_from) {
+                        return false;
+                    }
+                    if ($request->filled('date_to') && $closedDate > $request->date_to) {
+                        return false;
+                    }
+                    return true;
+                });
+                
+                $completedApprovedAmount = QuoteItem::whereIn('quote_id', $completedQuotesInRange->pluck('id'))
                     ->where('approved', true)
                     ->selectRaw('SUM(quantity * price)')
                     ->value('SUM(quantity * price)') ?? 0;
