@@ -69,9 +69,9 @@ class ExportController extends Controller
             case 'quotes':
                 $query = Quote::query()
                     ->with(['user', 'items'])
-                    ->where('status', 'completed')
-                    ->when($dateFrom, fn($q) => $q->whereDate('closed_at', '>=', $dateFrom))
-                    ->when($dateTo, fn($q) => $q->whereDate('closed_at', '<=', $dateTo))
+                    ->when($request->status, fn($q) => $q->where('status', $request->status))
+                    ->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
+                    ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo))
                     ->when($request->rfq_processor, fn($q) => $q->where('user_id', $request->rfq_processor));
                 break;
 
@@ -159,10 +159,18 @@ class ExportController extends Controller
         switch ($type) {
             case 'quotes':
                 return $data->map(function($quote) {
-                    // Calculate approved items amount
-                    $approvedAmount = $quote->items ? $quote->items->where('approved', true)->sum(function($item) {
-                        return $item->quantity * $item->price;
-                    }) : 0;
+                    // For completed quotes show approved items, for others show all items
+                    if ($quote->status === 'completed') {
+                        $amount = $quote->items ? $quote->items->where('approved', true)->sum(function($item) {
+                            return $item->quantity * $item->price;
+                        }) : 0;
+                        $itemCount = $quote->items ? $quote->items->where('approved', true)->count() : 0;
+                    } else {
+                        $amount = $quote->items ? $quote->items->sum(function($item) {
+                            return $item->quantity * $item->price;
+                        }) : 0;
+                        $itemCount = $quote->items ? $quote->items->count() : 0;
+                    }
 
                     return [
                         'ID' => $quote->id,
@@ -170,8 +178,8 @@ class ExportController extends Controller
                         'Date' => $quote->closed_at ? $quote->closed_at->format('Y-m-d') : $quote->created_at->format('Y-m-d'),
                         'RFQ Processor' => $quote->user ? $quote->user->name : 'N/A',
                         'Status' => $this->formatStatusForDisplay($quote->status),
-                        'Amount' => $approvedAmount,
-                        'Items Count' => $quote->items ? $quote->items->where('approved', true)->count() : 0,
+                        'Amount' => $amount,
+                        'Items Count' => $itemCount,
                     ];
                 });
 
