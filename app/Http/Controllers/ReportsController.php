@@ -182,6 +182,9 @@ class ReportsController extends Controller
                 if ($request && $request->filled('quote_title_filter')) {
                     $query->where('id', $request->quote_title_filter);
                 }
+                if ($request && $request->filled('status_filter')) {
+                    $query->where('status', $request->status_filter);
+                }
             }])
             ->get()
             ->map(function($processor) use ($request) {
@@ -344,6 +347,9 @@ class ReportsController extends Controller
             if ($request && $request->filled('quote_title_filter')) {
                 $query->where('id', $request->quote_title_filter);
             }
+            if ($request && $request->filled('status_filter')) {
+                $query->where('status', $request->status_filter);
+            }
 
             $query->groupBy(DB::connection()->getDriverName() === 'sqlite'
                 ? DB::raw("strftime('%Y-%m', quotes.created_at)")
@@ -493,6 +499,12 @@ class ReportsController extends Controller
             $allQuotesQuery->where('id', $request->quote_title_filter);
             $completedQuotesQuery->where('id', $request->quote_title_filter);
         }
+        if ($request && $request->filled('status_filter')) {
+            $allQuotesQuery->where('status', $request->status_filter);
+            if ($request->status_filter === 'completed') {
+                $completedQuotesQuery->where('status', $request->status_filter);
+            }
+        }
 
         $totalQuotes = $allQuotesQuery->count();
         $successfulQuotes = $completedQuotesQuery->count();
@@ -560,6 +572,9 @@ class ReportsController extends Controller
         if ($request && $request->filled('quote_title_filter')) {
             $baseItemQuery->where('quotes.id', $request->quote_title_filter);
         }
+        if ($request && $request->filled('status_filter')) {
+            $baseItemQuery->where('quotes.status', $request->status_filter);
+        }
 
         $totalQuotedAmount = (clone $baseItemQuery)->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0;
         
@@ -580,6 +595,9 @@ class ReportsController extends Controller
         }
         if ($request && $request->filled('quote_title_filter')) {
             $awardedQuery->where('quotes.id', $request->quote_title_filter);
+        }
+        if ($request && $request->filled('status_filter') && $request->status_filter === 'completed') {
+            $awardedQuery->where('quotes.status', $request->status_filter);
         }
         
         $awardedAmount = $awardedQuery->selectRaw('SUM(quantity * price)')->value('SUM(quantity * price)') ?? 0;
@@ -642,6 +660,11 @@ class ReportsController extends Controller
             $closingQuery->where('id', $request->quote_title_filter);
             $historyQuery->where('id', $request->quote_title_filter);
         }
+        if ($request && $request->filled('status_filter')) {
+            $approvalQuery->where('status', $request->status_filter);
+            $closingQuery->where('status', $request->status_filter);
+            $historyQuery->where('status', $request->status_filter);
+        }
 
         return (object)[
             'avg_approval_time' => $approvalQuery->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, approved_at)) as avg_hours')
@@ -698,6 +721,12 @@ class ReportsController extends Controller
         if ($request && $request->filled('quote_title_filter')) {
             $totalQuery->where('id', $request->quote_title_filter);
             $approvedQuery->where('id', $request->quote_title_filter);
+        }
+        if ($request && $request->filled('status_filter')) {
+            $totalQuery->where('status', $request->status_filter);
+            if ($request->status_filter === 'completed') {
+                $approvedQuery->where('status', $request->status_filter);
+            }
         }
 
         $total = $totalQuery->count();

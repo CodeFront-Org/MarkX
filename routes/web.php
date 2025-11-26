@@ -131,6 +131,7 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
     
     // Product Reports routes
     Route::get('product-reports', [ProductItemController::class, 'reports'])->name('product-reports.index');
+    Route::get('product-reports/export', [ProductItemController::class, 'exportReports'])->name('product-reports.export');
     
     // Supplier routes
     Route::resource('suppliers', SupplierController::class);

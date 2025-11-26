@@ -165,9 +165,9 @@
                             <label class="form-label text-xs mb-1">Status</label>
                             <select name="status" class="form-select form-select-sm">
                                 <option value="">All Status</option>
-                                <option value="pending_manager" {{ request('status') == 'pending_manager' ? 'selected' : '' }}>Pending RFQ Approver</option>
+                                <option value="pending_manager" {{ request('status') == 'pending_manager' ? 'selected' : '' }}>Pending Sarah</option>
                                 <option value="pending_customer" {{ request('status') == 'pending_customer' ? 'selected' : '' }}>Pending Customer</option>
-                                <option value="pending_finance" {{ request('status') == 'pending_finance' ? 'selected' : '' }}>Pending LPO Admin</option>
+                                <option value="pending_finance" {{ request('status') == 'pending_finance' ? 'selected' : '' }}>Work in Progress</option>
                                 <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed</option>
                                 <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Rejected</option>
                             </select>
@@ -222,9 +222,9 @@
                                                 ($quote->status === 'pending_customer' ? 'warning' : 
                                                 ($quote->status === 'pending_finance' ? 'primary' : 'danger'))) 
                                             }}">
-                                                {{ $quote->status === 'pending_manager' ? 'Pending RFQ Approver' :
+                                                {{ $quote->status === 'pending_manager' ? 'Pending Sarah' :
                                                    ($quote->status === 'pending_customer' ? 'Pending Customer' :
-                                                   ($quote->status === 'pending_finance' ? 'Pending LPO Admin' :
+                                                   ($quote->status === 'pending_finance' ? 'Work in Progress' :
                                                    ucwords(str_replace('_', ' ', $quote->status)))) }}
                                             </span>
                                         </td>

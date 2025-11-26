@@ -175,7 +175,7 @@ class ExportController extends Controller
                     return [
                         'ID' => $quote->id,
                         'Quote Title' => $quote->title ?? 'N/A',
-                        'Date' => $quote->closed_at ? $quote->closed_at->format('Y-m-d') : $quote->created_at->format('Y-m-d'),
+                        'Date' => $quote->closed_at ? $quote->closed_at->format('d/m/Y') : $quote->created_at->format('d/m/Y'),
                         'RFQ Processor' => $quote->user ? $quote->user->name : 'N/A',
                         'Status' => $this->formatStatusForDisplay($quote->status),
                         'Amount' => $amount,
@@ -315,7 +315,7 @@ class ExportController extends Controller
                 elseif ($value instanceof \DateTime || (is_string($value) && strtotime($value) !== false)) {
                     try {
                         $date = $value instanceof \DateTime ? $value : new \DateTime($value);
-                        $newRow[$key] = $date->format('Y-m-d');
+                        $newRow[$key] = $date->format('d/m/Y');
                     } catch (\Exception $e) {
                         $newRow[$key] = $value;
                     }
@@ -335,9 +335,9 @@ class ExportController extends Controller
     private function formatStatusForDisplay($status)
     {
         return match($status) {
-            'pending_manager' => 'Pending RFQ Approver',
+            'pending_manager' => 'Pending Sarah',
             'pending_customer' => 'Awaiting Customer Response',
-            'pending_finance' => 'Pending LPO Admin Review',
+            'pending_finance' => 'Work in Progress',
             'completed' => 'Completed',
             'rejected' => 'Rejected',
             default => ucwords(str_replace('_', ' ', $status))

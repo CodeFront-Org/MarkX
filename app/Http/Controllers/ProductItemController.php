@@ -232,8 +232,129 @@ class ProductItemController extends Controller
             $query->whereDate('quotes.created_at', '<=', $request->date_to);
         }
 
+        if ($request->filled('quote_status')) {
+            $query->where('quotes.status', $request->quote_status);
+        }
+
         $quoteItems = $query->orderBy('quotes.created_at', 'desc')->paginate(50)->withQueryString();
 
         return view('product-items.reports', compact('quoteItems'));
     }
+
+    public function exportReports(Request $request)
+    {
+        $query = QuoteItem::select([
+            'quote_items.*',
+            'quotes.title as quote_title',
+            'quotes.status as quote_status',
+            'quotes.created_at as quote_created_at',
+            'users.name as marketer_name'
+        ])
+        ->join('quotes', 'quotes.id', '=', 'quote_items.quote_id')
+        ->join('users', 'users.id', '=', 'quotes.user_id');
+
+        // Apply same filters as reports view
+        if ($request->filled('item')) {
+            $query->where('quote_items.item', 'like', '%' . $request->item . '%');
+        }
+
+        if ($request->filled('quote_title')) {
+            $query->where('quotes.title', 'like', '%' . $request->quote_title . '%');
+        }
+
+        if ($request->filled('marketer')) {
+            $query->where('users.name', 'like', '%' . $request->marketer . '%');
+        }
+
+        if ($request->filled('status')) {
+            if ($request->status === 'approved') {
+                $query->where('quote_items.approved', 1);
+            } elseif ($request->status === 'not_approved') {
+                $query->where('quote_items.approved', 0);
+            }
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('quotes.created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('quotes.created_at', '<=', $request->date_to);
+        }
+
+        if ($request->filled('quote_status')) {
+            $query->where('quotes.status', $request->quote_status);
+        }
+
+        $data = $query->orderBy('quotes.created_at', 'desc')->get();
+
+        if ($data->isEmpty()) {
+            return back()->with('error', 'No data available for export with the selected filters.');
+        }
+
+        $totalAmount = $data->sum(function($item) {
+            return $item->quantity * $item->price;
+        });
+
+        $formattedData = $data->map(function($item) {
+            return [
+                'Quote Title' => $item->quote_title,
+                'Quote Status' => $this->formatStatusForDisplay($item->quote_status),
+                'RFQ Processor' => $item->marketer_name,
+                'Item Description' => $item->item,
+                'Unit Pack' => $item->unit_pack ?? 'N/A',
+                'Quantity' => $item->quantity,
+                'Unit Price' => $item->price,
+                'Total' => $item->quantity * $item->price,
+                'VAT Amount' => $item->vat_amount ?? 0,
+                'Lead Time' => $item->lead_time ?? 'N/A',
+                'Item Status' => $item->approved ? 'Accepted' : 'Rejected',
+                'Date' => \Carbon\Carbon::parse($item->quote_created_at)->format('d/m/Y'),
+            ];
+        });
+
+        // Add total row
+        $formattedData->push([
+            'Quote Title' => '',
+            'Quote Status' => '',
+            'RFQ Processor' => '',
+            'Item Description' => '',
+            'Unit Pack' => '',
+            'Quantity' => '',
+            'Unit Price' => 'TOTAL',
+            'Total' => $totalAmount,
+            'VAT Amount' => '',
+            'Lead Time' => '',
+            'Item Status' => '',
+            'Date' => '',
+        ]);
+
+        $format = $request->input('format', 'excel');
+        $filename = 'product_reports_' . now()->format('Y-m-d');
+
+        if ($format === 'csv') {
+            return response($this->arrayToCsv($formattedData->toArray()))
+                ->header('Content-Type', 'text/csv')
+                ->header('Content-Disposition', "attachment; filename=\"$filename.csv\"");
+        }
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\DataExport($formattedData->toArray()),
+            $filename . '.xlsx'
+        );
+    }
+
+    private function formatStatusForDisplay($status)
+    {
+        return match($status) {
+            'pending_manager' => 'Pending Sarah',
+            'pending_customer' => 'Awaiting Customer Response',
+            'pending_finance' => 'Work in Progress',
+            'completed' => 'Completed',
+            'rejected' => 'Rejected',
+            default => ucwords(str_replace('_', ' ', $status))
+        };
+    }
+
+
 }
