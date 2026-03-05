@@ -13,10 +13,11 @@
                     <div class="alert alert-info mb-3">
                         <small>
                             <i class="fas fa-info-circle me-1"></i>
-                            If no data matches your filters, you'll be redirected back to this page with an error message.
+                            If no data matches your filters, you'll be redirected back to this page with an error
+                            message.
                         </small>
                     </div>
-                    
+
                     <div class="row">
                         <!-- Data Type Selection -->
                         <div class="col-md-6 mb-3">
@@ -93,36 +94,60 @@
 </div>
 
 @push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Export form loading state
-        const exportForm = document.getElementById('exportForm');
-        const exportBtn = document.getElementById('exportBtn');
-        
-        if (exportForm && exportBtn) {
-            exportForm.addEventListener('submit', function() {
-                exportBtn.querySelector('.normal-text').classList.add('d-none');
-                exportBtn.querySelector('.loading-text').classList.remove('d-none');
-                exportBtn.disabled = true;
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Export form loading state
+            const exportForm = document.getElementById('exportForm');
+            const exportBtn = document.getElementById('exportBtn');
+
+            if (exportForm && exportBtn) {
+                exportForm.addEventListener('submit', function () {
+                    exportBtn.querySelector('.normal-text').classList.add('d-none');
+                    exportBtn.querySelector('.loading-text').classList.remove('d-none');
+                    exportBtn.disabled = true;
+                });
+            }
+
+            // Dynamic form updates based on type selection
+            const typeSelect = document.querySelector('select[name="type"]');
+            const statusSelect = document.querySelector('select[name="status"]');
+            const processorSelect = document.querySelector('select[name="rfq_processor"]');
+
+            typeSelect.addEventListener('change', function () {
+                // Show/hide status filter for relevant types
+                const showStatus = ['quotes', 'items'].includes(this.value);
+                statusSelect.closest('.mb-3').style.display = showStatus ? 'block' : 'none';
+
+                // Show/hide processor selection for relevant types
+                const showProcessors = ['quotes', 'performance', 'items'].includes(this.value);
+                processorSelect.closest('.mb-3').style.display = showProcessors ? 'block' : 'none';
             });
-        }
-        
-        // Dynamic form updates based on type selection
-        const typeSelect = document.querySelector('select[name="type"]');
-        const statusSelect = document.querySelector('select[name="status"]');
-        const processorSelect = document.querySelector('select[name="rfq_processor"]');
-        
-        typeSelect.addEventListener('change', function() {
-            // Show/hide status filter for relevant types
-            const showStatus = ['quotes', 'items'].includes(this.value);
-            statusSelect.closest('.mb-3').style.display = showStatus ? 'block' : 'none';
-            
-            // Show/hide processor selection for relevant types
-            const showProcessors = ['quotes', 'performance', 'items'].includes(this.value);
-            processorSelect.closest('.mb-3').style.display = showProcessors ? 'block' : 'none';
+
+            // Pre-populate export modal date fields from the current page filters
+            const exportModal = document.getElementById('exportModal');
+            if (exportModal) {
+                exportModal.addEventListener('show.bs.modal', function () {
+                    const params = new URLSearchParams(window.location.search);
+
+                    // Map page filter param names -> export modal field names
+                    const dateFrom = params.get('date_from') || '';
+                    const dateTo = params.get('date_to') || '';
+                    const userFilter = params.get('user_filter') || '';
+                    const statusFilter = params.get('status_filter') || '';
+
+                    const dateFromInput = exportForm.querySelector('input[name="dateFrom"]');
+                    const dateToInput = exportForm.querySelector('input[name="dateTo"]');
+                    const rfqSelect = exportForm.querySelector('select[name="rfq_processor"]');
+                    const statusSel = exportForm.querySelector('select[name="status"]');
+
+                    if (dateFromInput && dateFrom) dateFromInput.value = dateFrom;
+                    if (dateToInput && dateTo) dateToInput.value = dateTo;
+                    if (rfqSelect && userFilter) rfqSelect.value = userFilter;
+                    if (statusSel && statusFilter) statusSel.value = statusFilter;
+                });
+            }
         });
-    });
-</script>
+    </script>
 @endpush
 
 @include('partials.modals.export-modal-script')
