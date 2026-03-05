@@ -67,45 +67,87 @@ class ExportController extends Controller
 
         switch ($request->type) {
             case 'quotes':
-                $query = Quote::query()
-                    ->with(['user', 'items'])
+                // Completed quotes must be filtered by closed_at (matches dashboard awarded logic).
+                $completedQuotes = Quote::with(['user', 'items'])
+                    ->where('status', 'completed')
+                    ->when($dateFrom, fn($q) => $q->whereDate('closed_at', '>=', $dateFrom))
+                    ->when($dateTo, fn($q) => $q->whereDate('closed_at', '<=', $dateTo))
+                    ->when($request->rfq_processor, fn($q) => $q->where('user_id', $request->rfq_processor))
+                    ->get();
+
+                // Non-completed quotes are filtered by created_at.
+                $otherQuotes = Quote::with(['user', 'items'])
+                    ->whereNotIn('status', ['completed'])
                     ->when($request->status, fn($q) => $q->where('status', $request->status))
                     ->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
                     ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo))
-                    ->when($request->rfq_processor, fn($q) => $q->where('user_id', $request->rfq_processor));
-                break;
+                    ->when($request->rfq_processor, fn($q) => $q->where('user_id', $request->rfq_processor))
+                    ->get();
+
+                if ($request->status === 'completed') {
+                    return $completedQuotes; // Only completed
+                }
+                if ($request->status) {
+                    return $otherQuotes; // Specific non-completed status
+                }
+                return $completedQuotes->merge($otherQuotes); // All statuses
+
 
             case 'rfq_processors':
                 $query = User::where('role', 'rfq_processor')
-                    ->withCount(['quotes as quotes_count' => function($q) use ($dateFrom, $dateTo) {
-                        $q->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
-                          ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo));
-                    }])
-                    ->withSum(['quotes as quotes_sum_total_amount' => function($q) use ($dateFrom, $dateTo) {
-                        $q->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
-                          ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo));
-                    }], 'amount');
+                    ->withCount([
+                        'quotes as quotes_count' => function ($q) use ($dateFrom, $dateTo) {
+                            $q->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
+                                ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo));
+                        }
+                    ])
+                    ->withSum([
+                        'quotes as quotes_sum_total_amount' => function ($q) use ($dateFrom, $dateTo) {
+                            $q->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
+                                ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo));
+                        }
+                    ], 'amount');
                 break;
 
             case 'products':
                 $query = ProductItem::query()
-                    ->withCount(['quotes' => function($q) use ($dateFrom, $dateTo) {
-                        $q->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
-                          ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo));
-                    }]);
+                    ->withCount([
+                        'quotes' => function ($q) use ($dateFrom, $dateTo) {
+                            $q->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
+                                ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo));
+                        }
+                    ]);
                 break;
 
             case 'items':
                 $query = QuoteItem::select(
-                        'quote_items.item',
-                        DB::raw('COUNT(*) as total_count'),
-                        DB::raw('SUM(quantity) as total_quantity'),
-                        DB::raw('AVG(price) as average_price'),
-                        DB::raw('SUM(quantity * price) as total_value')
-                    )
+                    'quote_items.item',
+                    DB::raw('COUNT(*) as total_count'),
+                    DB::raw('SUM(quantity) as total_quantity'),
+                    DB::raw('AVG(price) as average_price'),
+                    DB::raw('SUM(quantity * price) as total_value')
+                )
                     ->join('quotes', 'quote_items.quote_id', '=', 'quotes.id')
-                    ->when($dateFrom, fn($q) => $q->whereDate('quotes.created_at', '>=', $dateFrom))
-                    ->when($dateTo, fn($q) => $q->whereDate('quotes.created_at', '<=', $dateTo))
+                    ->when($dateFrom, function ($q) use ($dateFrom) {
+                        $q->where(function ($inner) use ($dateFrom) {
+                            $inner->whereDate('quotes.created_at', '>=', $dateFrom)
+                                ->orWhere(function ($sub) use ($dateFrom) {
+                                    $sub->where('quotes.status', 'completed')
+                                        ->whereNotNull('quotes.closed_at')
+                                        ->whereDate('quotes.closed_at', '>=', $dateFrom);
+                                });
+                        });
+                    })
+                    ->when($dateTo, function ($q) use ($dateTo) {
+                        $q->where(function ($inner) use ($dateTo) {
+                            $inner->whereDate('quotes.created_at', '<=', $dateTo)
+                                ->orWhere(function ($sub) use ($dateTo) {
+                                    $sub->where('quotes.status', 'completed')
+                                        ->whereNotNull('quotes.closed_at')
+                                        ->whereDate('quotes.closed_at', '<=', $dateTo);
+                                });
+                        });
+                    })
                     ->when($request->rfq_processor, fn($q) => $q->where('quotes.user_id', $request->rfq_processor))
                     ->when($request->status, fn($q) => $q->where('quotes.status', $request->status))
                     ->groupBy('quote_items.item')
@@ -113,20 +155,78 @@ class ExportController extends Controller
                 break;
 
             case 'performance':
-                $query = DB::table('quotes')
-                    ->join('users', 'quotes.user_id', '=', 'users.id')
-                    ->leftJoin('quote_items', 'quotes.id', '=', 'quote_items.quote_id')
-                    ->select(
-                        'users.name as rfq_processor_name',
-                        DB::raw('COUNT(DISTINCT quotes.id) as total_quotes'),
-                        DB::raw('SUM(quotes.amount) as total_amount'),
-                        DB::raw('AVG(quotes.amount) as average_quote_value'),
-                        DB::raw('COUNT(DISTINCT quote_items.item) as unique_products_sold')
-                    )
-                    ->when($dateFrom, fn($q) => $q->whereDate('quotes.created_at', '>=', $dateFrom))
-                    ->when($dateTo, fn($q) => $q->whereDate('quotes.created_at', '<=', $dateTo))
-                    ->when($request->rfq_processor, fn($q) => $q->where('quotes.user_id', $request->rfq_processor))
-                    ->groupBy('users.id', 'users.name');
+                // Get all rfq_processor users
+                $processorsQuery = User::where('role', 'rfq_processor')
+                    ->when($request->rfq_processor, fn($q) => $q->where('id', $request->rfq_processor));
+
+                $processors = $processorsQuery->get();
+
+                $rows = $processors->map(function ($processor) use ($dateFrom, $dateTo) {
+                    // Mirror the EXACT same OR-condition used in ReportsController::getRfqProcessorStats:
+                    // Include quotes created_at in range OR completed quotes closed_at in range
+                    $quotesQuery = $processor->quotes();
+                    if ($dateFrom) {
+                        $quotesQuery->where(function ($q) use ($dateFrom) {
+                            $q->whereDate('created_at', '>=', $dateFrom)
+                                ->orWhere(function ($sub) use ($dateFrom) {
+                                    $sub->where('status', 'completed')
+                                        ->whereNotNull('closed_at')
+                                        ->whereDate('closed_at', '>=', $dateFrom);
+                                });
+                        });
+                    }
+                    if ($dateTo) {
+                        $quotesQuery->where(function ($q) use ($dateTo) {
+                            $q->whereDate('created_at', '<=', $dateTo)
+                                ->orWhere(function ($sub) use ($dateTo) {
+                                    $sub->where('status', 'completed')
+                                        ->whereNotNull('closed_at')
+                                        ->whereDate('closed_at', '<=', $dateTo);
+                                });
+                        });
+                    }
+                    $quotes = $quotesQuery->get();
+                    $quoteIds = $quotes->pluck('id');
+
+                    // Total amount from all items
+                    $totalAmount = \App\Models\QuoteItem::whereIn('quote_id', $quoteIds)
+                        ->selectRaw('SUM(quantity * price)')
+                        ->value('SUM(quantity * price)') ?? 0;
+
+                    // Status breakdowns
+                    $completed = $quotes->where('status', 'completed');
+                    $rejected = $quotes->where('status', 'rejected');
+                    $pendingMgr = $quotes->where('status', 'pending_manager');
+                    $pendingCus = $quotes->where('status', 'pending_customer');
+                    $pendingFin = $quotes->where('status', 'pending_finance');
+
+                    // Awarded = approved items from completed quotes.
+                    // The outer query already filtered by closed_at in range, so all $completed
+                    // quotes here are already within the date range.
+                    $awardedAmount = \App\Models\QuoteItem::whereIn('quote_id', $completed->pluck('id'))
+                        ->where('approved', true)
+                        ->selectRaw('SUM(quantity * price)')
+                        ->value('SUM(quantity * price)') ?? 0;
+
+                    $totalQuotes = $quotes->count();
+                    $successRate = $totalAmount > 0 ? round(($awardedAmount / $totalAmount) * 100, 1) : 0;
+
+                    return [
+                        'RFQ Processor' => $processor->name,
+                        'Total Quotes' => $totalQuotes,
+                        'Total Quoted (KES)' => round($totalAmount, 2),
+                        'Awarded Amount (KES)' => round($awardedAmount, 2),
+                        'Completed Quotes' => $completed->count(),
+                        'Pending Manager' => $pendingMgr->count(),
+                        'Pending Customer' => $pendingCus->count(),
+                        'Pending Finance' => $pendingFin->count(),
+                        'Rejected Quotes' => $rejected->count(),
+                        'Success Rate (%)' => $successRate,
+                        'Avg Quote Value (KES)' => $totalQuotes > 0 ? round($totalAmount / $totalQuotes, 2) : 0,
+                    ];
+                });
+
+                return $rows->isNotEmpty() ? collect($rows) : collect([]);
                 break;
 
             case 'analytics':
@@ -137,11 +237,11 @@ class ExportController extends Controller
                     AVG(amount) as average_quote_value,
                     COUNT(DISTINCT user_id) as active_rfq_processors
                 ')
-                ->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
-                ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo))
-                ->when($request->rfq_processor, fn($q) => $q->where('user_id', $request->rfq_processor))
-                ->groupBy(DB::raw('DATE(created_at)'))
-                ->orderBy('date');
+                    ->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
+                    ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo))
+                    ->when($request->rfq_processor, fn($q) => $q->where('user_id', $request->rfq_processor))
+                    ->groupBy(DB::raw('DATE(created_at)'))
+                    ->orderBy('date');
                 break;
         }
 
@@ -158,15 +258,15 @@ class ExportController extends Controller
 
         switch ($type) {
             case 'quotes':
-                return $data->map(function($quote) {
+                return $data->map(function ($quote) {
                     // For completed quotes show approved items, for others show all items
                     if ($quote->status === 'completed') {
-                        $amount = $quote->items ? $quote->items->where('approved', true)->sum(function($item) {
+                        $amount = $quote->items ? $quote->items->where('approved', true)->sum(function ($item) {
                             return $item->quantity * $item->price;
                         }) : 0;
                         $itemCount = $quote->items ? $quote->items->where('approved', true)->count() : 0;
                     } else {
-                        $amount = $quote->items ? $quote->items->sum(function($item) {
+                        $amount = $quote->items ? $quote->items->sum(function ($item) {
                             return $item->quantity * $item->price;
                         }) : 0;
                         $itemCount = $quote->items ? $quote->items->count() : 0;
@@ -184,7 +284,7 @@ class ExportController extends Controller
                 });
 
             case 'rfq_processors':
-                return $data->map(function($user) {
+                return $data->map(function ($user) {
                     return [
                         'ID' => $user->id,
                         'Name' => $user->name,
@@ -197,7 +297,7 @@ class ExportController extends Controller
                 });
 
             case 'products':
-                return $data->map(function($item) {
+                return $data->map(function ($item) {
                     return [
                         'ID' => $item->id,
                         'Name' => $item->name,
@@ -209,7 +309,7 @@ class ExportController extends Controller
 
             // Performance and analytics data is already formatted by the query
             default:
-                return $data->map(function($item) {
+                return $data->map(function ($item) {
                     return (array) $item;
                 });
         }
@@ -235,7 +335,7 @@ class ExportController extends Controller
                         ->header('Content-Disposition', "attachment; filename=\"$filename.csv\"");
 
                 case 'pdf':
-                    $headers = !empty($data) ? array_keys((array)$data[0]) : [];
+                    $headers = !empty($data) ? array_keys((array) $data[0]) : [];
 
                     // Format data for better PDF display
                     $formattedData = $this->formatDataForPdf($data, $type);
@@ -244,7 +344,7 @@ class ExportController extends Controller
                     $orientation = count($headers) > 5 ? 'landscape' : 'portrait';
 
                     // Use specialized templates based on export type
-                    $view = match($type) {
+                    $view = match ($type) {
                         'performance' => 'exports.performance-report',
                         'quotes' => 'exports.quotes-report',
                         'analytics' => 'exports.analytics-report',
@@ -299,11 +399,13 @@ class ExportController extends Controller
         foreach ($data as $row) {
             $newRow = [];
 
-            foreach ((array)$row as $key => $value) {
+            foreach ((array) $row as $key => $value) {
                 // Format numeric values
                 if (is_numeric($value) && !in_array($key, ['id', 'ID'])) {
-                    if (stripos($key, 'amount') !== false || stripos($key, 'revenue') !== false ||
-                        stripos($key, 'value') !== false || stripos($key, 'price') !== false) {
+                    if (
+                        stripos($key, 'amount') !== false || stripos($key, 'revenue') !== false ||
+                        stripos($key, 'value') !== false || stripos($key, 'price') !== false
+                    ) {
                         $newRow[$key] = $value; // Keep raw value for calculations in template
                     } elseif (stripos($key, 'rate') !== false || stripos($key, 'percentage') !== false) {
                         $newRow[$key] = $value; // Keep raw value for calculations in template
@@ -334,7 +436,7 @@ class ExportController extends Controller
 
     private function formatStatusForDisplay($status)
     {
-        return match($status) {
+        return match ($status) {
             'pending_manager' => 'Pending Sarah',
             'pending_customer' => 'Awaiting Customer Response',
             'pending_finance' => 'Work in Progress',
@@ -354,11 +456,11 @@ class ExportController extends Controller
         $output = fopen('php://temp', 'r+');
 
         // Add headers
-        fputcsv($output, array_keys((array)$data[0]));
+        fputcsv($output, array_keys((array) $data[0]));
 
         // Add rows
         foreach ($data as $row) {
-            fputcsv($output, (array)$row);
+            fputcsv($output, (array) $row);
         }
 
         rewind($output);
