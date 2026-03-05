@@ -15,11 +15,11 @@ class CheckRole
             abort(403, 'Unauthorized action.');
         }
 
-        $allowedRoles = explode('|', $role);
+        $allowedRoles = explode(',', $role);
         $userRole = $request->user()->role;
-        
+
         \Log::info('CheckRole: User role=' . $userRole . ', Allowed roles=' . implode(',', $allowedRoles));
-        
+
         if (!in_array($userRole, $allowedRoles)) {
             \Log::error('CheckRole: Role mismatch - User role: ' . $userRole . ' not in allowed roles: ' . implode(',', $allowedRoles));
             abort(403, 'Unauthorized action.');
