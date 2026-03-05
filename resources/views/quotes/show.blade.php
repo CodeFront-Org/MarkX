@@ -134,9 +134,9 @@
                                 ($quote->status === 'pending_customer' ? 'warning' :
                                 ($quote->status === 'pending_finance' ? 'primary' : 'danger')))
                             }}">
-                                {{ $quote->status === 'pending_manager' ? 'Pending RFQ Approver' :
+                                {{ $quote->status === 'pending_manager' ? 'Pending Sarah' :
                                    ($quote->status === 'pending_customer' ? 'Pending Customer Review' :
-                                   ($quote->status === 'pending_finance' ? 'Pending LPO Admin' :
+                                   ($quote->status === 'pending_finance' ? 'Work in Progress' :
                                    ucwords(str_replace('_', ' ', $quote->status)))) }}
                             </span>
                         </div>
