@@ -8,14 +8,26 @@ use Symfony\Component\HttpFoundation\Response;
 
 class CheckRole
 {
-    public function handle(Request $request, Closure $next, string $role): Response
+    public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         if (!$request->user()) {
             \Log::error('CheckRole: No authenticated user');
             abort(403, 'Unauthorized action.');
         }
 
-        $allowedRoles = explode(',', $role);
+        // Laravel passes each comma-separated value as a separate argument,
+        // so "role:lpo_admin,rfq_approver" gives $roles = ['lpo_admin', 'rfq_approver'].
+        // We also handle pipe separators for any routes using "role:lpo_admin|rfq_approver".
+        $allowedRoles = [];
+        foreach ($roles as $role) {
+            foreach (preg_split('/[,|]/', $role) as $r) {
+                $r = trim($r);
+                if ($r !== '') {
+                    $allowedRoles[] = $r;
+                }
+            }
+        }
+
         $userRole = $request->user()->role;
 
         \Log::info('CheckRole: User role=' . $userRole . ', Allowed roles=' . implode(',', $allowedRoles));
