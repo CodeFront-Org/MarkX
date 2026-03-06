@@ -74,11 +74,11 @@ class ProductItemController extends Controller
 
     public function create()
     {
-        $quotes = Quote::when(Auth::user()->role !== 'rfq_approver' && Auth::user()->role !== 'lpo_admin', function($query) {
+        $quotes = Quote::when(Auth::user()->role !== 'rfq_approver' && Auth::user()->role !== 'lpo_admin', function ($query) {
             return $query->where('user_id', Auth::id());
         })
-        ->latest()
-        ->get();
+            ->latest()
+            ->get();
 
         return view('product-items.create', compact('quotes'));
     }
@@ -200,8 +200,8 @@ class ProductItemController extends Controller
             'quotes.status as quote_status',
             'users.name as marketer_name'
         ])
-        ->join('quotes', 'quotes.id', '=', 'quote_items.quote_id')
-        ->join('users', 'users.id', '=', 'quotes.user_id');
+            ->join('quotes', 'quotes.id', '=', 'quote_items.quote_id')
+            ->join('users', 'users.id', '=', 'quotes.user_id');
 
         // Apply filters
         if ($request->filled('item')) {
@@ -225,11 +225,25 @@ class ProductItemController extends Controller
         }
 
         if ($request->filled('date_from')) {
-            $query->whereDate('quotes.created_at', '>=', $request->date_from);
+            $query->where(function ($q) use ($request) {
+                $q->whereDate('quotes.created_at', '>=', $request->date_from)
+                    ->orWhere(function ($sub) use ($request) {
+                        $sub->where('quotes.status', 'completed')
+                            ->whereNotNull('quotes.closed_at')
+                            ->whereDate('quotes.closed_at', '>=', $request->date_from);
+                    });
+            });
         }
 
         if ($request->filled('date_to')) {
-            $query->whereDate('quotes.created_at', '<=', $request->date_to);
+            $query->where(function ($q) use ($request) {
+                $q->whereDate('quotes.created_at', '<=', $request->date_to)
+                    ->orWhere(function ($sub) use ($request) {
+                        $sub->where('quotes.status', 'completed')
+                            ->whereNotNull('quotes.closed_at')
+                            ->whereDate('quotes.closed_at', '<=', $request->date_to);
+                    });
+            });
         }
 
         if ($request->filled('quote_status')) {
@@ -250,8 +264,8 @@ class ProductItemController extends Controller
             'quotes.created_at as quote_created_at',
             'users.name as marketer_name'
         ])
-        ->join('quotes', 'quotes.id', '=', 'quote_items.quote_id')
-        ->join('users', 'users.id', '=', 'quotes.user_id');
+            ->join('quotes', 'quotes.id', '=', 'quote_items.quote_id')
+            ->join('users', 'users.id', '=', 'quotes.user_id');
 
         // Apply same filters as reports view
         if ($request->filled('item')) {
@@ -275,11 +289,25 @@ class ProductItemController extends Controller
         }
 
         if ($request->filled('date_from')) {
-            $query->whereDate('quotes.created_at', '>=', $request->date_from);
+            $query->where(function ($q) use ($request) {
+                $q->whereDate('quotes.created_at', '>=', $request->date_from)
+                    ->orWhere(function ($sub) use ($request) {
+                        $sub->where('quotes.status', 'completed')
+                            ->whereNotNull('quotes.closed_at')
+                            ->whereDate('quotes.closed_at', '>=', $request->date_from);
+                    });
+            });
         }
 
         if ($request->filled('date_to')) {
-            $query->whereDate('quotes.created_at', '<=', $request->date_to);
+            $query->where(function ($q) use ($request) {
+                $q->whereDate('quotes.created_at', '<=', $request->date_to)
+                    ->orWhere(function ($sub) use ($request) {
+                        $sub->where('quotes.status', 'completed')
+                            ->whereNotNull('quotes.closed_at')
+                            ->whereDate('quotes.closed_at', '<=', $request->date_to);
+                    });
+            });
         }
 
         if ($request->filled('quote_status')) {
@@ -292,11 +320,11 @@ class ProductItemController extends Controller
             return back()->with('error', 'No data available for export with the selected filters.');
         }
 
-        $totalAmount = $data->sum(function($item) {
+        $totalAmount = $data->sum(function ($item) {
             return $item->quantity * $item->price;
         });
 
-        $formattedData = $data->map(function($item) {
+        $formattedData = $data->map(function ($item) {
             return [
                 'Quote Title' => $item->quote_title,
                 'Quote Status' => $this->formatStatusForDisplay($item->quote_status),
@@ -332,6 +360,14 @@ class ProductItemController extends Controller
         $format = $request->input('format', 'excel');
         $filename = 'product_reports_' . now()->format('Y-m-d');
 
+        // Remove Date column for Excel and CSV formats as requested
+        if ($format === 'excel' || $format === 'csv') {
+            $formattedData = $formattedData->map(function ($row) {
+                unset($row['Date']);
+                return $row;
+            });
+        }
+
         if ($format === 'csv') {
             return response($this->arrayToCsv($formattedData->toArray()))
                 ->header('Content-Type', 'text/csv')
@@ -346,7 +382,7 @@ class ProductItemController extends Controller
 
     private function formatStatusForDisplay($status)
     {
-        return match($status) {
+        return match ($status) {
             'pending_manager' => 'Pending Sarah',
             'pending_customer' => 'Awaiting Customer Response',
             'pending_finance' => 'Work in Progress',

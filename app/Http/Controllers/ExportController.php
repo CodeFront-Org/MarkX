@@ -325,6 +325,15 @@ class ExportController extends Controller
                 return back()->with('error', 'No data available to export with the selected filters.');
             }
 
+            // Remove Date column for Excel and CSV formats as requested
+            if ($format === 'excel' || $format === 'csv') {
+                $data = collect($data)->map(function ($row) {
+                    $rowArray = (array) $row;
+                    unset($rowArray['Date'], $rowArray['date']);
+                    return $rowArray;
+                })->toArray();
+            }
+
             switch ($format) {
                 case 'excel':
                     return Excel::download(new DataExport($data), $filename . '.xlsx');
