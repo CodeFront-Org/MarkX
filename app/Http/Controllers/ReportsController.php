@@ -666,15 +666,19 @@ class ReportsController extends Controller
             $historyQuery->where('status', $request->status_filter);
         }
 
-        return (object)[
-            'avg_approval_time' => $approvalQuery->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, approved_at)) as avg_hours')
-                ->value('avg_hours') ?? 0,
+        $isSqlite = DB::connection()->getDriverName() === 'sqlite';
 
-            'avg_closing_time' => $closingQuery->selectRaw('AVG(TIMESTAMPDIFF(HOUR, approved_at, closed_at)) as avg_hours')
-                ->value('avg_hours') ?? 0,
+        return (object)[
+            'avg_approval_time' => $isSqlite
+                ? ($approvalQuery->selectRaw('AVG(ROUND((julianday(approved_at) - julianday(created_at)) * 24)) as avg_hours')->value('avg_hours') ?? 0)
+                : ($approvalQuery->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, approved_at)) as avg_hours')->value('avg_hours') ?? 0),
+
+            'avg_closing_time' => $isSqlite
+                ? ($closingQuery->selectRaw('AVG(ROUND((julianday(closed_at) - julianday(approved_at)) * 24)) as avg_hours')->value('avg_hours') ?? 0)
+                : ($closingQuery->selectRaw('AVG(TIMESTAMPDIFF(HOUR, approved_at, closed_at)) as avg_hours')->value('avg_hours') ?? 0),
 
             'approval_rates' => [
-                'manager' => $this->calculateRateByRole('manager', $request),
+                'manager' => $this->calculateRateByRole('rfq_approver', $request),
                 'lpo_admin' => $this->calculateRateByRole('lpo_admin', $request)
             ],
 

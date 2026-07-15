@@ -23,7 +23,7 @@
     </div>
     <div class="col-lg-3 col-md-6 col-12">
         <div class="border-radius-md text-center p-2 bg-gradient-danger mb-2">
-            <h6 class="text-xs mb-1 text-uppercase font-weight-bold text-white">Rejected</h6>
+            <h6 class="text-xs mb-1 text-uppercase font-weight-bold text-white">Not Recommended</h6>
             <h5 class="font-weight-bold mb-0 text-white">{{ $stats->rejected_quotes }}</h5>
             <small class="text-white opacity-8">{{ $stats->rejected_percentage }}% • KES {{ number_format($stats->rejected_amount, 2) }}</small>
         </div>
@@ -70,10 +70,12 @@
                         }}">
                             @if($quote->status === 'pending_customer')
                                 Awaiting Customer Response
+                            @elseif($quote->status === 'rejected')
+                                Not Recommended
                             @else
                                 {{ ucwords(str_replace('_', ' ', $quote->status)) }}
                             @endif
-                            ({{ $quote->created_at->diffInDays() }} days)
+                            ({{ $quote->getDaysInStatus() }} days)
                         </span>
                     </td>
                     <td>

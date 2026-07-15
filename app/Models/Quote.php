@@ -137,6 +137,20 @@ class Quote extends Model
     }
 
     // Methods
+    public function getDaysInStatus()
+    {
+        if ($this->status === 'pending_customer' && $this->submitted_to_customer_at) {
+            return $this->submitted_to_customer_at->diffInDays();
+        }
+        if ($this->status === 'completed' && $this->closed_at) {
+            return $this->closed_at->diffInDays();
+        }
+        if (($this->status === 'pending_finance' || $this->status === 'rejected') && $this->updated_at) {
+            return $this->updated_at->diffInDays();
+        }
+        return $this->created_at->diffInDays();
+    }
+
     public function isApproved()
     {
         return $this->status === 'approved';

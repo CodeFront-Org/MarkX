@@ -41,7 +41,7 @@
                                         <option value="pending_customer" {{ request('status') == 'pending_customer' ? 'selected' : '' }}>Awaiting Customer Response</option>
                                         <option value="pending_finance" {{ request('status') == 'pending_finance' ? 'selected' : '' }}>Work in Progress</option>
                                         <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed</option>
-                                        <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Rejected</option>
+                                        <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Not recommended</option>
                                     </select>
                                 </div>
                                 <div class="col-lg-3 col-md-6">
@@ -63,9 +63,9 @@
                                 </div>
                             </div>
                             
-                            <!-- Row 2: Date Filters -->
+                            <!-- Row 2: Date Filters & Age Filter -->
                             <div class="row g-3 mt-2">
-                                <div class="col-lg-6 col-md-6">
+                                <div class="col-lg-4 col-md-6">
                                     <label class="form-label text-xs font-weight-bold mb-1">
                                         <i class="fas fa-calendar-check text-success me-1"></i>Quotes Closed On
                                     </label>
@@ -76,7 +76,7 @@
                                         <input type="date" name="date_to" class="form-control search-input" value="{{ request('date_to') }}">
                                     </div>
                                 </div>
-                                <div class="col-lg-6 col-md-6">
+                                <div class="col-lg-4 col-md-6">
                                     <label class="form-label text-xs font-weight-bold mb-1">
                                         <i class="fas fa-paper-plane text-primary me-1"></i>Submitted to Customer
                                     </label>
@@ -85,6 +85,17 @@
                                         <input type="date" name="submitted_from" class="form-control search-input" value="{{ request('submitted_from') }}">
                                         <span class="input-group-text">To</span>
                                         <input type="date" name="submitted_to" class="form-control search-input" value="{{ request('submitted_to') }}">
+                                    </div>
+                                </div>
+                                <div class="col-lg-4 col-md-12">
+                                    <label class="form-label text-xs font-weight-bold mb-1">
+                                        <i class="fas fa-clock text-warning me-1"></i>Days in Status
+                                    </label>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">Min</span>
+                                        <input type="number" name="days_min" class="form-control search-input" value="{{ request('days_min') }}" min="0" placeholder="e.g. 20">
+                                        <span class="input-group-text">Max</span>
+                                        <input type="number" name="days_max" class="form-control search-input" value="{{ request('days_max') }}" min="0" placeholder="e.g. 30">
                                     </div>
                                 </div>
                             </div>
@@ -160,9 +171,12 @@
             const form = document.getElementById('search-form');
             form.reset();
 
-            // Clear all date inputs explicitly
-            form.querySelectorAll('input[type="date"]').forEach(input => {
+            // Clear all inputs explicitly
+            form.querySelectorAll('input').forEach(input => {
                 input.value = '';
+            });
+            form.querySelectorAll('select').forEach(select => {
+                select.selectedIndex = 0;
             });
 
             // Trigger the search

@@ -13,6 +13,7 @@ class QuoteFactory extends Factory
             'title' => $this->faker->sentence(),
             'description' => $this->faker->paragraph(),
             'amount' => $this->faker->randomFloat(2, 100, 10000),
+            'reference' => 'Q' . str_pad($this->faker->unique()->numberBetween(1, 999999), 6, '0', STR_PAD_LEFT),
             'status' => $this->faker->randomElement(['pending', 'approved', 'rejected', 'converted']),
             'user_id' => User::factory(),
             'valid_until' => $this->faker->dateTimeBetween('now', '+30 days')

@@ -6,6 +6,8 @@ use App\Models\Quote;
 use App\Models\User;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class QuoteTest extends TestCase
@@ -15,34 +17,46 @@ class QuoteTest extends TestCase
     public function test_marketer_can_create_quote(): void
     {
         /** @var User&Authenticatable */
-        $marketer = User::factory()->createOne(['role' => 'marketer']);
+        $processor = User::factory()->createOne(['role' => 'rfq_processor']);
         
-        $response = $this->actingAs($marketer)->post('/quotes', [
+        Storage::fake('public');
+        $file = UploadedFile::fake()->create('rfq_document.pdf', 100);
+
+        $response = $this->actingAs($processor)->post('/quotes', [
             'title' => 'Test Quote',
             'description' => 'Test Description',
-            'amount' => 1000.00,
-            'status' => 'pending',
-            'valid_until' => now()->addDays(30)->format('Y-m-d')
+            'valid_until' => now()->addDays(30)->format('Y-m-d'),
+            'total_rfq_items' => 1,
+            'items' => [
+                [
+                    'item' => 'Product A',
+                    'quantity' => 10,
+                    'price' => 100,
+                    'approved' => 0
+                ]
+            ],
+            'files' => [$file],
+            'descriptions' => ['Test file description']
         ]);
 
         $response->assertRedirect(route('quotes.index'));
         $this->assertDatabaseHas('quotes', [
             'title' => 'Test Quote',
-            'user_id' => $marketer->id
+            'user_id' => $processor->id
         ]);
     }
 
     public function test_marketer_can_only_see_their_quotes(): void
     {
         /** @var User&Authenticatable */
-        $marketer1 = User::factory()->createOne(['role' => 'marketer']);
+        $processor1 = User::factory()->createOne(['role' => 'rfq_processor']);
         /** @var User&Authenticatable */
-        $marketer2 = User::factory()->createOne(['role' => 'marketer']);
+        $processor2 = User::factory()->createOne(['role' => 'rfq_processor']);
         
-        $quote1 = Quote::factory()->create(['user_id' => $marketer1->id]);
-        $quote2 = Quote::factory()->create(['user_id' => $marketer2->id]);
+        $quote1 = Quote::factory()->create(['user_id' => $processor1->id]);
+        $quote2 = Quote::factory()->create(['user_id' => $processor2->id]);
 
-        $response = $this->actingAs($marketer1)->get('/quotes');
+        $response = $this->actingAs($processor1)->get('/quotes');
         
         $response->assertSee($quote1->title);
         $response->assertDontSee($quote2->title);
@@ -51,13 +65,13 @@ class QuoteTest extends TestCase
     public function test_manager_can_see_all_quotes(): void
     {
         /** @var User&Authenticatable */
-        $manager = User::factory()->createOne(['role' => 'manager']);
+        $approver = User::factory()->createOne(['role' => 'rfq_approver']);
         /** @var User&Authenticatable */
-        $marketer = User::factory()->createOne(['role' => 'marketer']);
+        $processor = User::factory()->createOne(['role' => 'rfq_processor']);
         
-        $quote = Quote::factory()->create(['user_id' => $marketer->id]);
+        $quote = Quote::factory()->create(['user_id' => $processor->id]);
 
-        $response = $this->actingAs($manager)->get('/quotes');
+        $response = $this->actingAs($approver)->get('/quotes');
         
         $response->assertSee($quote->title);
     }
@@ -65,25 +79,55 @@ class QuoteTest extends TestCase
     public function test_manager_can_access_reports(): void
     {
         /** @var User&Authenticatable */
-        $manager = User::factory()->createOne(['role' => 'manager']);
+        $approver = User::factory()->createOne(['role' => 'rfq_approver']);
         /** @var User&Authenticatable */
-        $marketer = User::factory()->createOne(['role' => 'marketer']);
+        $processor = User::factory()->createOne(['role' => 'rfq_processor']);
         
-        Quote::factory()->successful()->create(['user_id' => $marketer->id]);
+        Quote::factory()->successful()->create(['user_id' => $processor->id]);
 
-        $response = $this->actingAs($manager)->get('/reports');
+        $response = $this->actingAs($approver)->get('/reports');
         
         $response->assertOk();
-        $response->assertViewHas('revenueByMarketer');
+        $response->assertViewHas('rfqProcessorStats');
     }
 
     public function test_marketer_cannot_access_reports(): void
     {
         /** @var User&Authenticatable */
-        $marketer = User::factory()->createOne(['role' => 'marketer']);
+        $processor = User::factory()->createOne(['role' => 'rfq_processor']);
 
-        $response = $this->actingAs($marketer)->get('/reports');
+        $response = $this->actingAs($processor)->get('/reports');
         
         $response->assertForbidden();
+    }
+
+    public function test_can_filter_by_status_and_days(): void
+    {
+        /** @var User&Authenticatable */
+        $approver = User::factory()->createOne(['role' => 'rfq_approver']);
+
+        // Create a quote that was submitted to customer 25 days ago
+        $quote1 = Quote::factory()->create([
+            'title' => 'Quote 25 Days Old',
+            'status' => 'pending_customer',
+            'submitted_to_customer_at' => now()->subDays(25),
+        ]);
+
+        // Create a quote that was submitted to customer 5 days ago
+        $quote2 = Quote::factory()->create([
+            'title' => 'Quote 5 Days Old',
+            'status' => 'pending_customer',
+            'submitted_to_customer_at' => now()->subDays(5),
+        ]);
+
+        // Filter for Awaiting Customer Response (pending_customer) between 20 and 30 days
+        $response = $this->actingAs($approver)->get('/quotes?' . http_build_query([
+            'status' => 'pending_customer',
+            'days_min' => 20,
+            'days_max' => 30
+        ]));
+
+        $response->assertSee($quote1->title);
+        $response->assertDontSee($quote2->title);
     }
 }

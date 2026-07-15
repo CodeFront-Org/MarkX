@@ -11,7 +11,7 @@
                         <i class="fas fa-times-circle me-2"></i>
                     </div>
                     <div class="ps-2">
-                        <h6 class="text-sm text-white mb-1">Quote Rejected</h6>
+                        <h6 class="text-sm text-white mb-1">Quote Not Recommended</h6>
                         <p class="text-sm mb-0 text-white">
                             Reason: {{ ucfirst(str_replace('_', ' ', $quote->rejection_reason)) }}
                             @if($quote->rejection_details)
@@ -137,7 +137,8 @@
                                 {{ $quote->status === 'pending_manager' ? 'Pending Sarah' :
                                    ($quote->status === 'pending_customer' ? 'Pending Customer Review' :
                                    ($quote->status === 'pending_finance' ? 'Work in Progress' :
-                                   ucwords(str_replace('_', ' ', $quote->status)))) }}
+                                   ($quote->status === 'rejected' ? 'Not Recommended' :
+                                   ucwords(str_replace('_', ' ', $quote->status))))) }}
                             </span>
                         </div>
                         <div class="col-md-6">

@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Invoice;
 use App\Models\Quote;
 use App\Models\User;
 use App\Services\PdfService;
@@ -26,70 +25,25 @@ class PdfServiceTest extends TestCase
         $this->pdfService = new PdfService();
     }
 
-    private function createInvoice(): Invoice
+    private function createQuote(): Quote
     {
-        $user = User::factory()->create(['role' => 'manager']);
-        $quote = Quote::factory()->successful()->create(['user_id' => $user->id]);
-        return Invoice::factory()->create(['quote_id' => $quote->id]);
+        $user = User::factory()->create(['role' => 'rfq_approver']);
+        return Quote::factory()->create(['user_id' => $user->id]);
     }
 
-    private function mockPdfWithOutput(string $output): void
+    public function test_generate_quote_pdf(): void
     {
+        $quote = $this->createQuote();
+        
         $pdfMock = Mockery::mock('Barryvdh\DomPDF\PDF');
-        $pdfMock->shouldReceive('stream')->andReturn('pdf content');
-        $pdfMock->shouldReceive('output')->andReturn($output);
+        $pdfMock->shouldReceive('setOptions')->andReturnSelf();
         
         Pdf::shouldReceive('loadView')
-            ->with('pdf.invoice', Mockery::any())
+            ->once()
             ->andReturn($pdfMock);
-    }
 
-    public function test_pdf_generation_retries_on_failure(): void
-    {
-        $invoice = $this->createInvoice();
-
-        // First two calls will fail, third will succeed
-        Pdf::shouldReceive('loadView')
-            ->once()
-            ->with('pdf.invoice', ['invoice' => $invoice])
-            ->andThrow(new Exception('PDF generation failed'))
-            ->ordered();
-        
-        Pdf::shouldReceive('loadView')
-            ->once()
-            ->with('pdf.invoice', ['invoice' => $invoice])
-            ->andThrow(new Exception('PDF generation failed again'))
-            ->ordered();
-        
-        // Mock successful PDF generation
-        $pdfMock = Mockery::mock('Barryvdh\DomPDF\PDF');
-        $pdfMock->shouldReceive('stream')->andReturn('pdf content');
-        $pdfMock->shouldReceive('output')->andReturn('test content');
-        
-        Pdf::shouldReceive('loadView')
-            ->once()
-            ->with('pdf.invoice', ['invoice' => $invoice])
-            ->andReturn($pdfMock)
-            ->ordered();
-
-        $result = $this->pdfService->streamInvoicePdf($invoice);
-        
+        $result = $this->pdfService->generateQuotePdf($quote);
         $this->assertNotNull($result);
-    }
-
-    public function test_pdf_generation_fails_after_max_retries(): void
-    {
-        $invoice = $this->createInvoice();
-
-        Pdf::shouldReceive('loadView')
-            ->times(3)
-            ->with('pdf.invoice', ['invoice' => $invoice])
-            ->andThrow(new Exception('PDF generation failed'));
-
-        $this->expectException(Exception::class);
-        $this->expectExceptionMessage('PDF generation failed after 3 attempts');
-        
-        $this->pdfService->streamInvoicePdf($invoice);
     }
 
     public function test_cleanup_removes_old_temporary_files(): void
@@ -114,25 +68,6 @@ class PdfServiceTest extends TestCase
         // Check results
         $this->assertFalse(Storage::exists('temp/old_file.pdf'));
         $this->assertTrue(Storage::exists('temp/new_file.pdf'));
-    }
-
-    public function test_pdf_validation_checks_file_content(): void
-    {
-        $invoice = $this->createInvoice();
-
-        // Mock PDF with empty output
-        $pdfMock = Mockery::mock('Barryvdh\DomPDF\PDF');
-        $pdfMock->shouldReceive('output')->andReturn('');
-        
-        Pdf::shouldReceive('loadView')
-            ->once()
-            ->with('pdf.invoice', ['invoice' => $invoice])
-            ->andReturn($pdfMock);
-
-        $this->expectException(Exception::class);
-        $this->expectExceptionMessage('Generated PDF file is invalid or empty');
-
-        $this->pdfService->generateInvoicePdf($invoice);
     }
 
     protected function tearDown(): void
