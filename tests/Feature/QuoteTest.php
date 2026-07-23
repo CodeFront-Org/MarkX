@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Quote;
+use App\Models\QuoteItem;
 use App\Models\User;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -101,7 +102,7 @@ class QuoteTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_can_filter_by_status_and_days(): void
+    public function test_can_filter_product_reports_by_status_and_days(): void
     {
         /** @var User&Authenticatable */
         $approver = User::factory()->createOne(['role' => 'rfq_approver']);
@@ -112,6 +113,13 @@ class QuoteTest extends TestCase
             'status' => 'pending_customer',
             'submitted_to_customer_at' => now()->subDays(25),
         ]);
+        QuoteItem::create([
+            'quote_id' => $quote1->id,
+            'item' => 'Product X',
+            'quantity' => 5,
+            'price' => 100,
+            'approved' => 1
+        ]);
 
         // Create a quote that was submitted to customer 5 days ago
         $quote2 = Quote::factory()->create([
@@ -119,10 +127,17 @@ class QuoteTest extends TestCase
             'status' => 'pending_customer',
             'submitted_to_customer_at' => now()->subDays(5),
         ]);
+        QuoteItem::create([
+            'quote_id' => $quote2->id,
+            'item' => 'Product Y',
+            'quantity' => 2,
+            'price' => 50,
+            'approved' => 1
+        ]);
 
-        // Filter for Awaiting Customer Response (pending_customer) between 20 and 30 days
-        $response = $this->actingAs($approver)->get('/quotes?' . http_build_query([
-            'status' => 'pending_customer',
+        // Filter product reports for Awaiting Customer Response (pending_customer) between 20 and 30 days
+        $response = $this->actingAs($approver)->get('/product-reports?' . http_build_query([
+            'quote_status' => 'pending_customer',
             'days_min' => 20,
             'days_max' => 30
         ]));

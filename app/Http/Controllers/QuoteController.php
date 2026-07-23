@@ -95,27 +95,7 @@ class QuoteController extends Controller
             });
         }
 
-        // Days in status filter
-        if ($request->filled('days_min') || $request->filled('days_max')) {
-            $dateColumn = 'created_at';
-            if ($request->filled('status')) {
-                if ($request->status === 'pending_customer') {
-                    $dateColumn = 'submitted_to_customer_at';
-                } elseif ($request->status === 'completed') {
-                    $dateColumn = 'closed_at';
-                } elseif ($request->status === 'pending_finance' || $request->status === 'rejected') {
-                    $dateColumn = 'updated_at';
-                }
-            }
 
-            if ($request->filled('days_min')) {
-                $query->where($dateColumn, '<=', now()->subDays($request->days_min)->endOfDay());
-            }
-
-            if ($request->filled('days_max')) {
-                $query->where($dateColumn, '>=', now()->subDays($request->days_max)->startOfDay());
-            }
-        }
 
         $quotes = $query->with(['user', 'items'])
             ->latest()
@@ -172,27 +152,7 @@ class QuoteController extends Controller
             });
         }
 
-        // Days in status filter
-        if ($request && ($request->filled('days_min') || $request->filled('days_max'))) {
-            $dateColumn = 'created_at';
-            if ($request->filled('status')) {
-                if ($request->status === 'pending_customer') {
-                    $dateColumn = 'submitted_to_customer_at';
-                } elseif ($request->status === 'completed') {
-                    $dateColumn = 'closed_at';
-                } elseif ($request->status === 'pending_finance' || $request->status === 'rejected') {
-                    $dateColumn = 'updated_at';
-                }
-            }
 
-            if ($request->filled('days_min')) {
-                $query->where($dateColumn, '<=', now()->subDays($request->days_min)->endOfDay());
-            }
-
-            if ($request->filled('days_max')) {
-                $query->where($dateColumn, '>=', now()->subDays($request->days_max)->startOfDay());
-            }
-        }
 
         $totalQuotes = $query->count();
         $totalAmount = $query->sum('amount');

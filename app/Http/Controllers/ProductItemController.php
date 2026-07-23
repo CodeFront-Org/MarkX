@@ -250,6 +250,28 @@ class ProductItemController extends Controller
             $query->where('quotes.status', $request->quote_status);
         }
 
+        // Days in status filter
+        if ($request->filled('days_min') || $request->filled('days_max')) {
+            $dateColumn = 'quotes.created_at';
+            if ($request->filled('quote_status')) {
+                if ($request->quote_status === 'pending_customer') {
+                    $dateColumn = 'quotes.submitted_to_customer_at';
+                } elseif ($request->quote_status === 'completed') {
+                    $dateColumn = 'quotes.closed_at';
+                } elseif ($request->quote_status === 'pending_finance' || $request->quote_status === 'rejected') {
+                    $dateColumn = 'quotes.updated_at';
+                }
+            }
+
+            if ($request->filled('days_min')) {
+                $query->where($dateColumn, '<=', now()->subDays($request->days_min)->endOfDay());
+            }
+
+            if ($request->filled('days_max')) {
+                $query->where($dateColumn, '>=', now()->subDays($request->days_max)->startOfDay());
+            }
+        }
+
         $quoteItems = $query->orderBy('quotes.created_at', 'desc')->paginate(50)->withQueryString();
 
         return view('product-items.reports', compact('quoteItems'));
@@ -312,6 +334,28 @@ class ProductItemController extends Controller
 
         if ($request->filled('quote_status')) {
             $query->where('quotes.status', $request->quote_status);
+        }
+
+        // Days in status filter
+        if ($request->filled('days_min') || $request->filled('days_max')) {
+            $dateColumn = 'quotes.created_at';
+            if ($request->filled('quote_status')) {
+                if ($request->quote_status === 'pending_customer') {
+                    $dateColumn = 'quotes.submitted_to_customer_at';
+                } elseif ($request->quote_status === 'completed') {
+                    $dateColumn = 'quotes.closed_at';
+                } elseif ($request->quote_status === 'pending_finance' || $request->quote_status === 'rejected') {
+                    $dateColumn = 'quotes.updated_at';
+                }
+            }
+
+            if ($request->filled('days_min')) {
+                $query->where($dateColumn, '<=', now()->subDays($request->days_min)->endOfDay());
+            }
+
+            if ($request->filled('days_max')) {
+                $query->where($dateColumn, '>=', now()->subDays($request->days_max)->startOfDay());
+            }
         }
 
         $data = $query->orderBy('quotes.created_at', 'desc')->get();

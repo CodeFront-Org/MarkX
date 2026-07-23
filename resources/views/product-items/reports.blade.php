@@ -77,17 +77,28 @@
                                 </div>
                                 <div class="col-lg-3 col-md-6">
                                     <label class="form-label text-xs font-weight-bold mb-1">
+                                        <i class="fas fa-clock text-warning me-1"></i>Days in Status
+                                    </label>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">Min</span>
+                                        <input type="number" name="days_min" class="form-control form-control-sm" value="{{ request('days_min') }}" min="0" placeholder="e.g. 20">
+                                        <span class="input-group-text">Max</span>
+                                        <input type="number" name="days_max" class="form-control form-control-sm" value="{{ request('days_max') }}" min="0" placeholder="e.g. 30">
+                                    </div>
+                                </div>
+                                <div class="col-lg-2 col-md-6">
+                                    <label class="form-label text-xs font-weight-bold mb-1">
                                         <i class="fas fa-calendar text-primary me-1"></i>From Date
                                     </label>
                                     <input type="date" class="form-control form-control-sm" name="date_from" value="{{ request('date_from') }}">
                                 </div>
-                                <div class="col-lg-3 col-md-6">
+                                <div class="col-lg-2 col-md-6">
                                     <label class="form-label text-xs font-weight-bold mb-1">
                                         <i class="fas fa-calendar text-primary me-1"></i>To Date
                                     </label>
                                     <input type="date" class="form-control form-control-sm" name="date_to" value="{{ request('date_to') }}">
                                 </div>
-                                <div class="col-lg-3 col-md-6 d-flex align-items-end">
+                                <div class="col-lg-2 col-md-12 d-flex align-items-end">
                                     <div class="d-flex gap-2 w-100">
                                         <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
                                             <i class="fas fa-search me-1"></i>FILTER
