@@ -436,5 +436,24 @@ class ProductItemController extends Controller
         };
     }
 
+    private function arrayToCsv($data)
+    {
+        if (empty($data)) {
+            return '';
+        }
 
+        $output = fopen('php://temp', 'r+');
+
+        fputcsv($output, array_keys((array) $data[0]));
+
+        foreach ($data as $row) {
+            fputcsv($output, (array) $row);
+        }
+
+        rewind($output);
+        $csv = stream_get_contents($output);
+        fclose($output);
+
+        return $csv;
+    }
 }
