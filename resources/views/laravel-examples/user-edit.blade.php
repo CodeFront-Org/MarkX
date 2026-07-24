@@ -61,18 +61,22 @@
                     @enderror
                 </div>
                 <div class="d-flex justify-content-between align-items-center">
-                    <button type="submit" class="btn bg-gradient-info">Update User</button>
-                    @if(auth()->id() !== $user->id)
-                    <form action="{{ route('users.destroy', $user->id) }}" method="POST" class="d-inline m-0">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn bg-gradient-danger" onclick="return confirm('Are you sure you want to delete this user?')">
-                            Delete User
-                        </button>
-                    </form>
-                    @endif
+                    <button type="submit" class="btn bg-gradient-info mb-0">Update User</button>
+                    <a href="{{ route('user-management') }}" class="btn btn-outline-secondary mb-0">Cancel</a>
                 </div>
             </form>
+
+            @if(auth()->id() !== $user->id)
+            <div class="mt-4 pt-3 border-top d-flex justify-content-end">
+                <form action="{{ route('users.destroy', $user->id) }}" method="POST" class="d-inline m-0">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn bg-gradient-danger mb-0" onclick="return confirm('Are you sure you want to delete this user?')">
+                        Delete User Account
+                    </button>
+                </form>
+            </div>
+            @endif
         </div>
     </div>
 </div>
