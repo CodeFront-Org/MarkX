@@ -79,6 +79,18 @@
         </a>
       </li>
       @endcan
+
+      @if(auth()->user()->isSuperAdmin())
+      <li class="nav-item pb-2">
+        <a class="nav-link {{ (Request::is('settings/approval-chain*') ? 'active' : '') }}" href="{{ route('settings.approval-chain.index') }}">
+          <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+            <i class="fas fa-sitemap text-dark"></i>
+          </div>
+          <span class="nav-link-text ms-1">Approval Chain</span>
+        </a>
+      </li>
+      @endif
+
       <li class="nav-item mt-2">
         <h6 class="ps-4 ms-2 text-uppercase text-xs font-weight-bolder opacity-6">Business</h6>
       </li>

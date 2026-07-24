@@ -7,7 +7,7 @@
             <div class="card mb-4">                <div class="card-header pb-0 d-flex justify-content-between align-items-center">
                     <h6>Quotes</h6>
                     <div class="d-flex gap-2">
-                        @if(auth()->user()->isRfqApprover())
+                        @if(auth()->user()->isRfqApprover() || auth()->user()->isSuperAdmin())
                             @include('partials.export-button')
                         @endif
                         @if(auth()->user()->isRfqProcessor())

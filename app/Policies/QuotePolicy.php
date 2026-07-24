@@ -36,9 +36,11 @@ class QuotePolicy
 
     public function approve(User $user, Quote $quote): bool
     {
-        // RFQ Approvers can approve quotes in pending_manager status (whole quote approval)
-        if ($user->role === 'rfq_approver') {
-            return $quote->status === 'pending_manager';
+        // RFQ Approvers approve quotes in pending_manager status. When an
+        // approver chain is configured, only the approver whose turn it is may
+        // act; with no chain, any approver may act (legacy behaviour).
+        if ($user->role === 'rfq_approver' && $quote->status === 'pending_manager') {
+            return !$quote->hasApprovalChain() || $quote->isAwaitingApprovalBy($user);
         }
 
         // LPO Admin can approve quotes in pending_finance status (finalize after reviewing items)
@@ -51,9 +53,10 @@ class QuotePolicy
 
     public function reject(User $user, Quote $quote): bool
     {
-        // RFQ Approvers can reject quotes in pending_manager status
-        if ($user->role === 'rfq_approver') {
-            return $quote->status === 'pending_manager';
+        // RFQ Approvers reject quotes in pending_manager status. Same turn rule
+        // as approval: only the current approver may reject a chained quote.
+        if ($user->role === 'rfq_approver' && $quote->status === 'pending_manager') {
+            return !$quote->hasApprovalChain() || $quote->isAwaitingApprovalBy($user);
         }
 
         // LPO Admin can reject quotes in pending_finance status

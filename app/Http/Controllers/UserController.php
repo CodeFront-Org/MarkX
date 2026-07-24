@@ -35,6 +35,11 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
+        // Super admin accounts may only be removed by another super admin.
+        if ($user->isSuperAdmin() && !auth()->user()->isSuperAdmin()) {
+            return back()->with('error', 'You are not allowed to delete a Super Admin account.');
+        }
+
         if ($user->isRfqApprover() && User::where('role', 'rfq_approver')->count() <= 1) {
             return back()->with('error', 'Cannot delete the last RFQ Approver account');
         }

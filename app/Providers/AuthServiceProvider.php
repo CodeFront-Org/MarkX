@@ -32,6 +32,12 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
+        // Super admins have full access to the system: short-circuit every
+        // authorization check (policies and gates) before it is evaluated.
+        Gate::before(function ($user, $ability) {
+            return $user->isSuperAdmin() ? true : null;
+        });
+
         Gate::define('view-reports', function ($user) {
             return in_array($user->role, ['rfq_approver', 'lpo_admin']);
         });

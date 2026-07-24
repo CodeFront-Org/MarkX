@@ -30,6 +30,11 @@ class CheckRole
 
         $userRole = $request->user()->role;
 
+        // Super admins have full access to the system.
+        if ($userRole === 'superadmin') {
+            return $next($request);
+        }
+
         \Log::info('CheckRole: User role=' . $userRole . ', Allowed roles=' . implode(',', $allowedRoles));
 
         if (!in_array($userRole, $allowedRoles)) {

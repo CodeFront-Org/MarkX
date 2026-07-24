@@ -58,14 +58,31 @@
                                 <span class="text-muted ms-1">({{ number_format(($quote->items->where('approved', true)->count() / $quote->items->count()) * 100, 1) }}%)</span>
                             @endif
                         </div>
-                        @if($quote->status === 'pending_manager' && auth()->user()->isRfqApprover())
-                        <form action="{{ route('quotes.approve', $quote) }}" method="POST" class="d-inline">
-                            @csrf
-                            <button type="submit" class="btn bg-gradient-success mx-1">Approve Quote</button>
-                        </form>
-                        <button type="button" class="btn bg-gradient-danger mx-1" data-bs-toggle="modal" data-bs-target="#rejectQuoteModal">
-                            Reject Quote
-                        </button>
+
+                        @if($quote->status === 'pending_manager' && $quote->hasApprovalChain())
+                            @php([$currentStep, $totalSteps] = $quote->approvalProgress())
+                            @php($nextApprover = $quote->nextApprover())
+                            <div class="badge bg-light text-dark border me-3 px-3 py-2" style="font-size: 0.875rem; font-weight: 600;">
+                                <i class="fas fa-user-check me-1"></i>
+                                Approval {{ $currentStep }} of {{ $totalSteps }}
+                                @if($nextApprover)
+                                    <span class="text-muted ms-1">— awaiting {{ $nextApprover->name }}</span>
+                                @endif
+                            </div>
+                        @endif
+
+                        @if($quote->status === 'pending_manager')
+                            @can('approve', $quote)
+                            <form action="{{ route('quotes.approve', $quote) }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit" class="btn bg-gradient-success mx-1">Approve Quote</button>
+                            </form>
+                            @endcan
+                            @can('reject', $quote)
+                            <button type="button" class="btn bg-gradient-danger mx-1" data-bs-toggle="modal" data-bs-target="#rejectQuoteModal">
+                                Reject Quote
+                            </button>
+                            @endcan
                         @endif
 
                         @if($quote->status === 'pending_customer' && auth()->id() === $quote->user_id)

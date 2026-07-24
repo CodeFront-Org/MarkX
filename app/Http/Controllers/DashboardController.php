@@ -13,8 +13,8 @@ class DashboardController extends Controller
     public function index()
     {        
         // Base query for scoping data
-        $quotesQuery = Auth::user()->role === 'rfq_approver' || Auth::user()->role === 'lpo_admin' 
-            ? Quote::query() 
+        $quotesQuery = Auth::user()->canViewAllQuotes()
+            ? Quote::query()
             : Quote::where('user_id', Auth::id());
         
         // Today's Money - Sum of approved quotes today
@@ -31,7 +31,7 @@ class DashboardController extends Controller
             (($todaysMoney - $yesterdayMoney) / $yesterdayMoney) * 100 : 0;
 
         // Today's Users - For RFQ approvers and LPO admins, show all users
-        if (Auth::user()->role === 'rfq_approver' || Auth::user()->role === 'lpo_admin') {
+        if (Auth::user()->canViewAllQuotes()) {
             $todaysUsers = User::whereHas('quotes', function($q) {
                 $q->whereDate('created_at', today());
             })->count();
@@ -134,7 +134,7 @@ class DashboardController extends Controller
             });
 
         // Get RFQ processors data for the line chart
-        if (Auth::user()->role === 'rfq_approver' || Auth::user()->role === 'lpo_admin') {
+        if (Auth::user()->canViewAllQuotes()) {
             $rfqProcessors = User::where('role', 'rfq_processor')->get();
         } else {
             $rfqProcessors = User::where('id', Auth::id())->get();

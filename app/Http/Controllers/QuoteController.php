@@ -29,7 +29,7 @@ class QuoteController extends Controller
 
     public function index(Request $request)
     {
-        $query = Auth::user()->role === 'rfq_approver' || Auth::user()->role === 'lpo_admin'
+        $query = Auth::user()->canViewAllQuotes()
             ? Quote::query()
             : Quote::where('user_id', Auth::id());
 
@@ -137,7 +137,7 @@ class QuoteController extends Controller
 
     private function getQuoteStats($request = null)
     {
-        $query = Auth::user()->role === 'rfq_approver' || Auth::user()->role === 'lpo_admin'
+        $query = Auth::user()->canViewAllQuotes()
             ? Quote::query()
             : Quote::where('user_id', Auth::id());
 
@@ -490,35 +490,72 @@ class QuoteController extends Controller
     {
         $this->authorize('approve', $quote);
 
-        DB::transaction(function() use ($quote) {
-            if (auth()->user()->isRfqApprover() && $quote->status === 'pending_manager') {
-                // RFQ approver approves the entire quote to move to customer review
-                $quote->update([
-                    'status' => 'pending_customer',
-                    'approved_at' => now(),
-                    'approved_by' => auth()->id(),
-                    'submitted_to_customer_at' => now()
-                ]);
-                return redirect()->route('quotes.show', $quote)
-                    ->with('success', 'Quote approved. RFQ Processor can now download PDF for customer review.');
+        $user = auth()->user();
+        $message = 'Quote status updated successfully.';
+
+        DB::transaction(function () use ($quote, $user, &$message) {
+            // Manager stage: walk the approver chain (or finalize in one step
+            // when no chain is configured / on a super admin override).
+            if ($quote->status === 'pending_manager') {
+                $message = $this->processManagerApproval($quote, $user);
+                return;
             }
 
-            if (auth()->user()->isLpoAdmin() && $quote->status === 'pending_finance') {
-                // LPO Admin closes the quote after reviewing and approving items
+            // Finance stage: LPO Admin (or super admin) closes the quote.
+            if ($quote->status === 'pending_finance' && ($user->isLpoAdmin() || $user->isSuperAdmin())) {
                 $quote->update([
                     'status' => 'completed',
                     'closed_at' => now(),
-                    'closed_by' => auth()->id()
+                    'closed_by' => $user->id,
                 ]);
-                return redirect()->route('quotes.show', $quote)
-                    ->with('success', 'Quote closed successfully.');
+                $message = 'Quote closed successfully.';
+                return;
             }
 
             throw new \Exception('Invalid approval action for current quote status.');
         });
 
         return redirect()->route('quotes.show', $quote)
-            ->with('success', 'Quote status updated successfully.');
+            ->with('success', $message);
+    }
+
+    /**
+     * Record a manager-stage approval and either advance the quote to the next
+     * approver in the chain or finalize it to pending_customer.
+     *
+     * Returns the flash message describing what happened.
+     */
+    private function processManagerApproval(Quote $quote, $user): string
+    {
+        // A super admin acting out of turn on a chained quote is an override
+        // that bypasses the remaining approvers.
+        $isOverride = $user->isSuperAdmin()
+            && $quote->hasApprovalChain()
+            && !$quote->isAwaitingApprovalBy($user);
+
+        $quote->approvals()->create([
+            'user_id' => $user->id,
+            'action' => 'approved',
+            'is_override' => $isOverride,
+        ]);
+
+        // Wait for the next approver unless this was an override or the chain
+        // (possibly empty) is now fully approved.
+        if (!$isOverride && !$quote->chainApprovalComplete()) {
+            $next = $quote->nextApprover();
+
+            return 'Approval recorded. Awaiting approval from '
+                . ($next ? $next->name : 'the next approver') . '.';
+        }
+
+        $quote->update([
+            'status' => 'pending_customer',
+            'approved_at' => now(),
+            'approved_by' => $user->id,
+            'submitted_to_customer_at' => now(),
+        ]);
+
+        return 'Quote fully approved. RFQ Processor can now download PDF for customer review.';
     }
 
     public function submitToFinance(Quote $quote)
@@ -544,7 +581,19 @@ class QuoteController extends Controller
             'rejection_details' => 'required_if:rejection_reason,other|nullable|string|max:1000'
         ]);
 
-        DB::transaction(function() use ($quote, $validated) {
+        $user = auth()->user();
+
+        DB::transaction(function() use ($quote, $validated, $user) {
+            // A rejection at any point kills the chain. Record it for the audit trail.
+            $quote->approvals()->create([
+                'user_id' => $user->id,
+                'action' => 'rejected',
+                'is_override' => $user->isSuperAdmin()
+                    && $quote->hasApprovalChain()
+                    && !$quote->isAwaitingApprovalBy($user),
+                'comment' => $validated['rejection_details'] ?? $validated['rejection_reason'],
+            ]);
+
             $quote->update([
                 'status' => 'rejected',
                 'rejection_reason' => $validated['rejection_reason'],
@@ -601,7 +650,7 @@ class QuoteController extends Controller
 
         // Only show internal details (approval status, etc.) for LPO Admin users
         // For marketers and managers, hide these details as the PDF might be shared with clients
-        $showInternalDetails = auth()->user()->isLpoAdmin();
+        $showInternalDetails = auth()->user()->isLpoAdmin() || auth()->user()->isSuperAdmin();
 
         return $this->pdfService->streamQuotePdf($quote, $showInternalDetails);
     }
@@ -854,11 +903,17 @@ class QuoteController extends Controller
             'return_reason' => 'required|string|max:1000'
         ]);
 
-        $quote->update([
-            'status' => 'pending_manager',
-            'rejection_reason' => 'returned_for_editing',
-            'rejection_details' => $validated['return_reason']
-        ]);
+        DB::transaction(function () use ($quote, $validated) {
+            // Restart the approver chain: clear prior approvals so the quote
+            // walks the chain again from the first approver.
+            $quote->approvals()->delete();
+
+            $quote->update([
+                'status' => 'pending_manager',
+                'rejection_reason' => 'returned_for_editing',
+                'rejection_details' => $validated['return_reason']
+            ]);
+        });
 
         return redirect()->route('quotes.show', $quote)
             ->with('success', 'Quote returned to RFQ Processor for editing.');

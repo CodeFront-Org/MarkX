@@ -126,6 +126,35 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if user is a Super Admin.
+     *
+     * Super admins have full access to the system (see Gate::before and the
+     * CheckRole middleware). This intentionally does NOT make isLpoAdmin()/
+     * isRfqApprover() true, so quote workflow branching stays unambiguous.
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->hasRole('superadmin');
+    }
+
+    /**
+     * The approver chain step assigned to this user, if any.
+     */
+    public function approvalChainStep()
+    {
+        return $this->hasOne(ApprovalChainStep::class);
+    }
+
+    /**
+     * Whether the user sees org-wide data (all quotes, all users) rather than
+     * just their own. Approvers, LPO admins and super admins are privileged.
+     */
+    public function canViewAllQuotes(): bool
+    {
+        return in_array($this->role, ['rfq_approver', 'lpo_admin', 'superadmin']);
+    }
+
+    /**
      * Get the user's role
      *
      * @return string
@@ -142,6 +171,6 @@ class User extends Authenticatable
      */
     public static function getAvailableRoles(): array
     {
-        return ['rfq_approver', 'rfq_processor', 'lpo_admin'];
+        return ['rfq_approver', 'rfq_processor', 'lpo_admin', 'superadmin'];
     }
 }

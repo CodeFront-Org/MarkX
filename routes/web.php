@@ -16,6 +16,7 @@ use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\ProductItemController;
 use App\Http\Controllers\CompanyFileController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\Settings\ApprovalChainController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -106,6 +107,18 @@ Route::group(['middleware' => 'auth', 'prefix' => ''], function () {
     Route::post('company-files', [CompanyFileController::class, 'store'])->middleware(['auth', 'role:rfq_approver'])->name('company-files.store');
     Route::get('company-files/{fileName}/download', [CompanyFileController::class, 'download'])->name('company-files.download');
     Route::delete('company-files/{fileName}', [CompanyFileController::class, 'destroy'])->middleware(['auth', 'role:rfq_approver'])->name('company-files.destroy');
+
+    // Settings Routes (Super Admin only) — manage the approver chain
+    Route::middleware('role:superadmin')
+        ->prefix('settings/approval-chain')
+        ->name('settings.approval-chain.')
+        ->group(function () {
+            Route::get('/', [ApprovalChainController::class, 'index'])->name('index');
+            Route::post('/', [ApprovalChainController::class, 'store'])->name('store');
+            Route::delete('{step}', [ApprovalChainController::class, 'destroy'])->name('destroy');
+            Route::post('{step}/move-up', [ApprovalChainController::class, 'moveUp'])->name('move-up');
+            Route::post('{step}/move-down', [ApprovalChainController::class, 'moveDown'])->name('move-down');
+        });
 
     // Admin Routes (RFQ Approver and LPO Admin)
     Route::middleware('role:rfq_approver|lpo_admin')->group(function () {

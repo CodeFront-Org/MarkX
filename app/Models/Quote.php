@@ -99,6 +99,81 @@ class Quote extends Model
         return $this->belongsTo(User::class, 'closed_by');
     }
 
+    public function approvals()
+    {
+        return $this->hasMany(QuoteApproval::class);
+    }
+
+    // ---------------------------------------------------------------------
+    // Approver chain
+    // ---------------------------------------------------------------------
+
+    /**
+     * The next approver in the chain who still needs to approve this quote,
+     * or null when the chain is empty or every step has approved.
+     *
+     * Derived (not stored) so it stays correct even if the chain is reordered
+     * or an approver is removed while the quote is in flight.
+     */
+    public function nextApprover(): ?User
+    {
+        $approvedUserIds = $this->approvals()
+            ->where('action', 'approved')
+            ->pluck('user_id')
+            ->all();
+
+        $step = ApprovalChainStep::ordered()
+            ->whereNotIn('user_id', $approvedUserIds)
+            ->with('approver')
+            ->first();
+
+        return $step ? $step->approver : null;
+    }
+
+    /**
+     * Whether it is the given user's turn to approve this quote.
+     */
+    public function isAwaitingApprovalBy(User $user): bool
+    {
+        $next = $this->nextApprover();
+
+        return $next !== null && $next->id === $user->id;
+    }
+
+    /**
+     * Whether an approver chain has been configured at all.
+     */
+    public function hasApprovalChain(): bool
+    {
+        return ApprovalChainStep::exists();
+    }
+
+    /**
+     * Whether every configured chain step has approved this quote.
+     * True for an empty chain (nothing left to wait on).
+     */
+    public function chainApprovalComplete(): bool
+    {
+        return $this->nextApprover() === null;
+    }
+
+    /**
+     * Position (1-based) of the current step and total number of steps, for
+     * display, e.g. "Approval 2 of 3". Returns [0, 0] when no chain exists.
+     */
+    public function approvalProgress(): array
+    {
+        $total = ApprovalChainStep::count();
+
+        if ($total === 0) {
+            return [0, 0];
+        }
+
+        $approvedCount = $this->approvals()->where('action', 'approved')->distinct('user_id')->count('user_id');
+
+        return [min($approvedCount + 1, $total), $total];
+    }
+
     // Scopes
     public function scopeStatus($query, $status)
     {
