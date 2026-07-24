@@ -3,9 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CompanyFile extends Model
-{    protected $fillable = [
+{
+    use SoftDeletes;
+
+    protected $fillable = [
         'original_name',
         'file_name',
         'file_type',

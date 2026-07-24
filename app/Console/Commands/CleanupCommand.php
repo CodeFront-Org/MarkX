@@ -16,16 +16,6 @@ class CleanupCommand extends Command
     {
         $this->info('Starting cleanup...');
 
-        // Clean up soft-deleted draft invoices older than 30 days
-        $count = DB::transaction(function () {
-            return Invoice::onlyTrashed()
-                ->where('status', 'draft')
-                ->where('deleted_at', '<', now()->subDays(30))
-                ->forceDelete();
-        });
-        
-        $this->info("Cleaned up {$count} old draft invoices.");
-
         // Clean up temporary PDF files
         $pdfService->cleanup();
         $this->info('Cleaned up temporary PDF files.');
