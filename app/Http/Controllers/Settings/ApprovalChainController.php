@@ -23,7 +23,7 @@ class ApprovalChainController extends Controller
     {
         $steps = ApprovalChainStep::ordered()->with('approver')->get();
 
-        $availableApprovers = User::where('role', 'rfq_approver')
+        $availableApprovers = User::withRole('rfq_approver')
             ->whereDoesntHave('approvalChainStep')
             ->orderBy('name')
             ->get();
@@ -39,7 +39,7 @@ class ApprovalChainController extends Controller
         $validated = $request->validate([
             'user_id' => [
                 'required',
-                Rule::exists('users', 'id')->where(fn ($q) => $q->where('role', 'rfq_approver')),
+                Rule::exists('users', 'id')->where(fn ($q) => $q->where('role', 'rfq_approver')->orWhereJsonContains('roles', 'rfq_approver')),
                 Rule::unique('approval_chain_steps', 'user_id'),
             ],
         ]);

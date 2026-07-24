@@ -26,7 +26,13 @@ class UserController extends Controller
             'email' => ['required', 'email', 'max:50', Rule::unique('users')->ignore($user->id)],
             'phone' => ['nullable', 'max:50'],
             'location' => ['nullable', 'max:70'],
+            'roles' => ['required', 'array', 'min:1'],
+            'roles.*' => ['string', Rule::in(['rfq_approver', 'rfq_processor', 'lpo_admin', 'superadmin', 'client'])],
         ]);
+
+        $roles = array_values(array_unique($attributes['roles']));
+        $attributes['roles'] = $roles;
+        $attributes['role'] = $roles[0] ?? 'rfq_processor';
 
         $user->update($attributes);
 
@@ -40,7 +46,7 @@ class UserController extends Controller
             return back()->with('error', 'You are not allowed to delete a Super Admin account.');
         }
 
-        if ($user->isRfqApprover() && User::where('role', 'rfq_approver')->count() <= 1) {
+        if ($user->isRfqApprover() && User::withRole('rfq_approver')->count() <= 1) {
             return back()->with('error', 'Cannot delete the last RFQ Approver account');
         }
 

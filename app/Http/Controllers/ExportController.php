@@ -94,7 +94,7 @@ class ExportController extends Controller
 
 
             case 'rfq_processors':
-                $query = User::where('role', 'rfq_processor')
+                $query = User::withRole('rfq_processor')
                     ->withCount([
                         'quotes as quotes_count' => function ($q) use ($dateFrom, $dateTo) {
                             $q->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
@@ -156,7 +156,7 @@ class ExportController extends Controller
 
             case 'performance':
                 // Get all rfq_processor users
-                $processorsQuery = User::where('role', 'rfq_processor')
+                $processorsQuery = User::withRole('rfq_processor')
                     ->when($request->rfq_processor, fn($q) => $q->where('id', $request->rfq_processor));
 
                 $processors = $processorsQuery->get();

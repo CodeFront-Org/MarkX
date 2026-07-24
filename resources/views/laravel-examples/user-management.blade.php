@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="container-fluid py-4">
-    @if(in_array(auth()->user()->role, ['rfq_approver', 'lpo_admin']))
+    @if(auth()->user()->hasRole('rfq_approver') || auth()->user()->hasRole('lpo_admin') || auth()->user()->isSuperAdmin())
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
@@ -36,7 +36,7 @@
                                 <tr>
                                     <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Name</th>
                                     <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Email</th>
-                                    <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Role</th>
+                                    <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Roles</th>
                                     <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Actions</th>
                                 </tr>
                             </thead>
@@ -50,11 +50,30 @@
                                         <p class="text-xs font-weight-bold mb-0">{{ $user->email }}</p>
                                     </td>
                                     <td class="text-center">
-                                        <p class="text-xs font-weight-bold mb-0">{{ ucfirst($user->role) }}</p>
+                                        @foreach($user->getRolesArray() as $r)
+                                            @php
+                                                $badgeColor = match($r) {
+                                                    'rfq_approver' => 'bg-gradient-info',
+                                                    'lpo_admin' => 'bg-gradient-warning',
+                                                    'superadmin' => 'bg-gradient-danger',
+                                                    'rfq_processor' => 'bg-gradient-primary',
+                                                    default => 'bg-gradient-secondary',
+                                                };
+                                                $roleLabel = match($r) {
+                                                    'rfq_approver' => 'RFQ Approver',
+                                                    'lpo_admin' => 'LPO Admin',
+                                                    'superadmin' => 'Super Admin',
+                                                    'rfq_processor' => 'RFQ Processor',
+                                                    'client' => 'Client',
+                                                    default => ucfirst($r),
+                                                };
+                                            @endphp
+                                            <span class="badge badge-sm {{ $badgeColor }} me-1">{{ $roleLabel }}</span>
+                                        @endforeach
                                     </td>
                                     <td class="text-center">
                                         <a href="{{ route('users.edit', $user->id) }}" class="btn btn-sm bg-gradient-secondary me-1">View</a>
-                                        @if(in_array(auth()->user()->role, ['rfq_approver', 'lpo_admin']))
+                                        @if(auth()->user()->hasRole('rfq_approver') || auth()->user()->hasRole('lpo_admin') || auth()->user()->isSuperAdmin())
                                         <a href="{{ route('users.edit', $user->id) }}" class="btn btn-sm bg-gradient-info me-1">Edit</a>
                                         @if(auth()->id() !== $user->id)
                                         <form action="{{ route('users.destroy', $user->id) }}" method="POST" class="d-inline">

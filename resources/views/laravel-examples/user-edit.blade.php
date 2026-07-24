@@ -34,6 +34,32 @@
                         <p class="text-danger text-xs mt-2">{{ $message }}</p>
                     @enderror
                 </div>
+                <div class="mb-4">
+                    <label class="form-label font-weight-bold text-sm text-dark">User Roles (Select all that apply)</label>
+                    <div class="d-flex flex-wrap border rounded p-3 bg-light">
+                        @php
+                            $availableRoles = [
+                                'rfq_processor' => 'RFQ Processor',
+                                'rfq_approver' => 'RFQ Approver',
+                                'lpo_admin' => 'LPO Admin',
+                                'superadmin' => 'Super Admin',
+                            ];
+                            $userRoles = old('roles', $user->getRolesArray());
+                        @endphp
+                        @foreach($availableRoles as $roleKey => $roleLabel)
+                            <div class="form-check me-4 mb-2">
+                                <input class="form-check-input" type="checkbox" name="roles[]" value="{{ $roleKey }}" id="role_{{ $roleKey }}"
+                                    {{ in_array($roleKey, $userRoles) ? 'checked' : '' }}>
+                                <label class="form-check-label text-sm text-dark font-weight-bold ms-1" for="role_{{ $roleKey }}">
+                                    {{ $roleLabel }}
+                                </label>
+                            </div>
+                        @endforeach
+                    </div>
+                    @error('roles')
+                        <p class="text-danger text-xs mt-2">{{ $message }}</p>
+                    @enderror
+                </div>
                 <div class="d-flex justify-content-between align-items-center">
                     <button type="submit" class="btn bg-gradient-info">Update User</button>
                     @if(auth()->id() !== $user->id)

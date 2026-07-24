@@ -135,7 +135,7 @@ class DashboardController extends Controller
 
         // Get RFQ processors data for the line chart
         if (Auth::user()->canViewAllQuotes()) {
-            $rfqProcessors = User::where('role', 'rfq_processor')->get();
+            $rfqProcessors = User::withRole('rfq_processor')->get();
         } else {
             $rfqProcessors = User::where('id', Auth::id())->get();
         }

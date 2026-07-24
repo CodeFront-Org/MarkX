@@ -28,17 +28,21 @@ class CheckRole
             }
         }
 
-        $userRole = $request->user()->role;
+        $user = $request->user();
 
         // Super admins have full access to the system.
-        if ($userRole === 'superadmin') {
+        if ($user->isSuperAdmin()) {
             return $next($request);
         }
 
-        \Log::info('CheckRole: User role=' . $userRole . ', Allowed roles=' . implode(',', $allowedRoles));
+        $userRoles = $user->getRolesArray();
 
-        if (!in_array($userRole, $allowedRoles)) {
-            \Log::error('CheckRole: Role mismatch - User role: ' . $userRole . ' not in allowed roles: ' . implode(',', $allowedRoles));
+        \Log::info('CheckRole: User roles=' . implode(',', $userRoles) . ', Allowed roles=' . implode(',', $allowedRoles));
+
+        $hasAccess = !empty(array_intersect($userRoles, $allowedRoles));
+
+        if (!$hasAccess) {
+            \Log::error('CheckRole: Role mismatch - User roles: ' . implode(',', $userRoles) . ' not in allowed roles: ' . implode(',', $allowedRoles));
             abort(403, 'Unauthorized action.');
         }
 

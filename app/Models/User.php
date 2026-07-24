@@ -21,6 +21,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'roles',
     ];
 
     /**
@@ -41,14 +42,26 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'roles' => 'array',
     ];
+
+    /**
+     * Get array of all assigned roles for the user
+     */
+    public function getRolesArray(): array
+    {
+        if (!empty($this->roles) && is_array($this->roles)) {
+            return array_values(array_unique($this->roles));
+        }
+        return !empty($this->role) ? [$this->role] : [];
+    }
 
     /**
      * Check if user is a manager
      */
     public function isManager()
     {
-        return $this->role === 'rfq_approver';
+        return $this->hasRole('rfq_approver');
     }
 
     /**
@@ -56,7 +69,7 @@ class User extends Authenticatable
      */
     public function isRfqApprover()
     {
-        return $this->role === 'rfq_approver';
+        return $this->hasRole('rfq_approver');
     }
 
     /**
@@ -64,7 +77,7 @@ class User extends Authenticatable
      */
     public function isMarketer()
     {
-        return $this->role === 'rfq_processor';
+        return $this->hasRole('rfq_processor');
     }
 
     /**
@@ -72,7 +85,7 @@ class User extends Authenticatable
      */
     public function isRfqProcessor()
     {
-        return $this->role === 'rfq_processor';
+        return $this->hasRole('rfq_processor');
     }
 
     /**
@@ -80,7 +93,7 @@ class User extends Authenticatable
      */
     public function isClient()
     {
-        return $this->role === 'client';
+        return $this->hasRole('client');
     }
 
     /**
@@ -106,7 +119,8 @@ class User extends Authenticatable
      */
     public function hasRole(string $role): bool
     {
-        return $this->role === $role;
+        $userRoles = $this->getRolesArray();
+        return in_array($role, $userRoles, true) || $this->role === $role;
     }
 
     /**
@@ -127,10 +141,6 @@ class User extends Authenticatable
 
     /**
      * Check if user is a Super Admin.
-     *
-     * Super admins have full access to the system (see Gate::before and the
-     * CheckRole middleware). This intentionally does NOT make isLpoAdmin()/
-     * isRfqApprover() true, so quote workflow branching stays unambiguous.
      */
     public function isSuperAdmin(): bool
     {
@@ -151,17 +161,29 @@ class User extends Authenticatable
      */
     public function canViewAllQuotes(): bool
     {
-        return in_array($this->role, ['rfq_approver', 'lpo_admin', 'superadmin']);
+        $roles = $this->getRolesArray();
+        return !empty(array_intersect($roles, ['rfq_approver', 'lpo_admin', 'superadmin'])) || in_array($this->role, ['rfq_approver', 'lpo_admin', 'superadmin']);
     }
 
     /**
-     * Get the user's role
+     * Get the user's primary role or roles string
      *
      * @return string
      */
     public function getRole()
     {
-        return $this->role;
+        return $this->role ?? implode(', ', $this->getRolesArray());
+    }
+
+    /**
+     * Scope query to find users with a given role
+     */
+    public function scopeWithRole($query, string $role)
+    {
+        return $query->where(function ($q) use ($role) {
+            $q->where('role', $role)
+              ->orWhereJsonContains('roles', $role);
+        });
     }
 
     /**

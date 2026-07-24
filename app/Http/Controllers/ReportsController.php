@@ -40,7 +40,7 @@ class ReportsController extends Controller
         $financialHealth = $this->getFinancialHealthMetrics();
 
         // Get all RFQ processors for export modal
-        $rfq_processors = User::where('role', 'rfq_processor')->get();
+        $rfq_processors = User::withRole('rfq_processor')->get();
 
         return view('reports.index', compact(
             'rfqProcessorStats',
@@ -151,7 +151,7 @@ class ReportsController extends Controller
 
     private function getRfqProcessorStats($request = null)
     {
-        $query = User::where('role', 'rfq_processor');
+        $query = User::withRole('rfq_processor');
 
         if ($request && $request->filled('user_filter')) {
             $query->where('id', $request->user_filter);
@@ -702,11 +702,11 @@ class ReportsController extends Controller
     private function calculateRateByRole($role, $request = null)
     {
         $totalQuery = Quote::whereHas('approver', function($query) use ($role) {
-            $query->where('role', $role);
+            $query->withRole($role);
         });
 
         $approvedQuery = Quote::whereHas('approver', function($query) use ($role) {
-            $query->where('role', $role);
+            $query->withRole($role);
         })->where('status', 'completed');
 
         // Apply filters - use closed_at for completed quotes
@@ -782,7 +782,7 @@ class ReportsController extends Controller
             ? "ROUND(julianday(updated_at) - julianday(created_at))"
             : "TIMESTAMPDIFF(DAY, created_at, updated_at)";
 
-        return User::where('role', 'client')
+        return User::withRole('client')
             ->withCount(['quotes as total_quotes'])
             ->withCount(['quotes as approved_quotes' => function($query) {
                 $query->where('status', 'approved');
